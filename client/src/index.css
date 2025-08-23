@@ -1,0 +1,152 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(210 25% 7.8431%);
+  --card: hsl(180 6.6667% 97.0588%);
+  --card-foreground: hsl(210 25% 7.8431%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(210 25% 7.8431%);
+  --primary: hsl(203.8863 88.2845% 53.1373%);
+  --primary-foreground: hsl(0 0% 100%);
+  --secondary: hsl(210 25% 7.8431%);
+  --secondary-foreground: hsl(0 0% 100%);
+  --muted: hsl(240 1.9608% 90%);
+  --muted-foreground: hsl(210 25% 7.8431%);
+  --accent: hsl(211.5789 51.3514% 92.7451%);
+  --accent-foreground: hsl(203.8863 88.2845% 53.1373%);
+  --destructive: hsl(356.3033 90.5579% 54.3137%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(201.4286 30.4348% 90.9804%);
+  --input: hsl(200 23.0769% 97.4510%);
+  --ring: hsl(202.8169 89.1213% 53.1373%);
+  --chart-1: hsl(203.8863 88.2845% 53.1373%);
+  --chart-2: hsl(159.7826 100% 36.0784%);
+  --chart-3: hsl(42.0290 92.8251% 56.2745%);
+  --chart-4: hsl(147.1429 78.5047% 41.9608%);
+  --chart-5: hsl(341.4894 75.2000% 50.9804%);
+  --sidebar: hsl(180 6.6667% 97.0588%);
+  --sidebar-foreground: hsl(210 25% 7.8431%);
+  --sidebar-primary: hsl(203.8863 88.2845% 53.1373%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(211.5789 51.3514% 92.7451%);
+  --sidebar-accent-foreground: hsl(203.8863 88.2845% 53.1373%);
+  --sidebar-border: hsl(205.0000 25.0000% 90.5882%);
+  --sidebar-ring: hsl(202.8169 89.1213% 53.1373%);
+  --font-sans: Inter, sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: Menlo, monospace;
+  --radius: 0.5rem;
+  --shadow-2xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00);
+  --shadow-xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00);
+  --shadow-sm: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
+  --shadow: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
+  --shadow-md: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 2px 4px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
+  --shadow-lg: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 4px 6px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
+  --shadow-xl: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00), 0px 8px 10px -1px hsl(202.8169 89.1213% 53.1373% / 0.00);
+  --shadow-2xl: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0.00);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+  
+  /* Custom cybersecurity theme colors */
+  --cyber-blue: hsl(217 91% 60%);
+  --cyber-cyan: hsl(189 94% 43%);
+  --dark-slate: hsl(222 84% 5%);
+  --slate-800: hsl(215 28% 17%);
+  --slate-700: hsl(215 20% 25%);
+  --slate-600: hsl(215 16% 35%);
+  --slate-300: hsl(212 13% 65%);
+  --slate-100: hsl(210 40% 98%);
+}
+
+.dark {
+  --background: hsl(222 84% 5%);
+  --foreground: hsl(210 40% 98%);
+  --card: hsl(215 28% 17%);
+  --card-foreground: hsl(210 40% 98%);
+  --popover: hsl(215 28% 17%);
+  --popover-foreground: hsl(210 40% 98%);
+  --primary: hsl(189 94% 43%);
+  --primary-foreground: hsl(222 84% 5%);
+  --secondary: hsl(215 20% 25%);
+  --secondary-foreground: hsl(210 40% 98%);
+  --muted: hsl(215 28% 17%);
+  --muted-foreground: hsl(215 20% 65%);
+  --accent: hsl(215 20% 25%);
+  --accent-foreground: hsl(189 94% 43%);
+  --destructive: hsl(0 63% 55%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(215 20% 25%);
+  --input: hsl(215 28% 17%);
+  --ring: hsl(189 94% 43%);
+  --chart-1: hsl(189 94% 43%);
+  --chart-2: hsl(159 100% 36%);
+  --chart-3: hsl(42 93% 56%);
+  --chart-4: hsl(147 78% 42%);
+  --chart-5: hsl(341 75% 51%);
+  --sidebar: hsl(215 28% 17%);
+  --sidebar-foreground: hsl(210 40% 98%);
+  --sidebar-primary: hsl(189 94% 43%);
+  --sidebar-primary-foreground: hsl(222 84% 5%);
+  --sidebar-accent: hsl(215 20% 25%);
+  --sidebar-accent-foreground: hsl(189 94% 43%);
+  --sidebar-border: hsl(215 20% 25%);
+  --sidebar-ring: hsl(189 94% 43%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply dark;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* Custom cybersecurity theme classes */
+.bg-cyber-blue {
+  background-color: var(--cyber-blue);
+}
+
+.text-cyber-cyan {
+  color: var(--cyber-cyan);
+}
+
+.bg-dark-slate {
+  background-color: var(--dark-slate);
+}
+
+.border-cyber-cyan {
+  border-color: var(--cyber-cyan);
+}
+
+.hover\:text-cyber-cyan:hover {
+  color: var(--cyber-cyan);
+}
+
+.focus\:ring-cyber-cyan:focus {
+  --tw-ring-color: var(--cyber-cyan);
+}
