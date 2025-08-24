@@ -8,6 +8,7 @@ import { Globe, Rss, Filter, Zap, RefreshCw, Download, Plus } from 'lucide-react
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { AddSourceDialog } from '@/components/add-source-dialog';
+import { BuiltInSourcesDropdown } from '@/components/built-in-sources-dropdown';
 import type { RssSource } from '@shared/schema';
 
 interface SidebarProps {
@@ -72,6 +73,7 @@ export function Sidebar({
       'fas fa-crow': <div className="w-5 h-5 bg-red-600 rounded-sm flex items-center justify-center text-white text-xs">🐦</div>,
       'fas fa-shield-virus': <div className="w-5 h-5 bg-blue-600 rounded-sm flex items-center justify-center text-white text-xs">🛡</div>,
       'fas fa-search': <div className="w-5 h-5 bg-green-600 rounded-sm flex items-center justify-center text-white text-xs">🔍</div>,
+      'fas fa-flash': <div className="w-5 h-5 bg-yellow-500 rounded-sm flex items-center justify-center text-white text-xs">⚡</div>,
     };
 
     return iconMap[iconClass] || <Rss className="w-5 h-5" />;
@@ -195,6 +197,15 @@ export function Sidebar({
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Built-in Sources */}
+        <div className="mb-6">
+          <h3 className="text-md font-medium text-slate-200 mb-3 flex items-center">
+            <Rss className="w-5 h-5 text-cyber-cyan mr-2" />
+            Add Built-in Sources
+          </h3>
+          <BuiltInSourcesDropdown />
         </div>
 
         {/* Quick Actions */}
