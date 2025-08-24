@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -6,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Globe, Rss, Filter, Zap, RefreshCw, Download, Plus } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { AddSourceDialog } from '@/components/add-source-dialog';
 import type { RssSource } from '@shared/schema';
 
 interface SidebarProps {
@@ -27,6 +29,7 @@ export function Sidebar({
 }: SidebarProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [showAddSourceDialog, setShowAddSourceDialog] = useState(false);
 
   const { data: sources = [], isLoading } = useQuery<RssSource[]>({
     queryKey: ['/api/sources'],
@@ -227,6 +230,7 @@ export function Sidebar({
               variant="ghost"
               size="sm"
               className="w-full justify-start p-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-700"
+              onClick={() => setShowAddSourceDialog(true)}
               data-testid="button-add-source"
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -235,6 +239,11 @@ export function Sidebar({
           </div>
         </div>
       </div>
+      
+      <AddSourceDialog 
+        open={showAddSourceDialog}
+        onOpenChange={setShowAddSourceDialog}
+      />
     </aside>
   );
 }
