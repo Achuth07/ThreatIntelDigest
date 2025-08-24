@@ -1,9 +1,14 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
 import { insertArticleSchema, insertBookmarkSchema, insertRssSourceSchema } from "@shared/schema";
+import type { IStorage } from "./storage";
+import { PostgresStorage } from "./postgres-storage";
+import { MemStorage } from "./storage";
 import Parser from "rss-parser";
 import axios from "axios";
+
+// Initialize storage based on environment
+const storage: IStorage = process.env.DATABASE_URL ? new PostgresStorage() : new MemStorage();
 
 const parser = new Parser();
 
@@ -105,9 +110,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           // Update last fetched timestamp
-          await storage.updateRssSource(source.id, { 
-            ...source, 
-            lastFetched: new Date() 
+          await storage.updateRssSource(source.id, {
+            name: source.name,
+            url: source.url,
+            icon: source.icon,
+            color: source.color,
+            isActive: source.isActive,
           });
           
         } catch (feedError) {

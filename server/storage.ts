@@ -1,6 +1,9 @@
 import { type Article, type InsertArticle, type Bookmark, type InsertBookmark, type RssSource, type InsertRssSource } from "@shared/schema";
 import { randomUUID } from "crypto";
 
+// Re-export types for use in other files
+export { type Article, type InsertArticle, type Bookmark, type InsertBookmark, type RssSource, type InsertRssSource };
+
 export interface IStorage {
   // Articles
   getArticles(params?: { source?: string; limit?: number; offset?: number; search?: string; sortBy?: string }): Promise<Article[]>;
@@ -127,7 +130,11 @@ export class MemStorage implements IStorage {
   async createArticle(insertArticle: InsertArticle): Promise<Article> {
     const id = randomUUID();
     const article: Article = { 
-      ...insertArticle, 
+      ...insertArticle,
+      summary: insertArticle.summary ?? null,
+      sourceIcon: insertArticle.sourceIcon ?? null,
+      tags: Array.isArray(insertArticle.tags) ? insertArticle.tags : null,
+      readTime: insertArticle.readTime ?? null,
       id,
       createdAt: new Date(),
     };
@@ -156,7 +163,7 @@ export class MemStorage implements IStorage {
   }
 
   async deleteBookmark(articleId: string): Promise<boolean> {
-    for (const [id, bookmark] of this.bookmarks.entries()) {
+    for (const [id, bookmark] of Array.from(this.bookmarks.entries())) {
       if (bookmark.articleId === articleId) {
         return this.bookmarks.delete(id);
       }
@@ -165,7 +172,7 @@ export class MemStorage implements IStorage {
   }
 
   async isBookmarked(articleId: string): Promise<boolean> {
-    for (const bookmark of this.bookmarks.values()) {
+    for (const bookmark of Array.from(this.bookmarks.values())) {
       if (bookmark.articleId === articleId) {
         return true;
       }
@@ -185,7 +192,10 @@ export class MemStorage implements IStorage {
   async createRssSource(insertSource: InsertRssSource): Promise<RssSource> {
     const id = randomUUID();
     const source: RssSource = { 
-      ...insertSource, 
+      ...insertSource,
+      icon: insertSource.icon ?? null,
+      color: insertSource.color ?? null,
+      isActive: insertSource.isActive ?? null,
       id,
       lastFetched: null,
     };
@@ -207,4 +217,19 @@ export class MemStorage implements IStorage {
   }
 }
 
+// Import PostgresStorage dynamically to avoid circular dependency
+let PostgresStorage: any = null;
+
+const getStorage = async (): Promise<IStorage> => {
+  if (process.env.DATABASE_URL) {
+    if (!PostgresStorage) {
+      const module = await import('./postgres-storage');
+      PostgresStorage = module.PostgresStorage;
+    }
+    return new PostgresStorage();
+  }
+  return new MemStorage();
+};
+
+// For now, use MemStorage by default, we'll update this in routes.ts
 export const storage = new MemStorage();
