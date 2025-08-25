@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Globe, Rss, Filter, Zap, RefreshCw, Download, Plus, Eye, EyeOff } from 'lucide-react';
+import { Globe, Rss, Filter, Zap, RefreshCw, Download, Plus } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { AddSourcesDialog } from '@/components/add-sources-dialog';
@@ -34,22 +34,6 @@ export function Sidebar({
 
   const { data: sources = [], isLoading } = useQuery<RssSource[]>({
     queryKey: ['/api/sources'],
-  });
-
-  const updateSourceMutation = useMutation({
-    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => 
-      apiRequest('PATCH', `/api/sources/${id}`, { isActive }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/sources'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update source status. Please try again.",
-        variant: "destructive",
-      });
-    },
   });
 
   const refreshFeedsMutation = useMutation({
@@ -93,10 +77,6 @@ export function Sidebar({
     } else {
       onThreatFilterChange(threatFilters.filter(filter => filter !== threatLevel));
     }
-  };
-
-  const toggleSourceActive = (sourceId: string, currentActive: boolean) => {
-    updateSourceMutation.mutate({ id: sourceId, isActive: !currentActive });
   };
 
   const getSourceIcon = (iconClass: string | null | undefined) => {
@@ -176,53 +156,24 @@ export function Sidebar({
 
             {/* Individual Sources */}
             {sources.map((source) => (
-              <div
+              <button
                 key={source.id}
-                className={`flex items-center justify-between p-3 rounded-lg transition-colors group ${
+                className={`w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors group ${
                   selectedSource === source.name ? 'bg-cyber-blue' : 'hover:bg-slate-700'
                 }`}
+                onClick={() => onSourceSelect(source.name)}
+                data-testid={`button-source-${source.name.replace(/\s+/g, '-').toLowerCase()}`}
               >
-                <button
-                  className="flex-1 flex items-center space-x-3 text-left"
-                  onClick={() => onSourceSelect(source.name)}
-                  data-testid={`button-source-${source.name.replace(/\s+/g, '-').toLowerCase()}`}
-                >
+                <div className="flex items-center space-x-3">
                   {getSourceIcon(source.icon)}
-                  <span className={`transition-colors ${
-                    source.isActive ? 'text-slate-300 group-hover:text-slate-100' : 'text-slate-500'
-                  }`}>
+                  <span className="text-slate-300 group-hover:text-slate-100 transition-colors">
                     {source.name}
                   </span>
-                </button>
-                
-                <div className="flex items-center space-x-2">
-                  <span className={`text-xs px-2 py-1 rounded-full ${
-                    source.isActive 
-                      ? 'bg-slate-600 text-slate-300' 
-                      : 'bg-slate-700 text-slate-500'
-                  }`}>
-                    {source.isActive ? '10' : '0'}
-                  </span>
-                  
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className={`h-8 w-8 p-0 transition-colors ${
-                      source.isActive 
-                        ? 'text-green-400 hover:text-green-300 hover:bg-green-400/10' 
-                        : 'text-slate-500 hover:text-slate-400 hover:bg-slate-600'
-                    }`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleSourceActive(source.id, source.isActive ?? false);
-                    }}
-                    disabled={updateSourceMutation.isPending}
-                    data-testid={`toggle-source-${source.name.replace(/\s+/g, '-').toLowerCase()}`}
-                  >
-                    {source.isActive ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                  </Button>
                 </div>
-              </div>
+                <span className="bg-slate-600 text-slate-300 text-xs px-2 py-1 rounded-full">
+                  {source.isActive ? '10' : '0'}
+                </span>
+              </button>
             ))}
           </div>
         </div>

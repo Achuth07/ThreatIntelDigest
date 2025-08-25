@@ -24,9 +24,12 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick }: HeaderProp
         <div className="flex items-center justify-between h-16">
           {/* Logo and Brand */}
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
               <Shield className="w-8 h-8 text-cyber-cyan" data-testid="logo-icon" />
-              <h1 className="text-xl font-bold text-slate-100" data-testid="logo-text">CyberFeed</h1>
+              <div className="flex flex-col">
+                <h1 className="text-xl font-bold text-slate-100 leading-tight" data-testid="logo-text">WhatCyber</h1>
+                <span className="text-xs text-slate-400 font-medium -mt-1" data-testid="logo-tagline">CyberFeed</span>
+              </div>
             </div>
           </div>
 
