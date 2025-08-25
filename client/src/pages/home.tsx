@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Header } from '@/components/header';
 import { Sidebar } from '@/components/sidebar';
 import { ArticleCard } from '@/components/article-card';
+import { ArticleViewer } from '@/components/article-viewer';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -23,6 +24,7 @@ export default function Home() {
   const [threatFilters, setThreatFilters] = useState(['CRITICAL', 'HIGH', 'MEDIUM']);
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [page, setPage] = useState(0);
+  const [selectedArticleUrl, setSelectedArticleUrl] = useState<string | null>(null);
   const ARTICLES_PER_PAGE = 10;
 
   // Fetch articles
@@ -89,6 +91,14 @@ export default function Home() {
 
   const handleBookmarksClick = () => {
     setShowBookmarks(!showBookmarks);
+  };
+
+  const handleReadHere = (articleUrl: string) => {
+    setSelectedArticleUrl(articleUrl);
+  };
+
+  const handleCloseArticleViewer = () => {
+    setSelectedArticleUrl(null);
   };
 
   // Filter articles based on current filters
@@ -245,6 +255,7 @@ export default function Home() {
                         key={article.id}
                         article={article}
                         isFeatured={index === 0 && !showBookmarks && !searchQuery}
+                        onReadHere={handleReadHere}
                       />
                     ))}
                   </div>
@@ -269,6 +280,12 @@ export default function Home() {
           </div>
         </main>
       </div>
+      
+      {/* Article Viewer */}
+      <ArticleViewer 
+        articleUrl={selectedArticleUrl}
+        onClose={handleCloseArticleViewer}
+      />
     </div>
   );
 }

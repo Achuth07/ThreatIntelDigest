@@ -150,3 +150,10 @@
 .focus\:ring-cyber-cyan:focus {
   --tw-ring-color: var(--cyber-cyan);
 }
+
+/* Ensure article reader sheet is properly sized */
+[data-state="open"][data-side="right"] {
+  width: 70vw !important;
+  min-width: 600px !important;
+  max-width: 85vw !important;
+}

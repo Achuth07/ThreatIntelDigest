@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Bookmark, Eye, ExternalLink, Clock } from 'lucide-react';
+import { Bookmark, Eye, ExternalLink, Clock, BookOpen } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import type { Article } from '@shared/schema';
@@ -11,9 +11,10 @@ import type { Article } from '@shared/schema';
 interface ArticleCardProps {
   article: Article & { isBookmarked?: boolean };
   isFeatured?: boolean;
+  onReadHere?: (articleUrl: string) => void;
 }
 
-export function ArticleCard({ article, isFeatured = false }: ArticleCardProps) {
+export function ArticleCard({ article, isFeatured = false, onReadHere }: ArticleCardProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isBookmarked, setIsBookmarked] = useState(article.isBookmarked || false);
@@ -157,16 +158,30 @@ export function ArticleCard({ article, isFeatured = false }: ArticleCardProps) {
               </div>
             )}
           </div>
-          <Button
-            variant="link"
-            size="sm"
-            className="text-cyber-cyan hover:text-cyan-400 text-sm font-medium p-0"
-            onClick={() => window.open(article.url, '_blank', 'noopener,noreferrer')}
-            data-testid={`button-read-article-${article.id}`}
-          >
-            Read {isFeatured ? 'Full Article' : 'More'} 
-            <ExternalLink className="w-3 h-3 ml-1" />
-          </Button>
+          <div className="flex items-center space-x-2">
+            {onReadHere && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-cyber-cyan border-cyber-cyan hover:bg-cyber-cyan hover:text-slate-900 text-sm font-medium px-3 py-1"
+                onClick={() => onReadHere(article.url)}
+                data-testid={`button-read-here-${article.id}`}
+              >
+                <BookOpen className="w-3 h-3 mr-1" />
+                Read Here
+              </Button>
+            )}
+            <Button
+              variant="link"
+              size="sm"
+              className="text-slate-400 hover:text-slate-300 text-sm font-medium p-0"
+              onClick={() => window.open(article.url, '_blank', 'noopener,noreferrer')}
+              data-testid={`button-read-article-${article.id}`}
+            >
+              Read {isFeatured ? 'Full Article' : 'More'} 
+              <ExternalLink className="w-3 h-3 ml-1" />
+            </Button>
+          </div>
         </div>
       </div>
     </Card>
