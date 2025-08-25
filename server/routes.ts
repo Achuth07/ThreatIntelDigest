@@ -298,7 +298,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (error.response?.status === 429) {
           return res.status(429).json({ message: 'Rate limited - too many requests to this website' });
         }
-        if (error.response?.status >= 500) {
+        if (error.response?.status && error.response.status >= 500) {
           return res.status(502).json({ message: 'The article website is currently unavailable' });
         }
       }
