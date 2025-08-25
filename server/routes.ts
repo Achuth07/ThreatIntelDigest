@@ -34,6 +34,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/sources/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+      const updatedSource = await storage.updateRssSource(id, updateData);
+      
+      if (updatedSource) {
+        res.json(updatedSource);
+      } else {
+        res.status(404).json({ message: "Source not found" });
+      }
+    } catch (error) {
+      res.status(400).json({ message: "Invalid update data" });
+    }
+  });
+
   // Articles
   app.get("/api/articles", async (req, res) => {
     try {
@@ -133,8 +149,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Bookmarks
   app.get("/api/bookmarks", async (req, res) => {
     try {
-      const bookmarks = await storage.getBookmarks();
-      res.json(bookmarks);
+      const { export: isExport } = req.query;
+      
+      if (isExport === 'true') {
+        // Export bookmarks with full article details
+        const bookmarksWithArticles = await storage.getBookmarksWithArticles();
+        
+        // Format for export
+        const exportData = {
+          exportedAt: new Date().toISOString(),
+          totalBookmarks: bookmarksWithArticles.length,
+          bookmarks: bookmarksWithArticles.map(item => ({
+            title: item.article.title,
+            summary: item.article.summary,
+            url: item.article.url,
+            source: item.article.source,
+            publishedAt: item.article.publishedAt,
+            threatLevel: item.article.threatLevel,
+            tags: item.article.tags,
+            bookmarkedAt: item.bookmark.createdAt
+          }))
+        };
+        
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', `attachment; filename="cyberfeed-bookmarks-${new Date().toISOString().split('T')[0]}.json"`);
+        res.json(exportData);
+      } else {
+        // Regular bookmarks fetch
+        const bookmarks = await storage.getBookmarks();
+        res.json(bookmarks);
+      }
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch bookmarks" });
     }

@@ -4,11 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Globe, Rss, Filter, Zap, RefreshCw, Download, Plus } from 'lucide-react';
+import { Globe, Rss, Filter, Zap, RefreshCw, Download, Plus, Eye, EyeOff } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { AddSourceDialog } from '@/components/add-source-dialog';
-import { BuiltInSourcesDropdown } from '@/components/built-in-sources-dropdown';
+import { AddSourcesDialog } from '@/components/add-sources-dialog';
+import { exportBookmarks } from '@/lib/export-utils';
 import type { RssSource } from '@shared/schema';
 
 interface SidebarProps {
@@ -30,10 +30,26 @@ export function Sidebar({
 }: SidebarProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [showAddSourceDialog, setShowAddSourceDialog] = useState(false);
+  const [showAddSourcesDialog, setShowAddSourcesDialog] = useState(false);
 
   const { data: sources = [], isLoading } = useQuery<RssSource[]>({
     queryKey: ['/api/sources'],
+  });
+
+  const updateSourceMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => 
+      apiRequest('PATCH', `/api/sources/${id}`, { isActive }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/sources'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update source status. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 
   const refreshFeedsMutation = useMutation({
@@ -54,12 +70,33 @@ export function Sidebar({
     },
   });
 
+  const exportBookmarksMutation = useMutation({
+    mutationFn: exportBookmarks,
+    onSuccess: () => {
+      toast({
+        title: "Export Successful",
+        description: "Your bookmarks have been exported successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Export Failed",
+        description: error.message || "Failed to export bookmarks. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleThreatFilterChange = (threatLevel: string, checked: boolean) => {
     if (checked) {
       onThreatFilterChange([...threatFilters, threatLevel]);
     } else {
       onThreatFilterChange(threatFilters.filter(filter => filter !== threatLevel));
     }
+  };
+
+  const toggleSourceActive = (sourceId: string, currentActive: boolean) => {
+    updateSourceMutation.mutate({ id: sourceId, isActive: !currentActive });
   };
 
   const getSourceIcon = (iconClass: string | null | undefined) => {
@@ -103,10 +140,21 @@ export function Sidebar({
       <div className="p-6">
         {/* Feed Sources */}
         <div className="mb-6">
-          <h2 className="text-lg font-semibold text-slate-100 mb-4 flex items-center">
-            <Rss className="w-5 h-5 text-cyber-cyan mr-2" />
-            Threat Intel Sources
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-slate-100 flex items-center">
+              <Rss className="w-5 h-5 text-cyber-cyan mr-2" />
+              Threat Intel Sources
+            </h2>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 text-slate-400 hover:text-slate-100 hover:bg-slate-700"
+              onClick={() => setShowAddSourcesDialog(true)}
+              data-testid="button-add-sources"
+            >
+              <Plus className="w-4 h-4" />
+            </Button>
+          </div>
           
           <div className="space-y-2">
             {/* All Sources */}
@@ -128,24 +176,53 @@ export function Sidebar({
 
             {/* Individual Sources */}
             {sources.map((source) => (
-              <button
+              <div
                 key={source.id}
-                className={`w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors group ${
+                className={`flex items-center justify-between p-3 rounded-lg transition-colors group ${
                   selectedSource === source.name ? 'bg-cyber-blue' : 'hover:bg-slate-700'
                 }`}
-                onClick={() => onSourceSelect(source.name)}
-                data-testid={`button-source-${source.name.replace(/\s+/g, '-').toLowerCase()}`}
               >
-                <div className="flex items-center space-x-3">
+                <button
+                  className="flex-1 flex items-center space-x-3 text-left"
+                  onClick={() => onSourceSelect(source.name)}
+                  data-testid={`button-source-${source.name.replace(/\s+/g, '-').toLowerCase()}`}
+                >
                   {getSourceIcon(source.icon)}
-                  <span className="text-slate-300 group-hover:text-slate-100 transition-colors">
+                  <span className={`transition-colors ${
+                    source.isActive ? 'text-slate-300 group-hover:text-slate-100' : 'text-slate-500'
+                  }`}>
                     {source.name}
                   </span>
+                </button>
+                
+                <div className="flex items-center space-x-2">
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    source.isActive 
+                      ? 'bg-slate-600 text-slate-300' 
+                      : 'bg-slate-700 text-slate-500'
+                  }`}>
+                    {source.isActive ? '10' : '0'}
+                  </span>
+                  
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className={`h-8 w-8 p-0 transition-colors ${
+                      source.isActive 
+                        ? 'text-green-400 hover:text-green-300 hover:bg-green-400/10' 
+                        : 'text-slate-500 hover:text-slate-400 hover:bg-slate-600'
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleSourceActive(source.id, source.isActive ?? false);
+                    }}
+                    disabled={updateSourceMutation.isPending}
+                    data-testid={`toggle-source-${source.name.replace(/\s+/g, '-').toLowerCase()}`}
+                  >
+                    {source.isActive ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                  </Button>
                 </div>
-                <span className="bg-slate-600 text-slate-300 text-xs px-2 py-1 rounded-full">
-                  {source.isActive ? '10' : '0'}
-                </span>
-              </button>
+              </div>
             ))}
           </div>
         </div>
@@ -199,15 +276,6 @@ export function Sidebar({
           </div>
         </div>
 
-        {/* Built-in Sources */}
-        <div className="mb-6">
-          <h3 className="text-md font-medium text-slate-200 mb-3 flex items-center">
-            <Rss className="w-5 h-5 text-cyber-cyan mr-2" />
-            Add Built-in Sources
-          </h3>
-          <BuiltInSourcesDropdown />
-        </div>
-
         {/* Quick Actions */}
         <div>
           <h3 className="text-md font-medium text-slate-200 mb-3 flex items-center">
@@ -231,17 +299,19 @@ export function Sidebar({
               variant="ghost"
               size="sm"
               className="w-full justify-start p-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-700"
+              onClick={() => exportBookmarksMutation.mutate()}
+              disabled={exportBookmarksMutation.isPending}
               data-testid="button-export-bookmarks"
             >
-              <Download className="w-4 h-4 mr-2" />
-              Export Bookmarks
+              <Download className={`w-4 h-4 mr-2 ${exportBookmarksMutation.isPending ? 'animate-pulse' : ''}`} />
+              {exportBookmarksMutation.isPending ? 'Exporting...' : 'Export Bookmarks'}
             </Button>
             
             <Button
               variant="ghost"
               size="sm"
               className="w-full justify-start p-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-700"
-              onClick={() => setShowAddSourceDialog(true)}
+              onClick={() => setShowAddSourcesDialog(true)}
               data-testid="button-add-source"
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -251,9 +321,9 @@ export function Sidebar({
         </div>
       </div>
       
-      <AddSourceDialog 
-        open={showAddSourceDialog}
-        onOpenChange={setShowAddSourceDialog}
+      <AddSourcesDialog 
+        open={showAddSourcesDialog}
+        onOpenChange={setShowAddSourcesDialog}
       />
     </aside>
   );

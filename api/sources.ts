@@ -20,6 +20,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } catch (error) {
       res.status(400).json({ message: "Invalid source data" });
     }
+  } else if (req.method === 'PATCH') {
+    try {
+      const { pathname } = new URL(req.url!, `https://${req.headers.host}`);
+      const sourceId = pathname.split('/').pop();
+      
+      if (!sourceId) {
+        return res.status(400).json({ message: "Source ID is required" });
+      }
+      
+      // Validate partial update data
+      const updateData = req.body;
+      const updatedSource = await storage.updateRssSource(sourceId, updateData);
+      
+      if (updatedSource) {
+        res.json(updatedSource);
+      } else {
+        res.status(404).json({ message: "Source not found" });
+      }
+    } catch (error) {
+      res.status(400).json({ message: "Invalid update data" });
+    }
   } else {
     res.status(405).json({ message: 'Method not allowed' });
   }

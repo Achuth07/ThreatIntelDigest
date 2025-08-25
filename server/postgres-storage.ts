@@ -132,7 +132,7 @@ export class PostgresStorage implements IStorage {
         sourceIcon: insertArticle.sourceIcon || null,
         publishedAt: insertArticle.publishedAt,
         threatLevel: insertArticle.threatLevel || "MEDIUM",
-        tags: insertArticle.tags || [],
+        tags: (insertArticle.tags ? [...(insertArticle.tags as string[])] : []) as string[],
         readTime: insertArticle.readTime || 5,
       };
       
@@ -160,6 +160,27 @@ export class PostgresStorage implements IStorage {
       return await this.db.select().from(bookmarks).orderBy(desc(bookmarks.createdAt));
     } catch (error) {
       console.error('Error fetching bookmarks:', error);
+      return [];
+    }
+  }
+
+  async getBookmarksWithArticles(): Promise<{ bookmark: Bookmark; article: Article }[]> {
+    try {
+      const result = await this.db
+        .select({
+          bookmark: bookmarks,
+          article: articles
+        })
+        .from(bookmarks)
+        .innerJoin(articles, eq(bookmarks.articleId, articles.id))
+        .orderBy(desc(bookmarks.createdAt));
+      
+      return result.map(row => ({
+        bookmark: row.bookmark,
+        article: row.article
+      }));
+    } catch (error) {
+      console.error('Error fetching bookmarks with articles:', error);
       return [];
     }
   }

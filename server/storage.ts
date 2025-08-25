@@ -13,6 +13,7 @@ export interface IStorage {
   
   // Bookmarks
   getBookmarks(): Promise<Bookmark[]>;
+  getBookmarksWithArticles(): Promise<{ bookmark: Bookmark; article: Article }[]>;
   createBookmark(bookmark: InsertBookmark): Promise<Bookmark>;
   deleteBookmark(articleId: string): Promise<boolean>;
   isBookmarked(articleId: string): Promise<boolean>;
@@ -133,8 +134,9 @@ export class MemStorage implements IStorage {
       ...insertArticle,
       summary: insertArticle.summary ?? null,
       sourceIcon: insertArticle.sourceIcon ?? null,
-      tags: Array.isArray(insertArticle.tags) ? insertArticle.tags : null,
+      tags: (insertArticle.tags ? [...(insertArticle.tags as string[])] : null) as string[] | null,
       readTime: insertArticle.readTime ?? null,
+      threatLevel: insertArticle.threatLevel ?? "MEDIUM",
       id,
       createdAt: new Date(),
     };
@@ -149,6 +151,22 @@ export class MemStorage implements IStorage {
   // Bookmarks
   async getBookmarks(): Promise<Bookmark[]> {
     return Array.from(this.bookmarks.values());
+  }
+
+  async getBookmarksWithArticles(): Promise<{ bookmark: Bookmark; article: Article }[]> {
+    const result: { bookmark: Bookmark; article: Article }[] = [];
+    
+    for (const bookmark of Array.from(this.bookmarks.values())) {
+      const article = this.articles.get(bookmark.articleId);
+      if (article) {
+        result.push({ bookmark, article });
+      }
+    }
+    
+    // Sort by bookmark creation date (newest first)
+    return result.sort((a, b) => 
+      new Date(b.bookmark.createdAt || 0).getTime() - new Date(a.bookmark.createdAt || 0).getTime()
+    );
   }
 
   async createBookmark(insertBookmark: InsertBookmark): Promise<Bookmark> {

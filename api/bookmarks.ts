@@ -7,8 +7,36 @@ const storage = new PostgresStorage();
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'GET') {
     try {
-      const bookmarks = await storage.getBookmarks();
-      res.json(bookmarks);
+      const { export: isExport } = req.query;
+      
+      if (isExport === 'true') {
+        // Export bookmarks with full article details
+        const bookmarksWithArticles = await storage.getBookmarksWithArticles();
+        
+        // Format for export
+        const exportData = {
+          exportedAt: new Date().toISOString(),
+          totalBookmarks: bookmarksWithArticles.length,
+          bookmarks: bookmarksWithArticles.map(item => ({
+            title: item.article.title,
+            summary: item.article.summary,
+            url: item.article.url,
+            source: item.article.source,
+            publishedAt: item.article.publishedAt,
+            threatLevel: item.article.threatLevel,
+            tags: item.article.tags,
+            bookmarkedAt: item.bookmark.createdAt
+          }))
+        };
+        
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', `attachment; filename="cyberfeed-bookmarks-${new Date().toISOString().split('T')[0]}.json"`);
+        res.json(exportData);
+      } else {
+        // Regular bookmarks fetch
+        const bookmarks = await storage.getBookmarks();
+        res.json(bookmarks);
+      }
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch bookmarks" });
     }
