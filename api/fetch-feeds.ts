@@ -96,9 +96,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const summary = item.contentSnippet || item.content?.substring(0, 300) + "..." || "";
             const publishedAt = item.pubDate ? new Date(item.pubDate) : new Date();
             
+            // Convert tags array to PostgreSQL array format
+            const tagsArray = `{${tags.map(tag => `"${tag.replace(/"/g, '\\"')}"`).join(',')}}}`;
+            
             await db.execute(sql`
               INSERT INTO articles (title, summary, url, source, threat_level, tags, read_time, published_at)
-              VALUES (${item.title}, ${summary}, ${item.link}, ${source.name}, ${threatLevel}, ${tags}, ${readTime}, ${publishedAt})
+              VALUES (${item.title}, ${summary}, ${item.link}, ${source.name}, ${threatLevel}, ${tagsArray}, ${readTime}, ${publishedAt})
             `);
             
             totalFetched++;

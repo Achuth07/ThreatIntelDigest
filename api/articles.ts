@@ -23,42 +23,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.log('Fetching articles...');
       const { source, limit = '10', offset = '0', search, sortBy = 'newest' } = req.query;
       
-      let query = 'SELECT id, title, summary, url, source, threat_level, tags, read_time, published_at, created_at FROM articles';
-      const conditions = [];
-      const values = [];
-      let paramIndex = 1;
+      // Build base query
+      let baseQuery = sql`SELECT id, title, summary, url, source, threat_level, tags, read_time, published_at, created_at FROM articles`;
       
-      // Add filtering conditions
+      // Add WHERE conditions
+      const conditions = [];
+      
       if (source && source !== 'all') {
-        conditions.push(`source = $${paramIndex}`);
-        values.push(source);
-        paramIndex++;
+        conditions.push(sql`source = ${source}`);
       }
       
       if (search) {
-        conditions.push(`(title ILIKE $${paramIndex} OR summary ILIKE $${paramIndex})`);
-        values.push(`%${search}%`);
-        paramIndex++;
+        const searchTerm = `%${search}%`;
+        conditions.push(sql`(title ILIKE ${searchTerm} OR summary ILIKE ${searchTerm})`);
       }
       
+      // Combine conditions
+      let query = baseQuery;
       if (conditions.length > 0) {
-        query += ' WHERE ' + conditions.join(' AND ');
+        query = sql`${baseQuery} WHERE ${sql.join(conditions, sql` AND `)}`;
       }
       
       // Add sorting
       if (sortBy === 'newest') {
-        query += ' ORDER BY published_at DESC';
+        query = sql`${query} ORDER BY published_at DESC`;
       } else if (sortBy === 'oldest') {
-        query += ' ORDER BY published_at ASC';
+        query = sql`${query} ORDER BY published_at ASC`;
       } else {
-        query += ' ORDER BY created_at DESC';
+        query = sql`${query} ORDER BY created_at DESC`;
       }
       
       // Add pagination
-      query += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-      values.push(parseInt(limit as string), parseInt(offset as string));
+      const limitNum = parseInt(limit as string);
+      const offsetNum = parseInt(offset as string);
+      query = sql`${query} LIMIT ${limitNum} OFFSET ${offsetNum}`;
       
-      const result = await db.execute(sql.raw(query, values));
+      const result = await db.execute(query);
       
       const articles = result.rows.map((row: any) => ({
         id: row.id,
