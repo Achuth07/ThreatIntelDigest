@@ -132,6 +132,10 @@ The `vercel.json` configuration handles:
 
 #### Build Failures
 ```bash
+# Issue: "vite: command not found" or "esbuild: command not found"
+# Solution: Build tools moved to dependencies (already fixed)
+npm run build  # Test locally first
+
 # Issue: TypeScript compilation errors
 # Solution: Run locally first
 npm run check

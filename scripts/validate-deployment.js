@@ -49,6 +49,12 @@ if (fs.existsSync('package.json')) {
     warnings.push('⚠️  @vercel/node dependency missing - API routes may not work');
   }
   
+  if (pkg.dependencies?.['vite'] && pkg.dependencies?.['esbuild']) {
+    success.push('✅ Build tools (vite, esbuild) found in dependencies');
+  } else {
+    warnings.push('⚠️  Build tools missing from dependencies - may cause Vercel build issues');
+  }
+  
   if (pkg.type === 'module') {
     success.push('✅ ES modules configuration detected');
   }

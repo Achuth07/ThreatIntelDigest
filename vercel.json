@@ -3,8 +3,11 @@
   "name": "threat-intel-digest",
   "buildCommand": "npm run build",
   "outputDirectory": "dist/public",
-  "installCommand": "npm install",
+  "installCommand": "npm ci",
   "devCommand": "npm run dev",
+  "env": {
+    "NPM_CONFIG_INCLUDE_STAGE_ALL": "true"
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",
