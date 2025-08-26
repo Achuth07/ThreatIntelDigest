@@ -4,6 +4,8 @@
 
 CyberFeed is a cybersecurity-focused RSS news aggregator that provides real-time threat intelligence and security news from multiple sources. The application allows users to browse, search, filter, and bookmark security articles with threat level classification. It features a modern dark theme UI optimized for security professionals who need to stay updated on the latest cybersecurity threats and developments.
 
+The application includes advanced source management with non-destructive deactivation/reactivation functionality, allowing users to temporarily remove sources from their sidebar while preserving the ability to re-add them later. RSS sources are organized into categories (Vendor & Private Threat Research, Government & Agency Alerts, Specialized & Malware Focus, General Security News) for better discoverability.
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
@@ -36,8 +38,9 @@ Preferred communication style: Simple, everyday language.
 ### Database Schema Design
 - **Articles**: Stores news articles with metadata (title, summary, URL, source, threat level, tags, read time)
 - **Bookmarks**: User bookmarks linking to articles with timestamps
-- **RSS Sources**: Configuration for RSS feeds (name, URL, icon, color, active status)
+- **RSS Sources**: Configuration for RSS feeds (name, URL, icon, color, active status) with support for deactivation/reactivation
 - **Relationships**: Foreign key constraints between bookmarks and articles
+- **Source Management**: Non-destructive operations using isActive field for source lifecycle management
 
 ### Authentication and Authorization
 - **Current State**: No authentication system implemented (planned for future)
@@ -50,13 +53,17 @@ Preferred communication style: Simple, everyday language.
 - **Responsive Design**: Mobile-first approach with breakpoint-based layouts
 - **Accessibility**: Full keyboard navigation and screen reader support via Radix UI
 - **Loading States**: Skeleton components and loading indicators for better UX
+- **Source Management UI**: Hover-based controls with minus icons for non-destructive source removal
+- **Categorized Dialogs**: Tabbed interfaces for organized source selection and management
 
 ### RSS Feed Integration
-- **Sources**: Pre-configured cybersecurity news sources (Bleeping Computer, The Hacker News, Dark Reading, etc.)
+- **Sources**: 25+ categorized cybersecurity news sources organized by type (Vendor Research, Government Alerts, Malware Focus, General News)
 - **Processing**: Automatic feed fetching with parsing and content extraction
 - **Content Classification**: Threat level assignment (Critical, High, Medium, Low)
 - **Scheduling**: Manual refresh with planned automatic scheduling
 - **Error Handling**: Graceful degradation when feeds are unavailable
+- **Source Management**: Non-destructive deactivation/reactivation with hover controls
+- **Smart Reactivation**: Previously added sources can be reactivated without creating duplicates
 
 ### Development Tools and Configuration
 - **Build System**: Vite with React plugin and TypeScript support
@@ -72,12 +79,11 @@ Preferred communication style: Simple, everyday language.
 - **DATABASE_URL**: Environment variable for database connection string
 
 ### RSS Data Sources
-- Bleeping Computer RSS feed
-- The Hacker News RSS feed  
-- Dark Reading RSS feed
-- CrowdStrike Blog RSS feed
-- Unit 42 RSS feed
-- The DFIR Report RSS feed
+- **Vendor & Private Threat Research**: Google Mandiant, Cisco Talos, CrowdStrike, Red Canary, Kaspersky, ESET, Trustwave, FireEye, McAfee, Symantec
+- **Government & Agency Alerts**: CISA Alerts, FBI IC3, NCSC-UK
+- **Specialized & Malware Focus**: Malwarebytes Labs, Recorded Future, ThreatPost, Krebs on Security
+- **General Security News**: Bleeping Computer, The Hacker News, Dark Reading, SecurityWeek, InfoSecurity Magazine
+- **Legacy Sources**: The DFIR Report
 
 ### UI Component Libraries
 - **Radix UI**: Headless UI components for accessibility and customization

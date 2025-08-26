@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Plus, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
-import { RSS_SOURCES } from '@/lib/rss-sources';
+import { RSS_SOURCES, VENDOR_THREAT_RESEARCH, GOVERNMENT_ALERTS, MALWARE_RESEARCH, GENERAL_SECURITY_NEWS, LEGACY_SOURCES } from '@/lib/rss-sources';
 import type { InsertRssSource, RssSource } from '@shared/schema';
 
 interface AddSourcesDialogProps {
@@ -55,6 +55,26 @@ export function AddSourcesDialog({ open, onOpenChange }: AddSourcesDialogProps) 
     },
   });
 
+  const reactivateSourceMutation = useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => 
+      apiRequest('PATCH', `/api/sources/${id}`, { isActive: true }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/sources'] });
+      toast({
+        title: "Success",
+        description: `${variables.name} reactivated successfully`,
+      });
+      resetForm();
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to reactivate source. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const resetForm = () => {
     setSelectedSourceName('');
     setName('');
@@ -75,27 +95,41 @@ export function AddSourcesDialog({ open, onOpenChange }: AddSourcesDialogProps) 
       return;
     }
 
-    // Check if source already exists
-    const sourceExists = existingSources.some(existing => 
-      existing.name === selectedSource.name || existing.url === selectedSource.url
+    // Check if source already exists and is active
+    const activeSourceExists = existingSources.some(existing => 
+      existing.isActive && (existing.name === selectedSource.name || existing.url === selectedSource.url)
     );
 
-    if (sourceExists) {
+    if (activeSourceExists) {
       toast({
         title: "Source Already Added",
-        description: `${selectedSource.name} is already in your sources list`,
+        description: `${selectedSource.name} is already active in your sources list`,
         variant: "destructive",
       });
       return;
     }
 
-    addSourceMutation.mutate({
-      name: selectedSource.name,
-      url: selectedSource.url,
-      icon: selectedSource.icon,
-      color: selectedSource.color,
-      isActive: true,
-    });
+    // Check if inactive source exists that we can reactivate
+    const inactiveSource = existingSources.find(existing => 
+      !existing.isActive && (existing.name === selectedSource.name || existing.url === selectedSource.url)
+    );
+
+    if (inactiveSource) {
+      // Reactivate existing inactive source
+      reactivateSourceMutation.mutate({
+        id: inactiveSource.id,
+        name: selectedSource.name,
+      });
+    } else {
+      // Add new source
+      addSourceMutation.mutate({
+        name: selectedSource.name,
+        url: selectedSource.url,
+        icon: selectedSource.icon,
+        color: selectedSource.color,
+        isActive: true,
+      });
+    }
   };
 
   const handleAddCustomSource = (e: React.FormEvent) => {
@@ -124,10 +158,10 @@ export function AddSourcesDialog({ open, onOpenChange }: AddSourcesDialogProps) 
     onOpenChange(false);
   };
 
-  // Get available sources (not already added)
+  // Get available sources (not already active)
   const availableSources = RSS_SOURCES.filter(source => 
     !existingSources.some(existing => 
-      existing.name === source.name || existing.url === source.url
+      existing.isActive && (existing.name === source.name || existing.url === source.url)
     )
   );
 
@@ -155,15 +189,21 @@ export function AddSourcesDialog({ open, onOpenChange }: AddSourcesDialogProps) 
                 All built-in sources already added
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-4 max-h-96 overflow-y-auto">
                 <div className="space-y-2">
-                  <Label className="text-slate-300">Select a built-in source</Label>
+                  <Label className="text-slate-300">Select from categorized sources</Label>
                   <Select value={selectedSourceName} onValueChange={setSelectedSourceName}>
                     <SelectTrigger className="bg-slate-700 border-slate-600 text-slate-100">
                       <SelectValue placeholder="Choose from pre-configured sources..." />
                     </SelectTrigger>
-                    <SelectContent>
-                      {availableSources.map((source) => (
+                    <SelectContent className="max-h-80">
+                      {/* Vendor & Private Threat Research */}
+                      <div className="px-2 py-1 text-xs font-semibold text-slate-400 bg-slate-700">Vendor & Private Threat Research</div>
+                      {VENDOR_THREAT_RESEARCH.filter(source => 
+                        !existingSources.some(existing => 
+                          existing.isActive && (existing.name === source.name || existing.url === source.url)
+                        )
+                      ).map((source) => (
                         <SelectItem key={source.name} value={source.name}>
                           <div className="flex items-center space-x-2">
                             <div 
@@ -174,6 +214,86 @@ export function AddSourcesDialog({ open, onOpenChange }: AddSourcesDialogProps) 
                           </div>
                         </SelectItem>
                       ))}
+                      
+                      {/* Government & Agency Alerts */}
+                      <div className="px-2 py-1 text-xs font-semibold text-slate-400 bg-slate-700">Government & Agency Alerts</div>
+                      {GOVERNMENT_ALERTS.filter(source => 
+                        !existingSources.some(existing => 
+                          existing.isActive && (existing.name === source.name || existing.url === source.url)
+                        )
+                      ).map((source) => (
+                        <SelectItem key={source.name} value={source.name}>
+                          <div className="flex items-center space-x-2">
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: source.color }}
+                            />
+                            <span>{source.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                      
+                      {/* Specialized & Malware Focus */}
+                      <div className="px-2 py-1 text-xs font-semibold text-slate-400 bg-slate-700">Specialized & Malware Focus</div>
+                      {MALWARE_RESEARCH.filter(source => 
+                        !existingSources.some(existing => 
+                          existing.isActive && (existing.name === source.name || existing.url === source.url)
+                        )
+                      ).map((source) => (
+                        <SelectItem key={source.name} value={source.name}>
+                          <div className="flex items-center space-x-2">
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: source.color }}
+                            />
+                            <span>{source.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                      
+                      {/* General Security News */}
+                      <div className="px-2 py-1 text-xs font-semibold text-slate-400 bg-slate-700">General Security News</div>
+                      {GENERAL_SECURITY_NEWS.filter(source => 
+                        !existingSources.some(existing => 
+                          existing.isActive && (existing.name === source.name || existing.url === source.url)
+                        )
+                      ).map((source) => (
+                        <SelectItem key={source.name} value={source.name}>
+                          <div className="flex items-center space-x-2">
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: source.color }}
+                            />
+                            <span>{source.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                      
+                      {/* Legacy Sources */}
+                      {LEGACY_SOURCES.filter(source => 
+                        !existingSources.some(existing => 
+                          existing.isActive && (existing.name === source.name || existing.url === source.url)
+                        )
+                      ).length > 0 && (
+                        <>
+                          <div className="px-2 py-1 text-xs font-semibold text-slate-400 bg-slate-700">Legacy Sources</div>
+                          {LEGACY_SOURCES.filter(source => 
+                            !existingSources.some(existing => 
+                              existing.isActive && (existing.name === source.name || existing.url === source.url)
+                            )
+                          ).map((source) => (
+                            <SelectItem key={source.name} value={source.name}>
+                              <div className="flex items-center space-x-2">
+                                <div 
+                                  className="w-3 h-3 rounded-full" 
+                                  style={{ backgroundColor: source.color }}
+                                />
+                                <span>{source.name}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>

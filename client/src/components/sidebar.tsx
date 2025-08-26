@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Globe, Rss, Filter, Zap, RefreshCw, Download, Plus } from 'lucide-react';
+import { Globe, Rss, Filter, Zap, RefreshCw, Download, Plus, Minus } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { AddSourcesDialog } from '@/components/add-sources-dialog';
+import { ConfirmationDialog } from '@/components/confirmation-dialog';
 import { exportBookmarks } from '@/lib/export-utils';
 import type { RssSource } from '@shared/schema';
 
@@ -31,6 +32,8 @@ export function Sidebar({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showAddSourcesDialog, setShowAddSourcesDialog] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [sourceToDeactivate, setSourceToDeactivate] = useState<{ id: string; name: string } | null>(null);
 
   const { data: sources = [], isLoading } = useQuery<RssSource[]>({
     queryKey: ['/api/sources'],
@@ -71,12 +74,47 @@ export function Sidebar({
     },
   });
 
+  const deactivateSourceMutation = useMutation({
+    mutationFn: (sourceId: string) => apiRequest('PATCH', `/api/sources/${sourceId}`, { isActive: false }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/sources'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
+      toast({
+        title: "Source Deactivated",
+        description: "RSS source has been removed from sidebar and can be re-added from built-in sources",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to deactivate RSS source. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleThreatFilterChange = (threatLevel: string, checked: boolean) => {
     if (checked) {
       onThreatFilterChange([...threatFilters, threatLevel]);
     } else {
       onThreatFilterChange(threatFilters.filter(filter => filter !== threatLevel));
     }
+  };
+
+  const handleDeactivateSource = (sourceId: string, sourceName: string) => {
+    setSourceToDeactivate({ id: sourceId, name: sourceName });
+    setShowConfirmDialog(true);
+  };
+
+  const confirmDeactivateSource = () => {
+    if (sourceToDeactivate) {
+      deactivateSourceMutation.mutate(sourceToDeactivate.id);
+      setSourceToDeactivate(null);
+    }
+  };
+
+  const cancelDeactivateSource = () => {
+    setSourceToDeactivate(null);
   };
 
   const getSourceIcon = (iconClass: string | null | undefined) => {
@@ -155,25 +193,42 @@ export function Sidebar({
             </button>
 
             {/* Individual Sources */}
-            {sources.map((source) => (
-              <button
+            {sources.filter(source => source.isActive).map((source) => (
+              <div
                 key={source.id}
-                className={`w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors group ${
+                className={`relative w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors group ${
                   selectedSource === source.name ? 'bg-cyber-blue' : 'hover:bg-slate-700'
                 }`}
-                onClick={() => onSourceSelect(source.name)}
                 data-testid={`button-source-${source.name.replace(/\s+/g, '-').toLowerCase()}`}
               >
-                <div className="flex items-center space-x-3">
+                <button
+                  className="flex-1 flex items-center space-x-3 text-left"
+                  onClick={() => onSourceSelect(source.name)}
+                >
                   {getSourceIcon(source.icon)}
                   <span className="text-slate-300 group-hover:text-slate-100 transition-colors">
                     {source.name}
                   </span>
-                </div>
-                <span className="bg-slate-600 text-slate-300 text-xs px-2 py-1 rounded-full">
+                </button>
+                
+                {/* Article count badge */}
+                <span className="bg-slate-600 text-slate-300 text-xs px-2 py-1 rounded-full mr-2">
                   {source.isActive ? '10' : '0'}
                 </span>
-              </button>
+                
+                {/* Remove button - shown on hover */}
+                <button
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-600 rounded text-red-400 hover:text-white"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeactivateSource(source.id, source.name);
+                  }}
+                  title={`Remove ${source.name} from sidebar`}
+                  disabled={deactivateSourceMutation.isPending}
+                >
+                  <Minus className="w-3 h-3" />
+                </button>
+              </div>
             ))}
           </div>
         </div>
@@ -275,6 +330,19 @@ export function Sidebar({
       <AddSourcesDialog 
         open={showAddSourcesDialog}
         onOpenChange={setShowAddSourcesDialog}
+      />
+      
+      <ConfirmationDialog
+        open={showConfirmDialog}
+        onOpenChange={setShowConfirmDialog}
+        title="Remove RSS Source"
+        description={sourceToDeactivate ? `Remove "${sourceToDeactivate.name}" from your sidebar? You can re-add it later from the built-in sources list.` : ''}
+        confirmText="Remove Source"
+        cancelText="Keep Source"
+        variant="destructive"
+        onConfirm={confirmDeactivateSource}
+        onCancel={cancelDeactivateSource}
+        loading={deactivateSourceMutation.isPending}
       />
     </aside>
   );

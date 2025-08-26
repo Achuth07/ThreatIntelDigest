@@ -41,6 +41,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } catch (error) {
       res.status(400).json({ message: "Invalid update data" });
     }
+  } else if (req.method === 'DELETE') {
+    try {
+      const { pathname } = new URL(req.url!, `https://${req.headers.host}`);
+      const sourceId = pathname.split('/').pop();
+      
+      if (!sourceId) {
+        return res.status(400).json({ message: "Source ID is required" });
+      }
+      
+      const deleted = await storage.deleteRssSource(sourceId);
+      
+      if (deleted) {
+        res.status(204).send('');
+      } else {
+        res.status(404).json({ message: "Source not found" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete source" });
+    }
   } else {
     res.status(405).json({ message: 'Method not allowed' });
   }

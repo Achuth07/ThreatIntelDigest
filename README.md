@@ -45,15 +45,40 @@ CyberFeed is a threat intelligence aggregation platform that enables security an
 
 ### Built-in RSS Sources
 
-The application comes pre-configured with major cybersecurity news sources:
+The application comes pre-configured with 25+ categorized cybersecurity news sources:
 
+**Vendor & Private Threat Research:**
+- **Google Mandiant Threat Intelligence** - Advanced threat research and analysis
+- **Cisco Talos Intelligence** - Network security and threat intelligence
+- **CrowdStrike Blog** - Endpoint security and threat hunting
+- **Red Canary Blog** - Threat detection and security operations
+- **Securelist (Kaspersky)** - Global threat research and analysis
+- **ESET WeLiveSecurity** - Security research and threat intelligence
+- **Trustwave SpiderLabs** - Web application and network security
+- **FireEye Threat Research** - Advanced persistent threat analysis
+- **McAfee Labs** - Malware research and threat intelligence
+- **Symantec Security Response** - Enterprise security research
+
+**Government & Agency Alerts:**
+- **CISA Alerts** - Official US cybersecurity advisories
+- **FBI IC3** - Internet crime and fraud alerts
+- **NCSC-UK** - UK national cybersecurity guidance
+
+**Specialized & Malware Focus:**
+- **Malwarebytes Labs** - Consumer and enterprise malware research
+- **Recorded Future** - Threat intelligence and security analytics
+- **ThreatPost** - Breaking cybersecurity news and analysis
+- **Krebs on Security** - Independent security journalism
+
+**General Security News:**
 - **Bleeping Computer** - Latest cybersecurity news and threat reports
-- **The Hacker News** - Breaking cybersecurity news and analysis  
+- **The Hacker News** - Breaking cybersecurity news and analysis
 - **Dark Reading** - Enterprise security news and insights
-- **CrowdStrike Blog** - Threat intelligence and security research
-- **Palo Alto Unit 42** - Advanced threat research and analysis
-- **DFIR Report** - Digital forensics and incident response
-- **Flashpoint** - Threat intelligence and security research
+- **SecurityWeek** - Information security news and analysis
+- **InfoSecurity Magazine** - Global cybersecurity news coverage
+
+**Legacy Sources:**
+- **The DFIR Report** - Digital forensics and incident response
 
 ## 🚀 Quick Start
 
@@ -104,9 +129,10 @@ The application comes pre-configured with major cybersecurity news sources:
 
 ### First Run
 
-1. **Add RSS Sources:** Use the built-in sources dropdown in the left sidebar to quickly add pre-configured cybersecurity RSS feeds
-2. **Fetch Articles:** Click "Refresh All Feeds" to populate the application with latest articles
-3. **Explore:** Browse articles, filter by threat level, and bookmark important intelligence
+1. **Add RSS Sources:** Use the "Add RSS Source" dialog to select from categorized built-in cybersecurity RSS feeds
+2. **Manage Sources:** Remove sources from sidebar by hovering and clicking minus icon - they can be re-added later
+3. **Fetch Articles:** Click "Refresh All Feeds" to populate the application with latest articles
+4. **Explore:** Browse articles, filter by threat level, and bookmark important intelligence
 
 ## 📁 Project Structure
 
@@ -122,9 +148,10 @@ ThreatIntelDigest/
 │   ├── src/
 │   │   ├── components/     # React components
 │   │   │   ├── ui/         # shadcn/ui components
-│   │   │   ├── sidebar.tsx # Main navigation sidebar
+│   │   │   ├── sidebar.tsx # Main navigation sidebar with source management
 │   │   │   ├── article-card.tsx # Article display component
-│   │   │   └── built-in-sources-dropdown.tsx # RSS sources selector
+│   │   │   ├── add-sources-dialog.tsx # Categorized RSS sources selector
+│   │   │   └── article-viewer.tsx # Slide-in article reader
 │   │   ├── pages/          # Application pages
 │   │   ├── hooks/          # Custom React hooks
 │   │   ├── lib/            # Utility functions and configurations
@@ -173,6 +200,14 @@ npm run db:push
 - **Threat Level Classification:** Automatic categorization (Critical, High, Medium, Low)
 - **Bookmarking System:** Save important articles for future reference
 - **Real-time Updates:** Manual refresh with planned automatic scheduling
+- **Source Management:** Add, deactivate, and reactivate RSS sources without data loss
+
+### Source Management Features
+- **Non-Destructive Removal:** Deactivate sources instead of permanent deletion
+- **Easy Reactivation:** Deactivated sources can be re-added from built-in sources list
+- **Hover Controls:** Minus icon appears on hover for quick source removal
+- **Categorized Sources:** Organized by vendor, government, malware focus, and general news
+- **Smart Duplicate Prevention:** Prevents adding the same source multiple times
 
 ### User Interface
 - **Dark Theme:** Optimized for security professionals
@@ -180,10 +215,12 @@ npm run db:push
 - **Accessibility:** Full keyboard navigation and screen reader support
 - **Modern Components:** Built with Radix UI primitives for accessibility
 
-### Built-in Sources Management
-- **Quick Setup:** Dropdown to select from pre-configured cybersecurity sources
+### RSS Source Management
+- **Categorized Selection:** Choose from organized categories of cybersecurity sources
 - **One-Click Adding:** Simple interface to add trusted RSS feeds
-- **Smart Filtering:** Only shows sources not yet added to avoid duplicates
+- **Non-Destructive Removal:** Deactivate sources with hover minus icon
+- **Smart Reactivation:** Previously added sources can be reactivated without data loss
+- **Duplicate Prevention:** Only shows sources not currently active
 
 ## 🔧 Configuration
 
@@ -217,6 +254,8 @@ DATABASE_URL=postgresql://username:password@host:port/database
 ### RSS Sources  
 - `GET /api/sources` - Get all RSS sources
 - `POST /api/sources` - Add new RSS source
+- `PATCH /api/sources/:id` - Update RSS source (activate/deactivate)
+- `DELETE /api/sources/:id` - Permanently delete RSS source
 
 ### Bookmarks
 - `GET /api/bookmarks` - Get user bookmarks
