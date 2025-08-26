@@ -78,11 +78,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     for (const source of activeSources) {
       try {
-        console.log(`Fetching feed from ${source.name}...`);
+        console.log(`Fetching feed from ${source.name} (${source.url})...`);
         const feed = await parser.parseURL(source.url);
+        console.log(`Feed parsed successfully. Found ${feed.items.length} items`);
         
+        let processedCount = 0;
         for (const item of feed.items.slice(0, 10)) { // Limit to 10 latest items per source
-          if (!item.title || !item.link) continue;
+          if (!item.title || !item.link) {
+            console.log('Skipping item: missing title or link');
+            continue;
+          }
 
           // Check if article already exists
           const existingResult = await db.execute(sql`
@@ -93,18 +98,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const threatLevel = determineThreatLevel(item.title || "", item.contentSnippet || "");
             const tags = extractTags(item.title || "", item.contentSnippet || "");
             const readTime = estimateReadTime(item.contentSnippet || item.content || "");
-            const summary = item.contentSnippet || item.content?.substring(0, 300) + "..." || "";
-            const publishedAt = item.pubDate ? new Date(item.pubDate) : new Date();
+            const summary = (item.contentSnippet || item.content?.substring(0, 300) || "") + (item.content?.length > 300 ? "..." : "");
             
-            // Convert tags array to PostgreSQL array format
-            const tagsArray = `{${tags.map(tag => `"${tag.replace(/"/g, '\\"')}"`).join(',')}}}`;
+            // Handle published date - use current time if parsing fails
+            let publishedAt: Date;
+            try {
+              publishedAt = item.pubDate ? new Date(item.pubDate) : new Date();
+              // Validate the date
+              if (isNaN(publishedAt.getTime())) {
+                publishedAt = new Date();
+              }
+            } catch {
+              publishedAt = new Date();
+            }
             
-            await db.execute(sql`
-              INSERT INTO articles (title, summary, url, source, threat_level, tags, read_time, published_at)
-              VALUES (${item.title}, ${summary}, ${item.link}, ${source.name}, ${threatLevel}, ${tagsArray}, ${readTime}, ${publishedAt})
-            `);
-            
-            totalFetched++;
+            try {
+              await db.execute(sql`
+                INSERT INTO articles (title, summary, url, source, threat_level, tags, read_time, published_at)
+                VALUES (${item.title}, ${summary}, ${item.link}, ${source.name}, ${threatLevel}, ${tags}, ${readTime}, ${publishedAt})
+              `);
+              
+              totalFetched++;
+              processedCount++;
+              console.log(`Saved article: ${item.title}`);
+            } catch (insertError) {
+              console.error(`Failed to insert article "${item.title}":`, insertError);
+            }
+          } else {
+            console.log(`Article already exists: ${item.title}`);
           }
         }
 
@@ -115,10 +136,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           WHERE id = ${source.id}
         `);
         
-        console.log(`Processed feed from ${source.name}`);
+        console.log(`Processed ${processedCount} new articles from ${source.name}`);
         
       } catch (feedError) {
         console.error(`Error fetching feed for ${source.name}:`, feedError);
+        console.error('Feed URL:', source.url);
+        console.error('Error details:', feedError instanceof Error ? feedError.message : feedError);
       }
     }
 
