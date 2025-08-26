@@ -1,45 +1,72 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { PostgresStorage } from '../server/postgres-storage';
-import { insertRssSourceSchema } from '../shared/schema';
-
-let storage: PostgresStorage | null = null;
-
-function getStorage() {
-  if (!storage) {
-    if (!process.env.DATABASE_URL) {
-      throw new Error('DATABASE_URL environment variable is required');
-    }
-    storage = new PostgresStorage();
-  }
-  return storage;
-}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     console.log(`${req.method} /api/sources - Starting request`);
     
-    const storageInstance = getStorage();
+    if (!process.env.DATABASE_URL) {
+      return res.status(500).json({ 
+        error: 'DATABASE_URL environment variable is required',
+        hasDbUrl: false
+      });
+    }
+    
+    // Import modules dynamically to avoid module loading issues
+    const { drizzle } = await import('drizzle-orm/neon-serverless');
+    const { Pool } = await import('@neondatabase/serverless');
+    const { sql } = await import('drizzle-orm');
+    
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const db = drizzle(pool);
     
     if (req.method === 'GET') {
       console.log('Fetching RSS sources...');
-      const sources = await storageInstance.getRssSources();
+      const result = await db.execute(sql`
+        SELECT id, name, url, icon, color, is_active, last_fetched
+        FROM rss_sources 
+        ORDER BY name ASC
+      `);
+      
+      const sources = result.rows.map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        url: row.url,
+        icon: row.icon,
+        color: row.color,
+        isActive: row.is_active,
+        lastFetched: row.last_fetched
+      }));
+      
       console.log(`Successfully fetched ${sources.length} sources`);
       res.json(sources);
+      
     } else if (req.method === 'POST') {
       console.log('Creating new RSS source...');
-      const validatedData = insertRssSourceSchema.parse(req.body);
-      const source = await storageInstance.createRssSource(validatedData);
+      const { name, url, icon, color, isActive = true } = req.body;
+      
+      if (!name || !url) {
+        return res.status(400).json({ message: "Name and URL are required" });
+      }
+      
+      const result = await db.execute(sql`
+        INSERT INTO rss_sources (name, url, icon, color, is_active) 
+        VALUES (${name}, ${url}, ${icon || null}, ${color || null}, ${isActive})
+        RETURNING id, name, url, icon, color, is_active, last_fetched
+      `);
+      
+      const source = result.rows[0];
       console.log('Successfully created RSS source:', source.id);
-      res.status(201).json(source);
-    } catch (error) {
-      console.error('Error creating RSS source:', error);
-      res.status(400).json({ 
-        message: "Invalid source data",
-        error: error instanceof Error ? error.message : 'Unknown error'
+      res.status(201).json({
+        id: source.id,
+        name: source.name,
+        url: source.url,
+        icon: source.icon,
+        color: source.color,
+        isActive: source.is_active,
+        lastFetched: source.last_fetched
       });
-    }
-  } else if (req.method === 'PATCH') {
-    try {
+      
+    } else if (req.method === 'PATCH') {
       console.log('Updating RSS source...');
       const { pathname } = new URL(req.url!, `https://${req.headers.host}`);
       const sourceId = pathname.split('/').pop();
@@ -48,24 +75,66 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ message: "Source ID is required" });
       }
       
-      const updateData = req.body;
-      const updatedSource = await storageInstance.updateRssSource(sourceId, updateData);
+      const { isActive, name, url, icon, color } = req.body;
       
-      if (updatedSource) {
-        console.log('Successfully updated RSS source:', sourceId);
-        res.json(updatedSource);
-      } else {
-        res.status(404).json({ message: "Source not found" });
+      // Build update query dynamically based on provided fields
+      let updateQuery = 'UPDATE rss_sources SET ';
+      const updateFields = [];
+      const values = [sourceId];
+      let paramIndex = 2;
+      
+      if (isActive !== undefined) {
+        updateFields.push(`is_active = $${paramIndex}`);
+        values.push(isActive);
+        paramIndex++;
       }
-    } catch (error) {
-      console.error('Error updating RSS source:', error);
-      res.status(400).json({ 
-        message: "Invalid update data",
-        error: error instanceof Error ? error.message : 'Unknown error'
+      if (name !== undefined) {
+        updateFields.push(`name = $${paramIndex}`);
+        values.push(name);
+        paramIndex++;
+      }
+      if (url !== undefined) {
+        updateFields.push(`url = $${paramIndex}`);
+        values.push(url);
+        paramIndex++;
+      }
+      if (icon !== undefined) {
+        updateFields.push(`icon = $${paramIndex}`);
+        values.push(icon);
+        paramIndex++;
+      }
+      if (color !== undefined) {
+        updateFields.push(`color = $${paramIndex}`);
+        values.push(color);
+        paramIndex++;
+      }
+      
+      if (updateFields.length === 0) {
+        return res.status(400).json({ message: "No valid fields to update" });
+      }
+      
+      updateQuery += updateFields.join(', ');
+      updateQuery += ' WHERE id = $1 RETURNING id, name, url, icon, color, is_active, last_fetched';
+      
+      const result = await db.execute(sql.raw(updateQuery, values));
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ message: "Source not found" });
+      }
+      
+      const source = result.rows[0];
+      console.log('Successfully updated RSS source:', sourceId);
+      res.json({
+        id: source.id,
+        name: source.name,
+        url: source.url,
+        icon: source.icon,
+        color: source.color,
+        isActive: source.is_active,
+        lastFetched: source.last_fetched
       });
-    }
-  } else if (req.method === 'DELETE') {
-    try {
+      
+    } else if (req.method === 'DELETE') {
       console.log('Deleting RSS source...');
       const { pathname } = new URL(req.url!, `https://${req.headers.host}`);
       const sourceId = pathname.split('/').pop();
@@ -74,30 +143,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ message: "Source ID is required" });
       }
       
-      const deleted = await storageInstance.deleteRssSource(sourceId);
+      const result = await db.execute(sql`
+        DELETE FROM rss_sources WHERE id = ${sourceId}
+        RETURNING id
+      `);
       
-      if (deleted) {
-        console.log('Successfully deleted RSS source:', sourceId);
-        res.status(204).send('');
-      } else {
-        res.status(404).json({ message: "Source not found" });
+      if (result.rows.length === 0) {
+        return res.status(404).json({ message: "Source not found" });
       }
-    } catch (error) {
-      console.error('Error deleting RSS source:', error);
-      res.status(500).json({ 
-        message: "Failed to delete source",
-        error: error instanceof Error ? error.message : 'Unknown error'
-      });
+      
+      console.log('Successfully deleted RSS source:', sourceId);
+      res.status(204).send('');
+      
+    } else {
+      res.status(405).json({ message: 'Method not allowed' });
     }
-  } else {
-    res.status(405).json({ message: 'Method not allowed' });
-  }
+    
   } catch (error) {
     console.error('Fatal error in sources API:', error);
     res.status(500).json({ 
       message: "Internal server error",
       error: error instanceof Error ? error.message : 'Unknown error',
-      hasDbUrl: !!process.env.DATABASE_URL
+      hasDbUrl: !!process.env.DATABASE_URL,
+      stack: error instanceof Error ? error.stack?.split('\n').slice(0, 5) : undefined
     });
   }
 }
