@@ -1,8 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import { Pool } from '@neondatabase/serverless';
-import { sql } from 'drizzle-orm';
-import * as schema from '../shared/schema';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -18,10 +14,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    const db = drizzle(pool, { schema });
+    // Import modules dynamically to avoid module loading issues
+    const { drizzle } = await import('drizzle-orm/neon-serverless');
+    const { Pool } = await import('@neondatabase/serverless');
+    const { sql } = await import('drizzle-orm');
 
-    // Create tables if they don't exist
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const db = drizzle(pool);
+
+    console.log('Creating rss_sources table...');
+    // Create rss_sources table
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS rss_sources (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -31,9 +33,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         color VARCHAR(7),
         is_active BOOLEAN DEFAULT true,
         last_fetched TIMESTAMP
-      );
+      )
     `);
 
+    console.log('Creating articles table...');
+    // Create articles table
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS articles (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -46,78 +50,49 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         read_time INTEGER,
         published_at TIMESTAMP NOT NULL,
         created_at TIMESTAMP DEFAULT NOW()
-      );
+      )
     `);
 
+    console.log('Creating bookmarks table...');
+    // Create bookmarks table
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS bookmarks (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         article_id UUID REFERENCES articles(id) ON DELETE CASCADE,
         created_at TIMESTAMP DEFAULT NOW()
-      );
+      )
     `);
 
-    console.log('Database schema initialized successfully');
+    console.log('Database schema created successfully');
 
-    // Now add default sources
+    // Add default sources using individual INSERT statements
     const defaultSources = [
-      {
-        name: "Bleeping Computer",
-        url: "https://www.bleepingcomputer.com/feed/",
-        icon: "fas fa-exclamation",
-        color: "#ef4444",
-        isActive: true,
-      },
-      {
-        name: "The Hacker News",
-        url: "https://feeds.feedburner.com/TheHackersNews",
-        icon: "fas fa-user-secret",
-        color: "#f97316",
-        isActive: true,
-      },
-      {
-        name: "Dark Reading",
-        url: "https://www.darkreading.com/rss_simple.asp",
-        icon: "fas fa-eye",
-        color: "#8b5cf6",
-        isActive: true,
-      },
-      {
-        name: "CrowdStrike Blog",
-        url: "https://www.crowdstrike.com/blog/feed/",
-        icon: "fas fa-crow",
-        color: "#dc2626",
-        isActive: true,
-      },
-      {
-        name: "Unit 42",
-        url: "https://unit42.paloaltonetworks.com/feed/",
-        icon: "fas fa-shield-virus",
-        color: "#2563eb",
-        isActive: true,
-      },
-      {
-        name: "The DFIR Report",
-        url: "https://thedfirreport.com/feed/",
-        icon: "fas fa-search",
-        color: "#16a34a",
-        isActive: true,
-      },
+      ['Bleeping Computer', 'https://www.bleepingcomputer.com/feed/', 'fas fa-exclamation', '#ef4444'],
+      ['The Hacker News', 'https://feeds.feedburner.com/TheHackersNews', 'fas fa-user-secret', '#f97316'],
+      ['Dark Reading', 'https://www.darkreading.com/rss_simple.asp', 'fas fa-eye', '#8b5cf6'],
+      ['CrowdStrike Blog', 'https://www.crowdstrike.com/blog/feed/', 'fas fa-crow', '#dc2626'],
+      ['Unit 42', 'https://unit42.paloaltonetworks.com/feed/', 'fas fa-shield-virus', '#2563eb'],
+      ['The DFIR Report', 'https://thedfirreport.com/feed/', 'fas fa-search', '#16a34a']
     ];
 
     let sourcesAdded = 0;
-    for (const source of defaultSources) {
+    console.log('Adding default sources...');
+    
+    for (const [name, url, icon, color] of defaultSources) {
       try {
-        await db.execute(sql`
-          INSERT INTO rss_sources (name, url, icon, color, is_active) 
-          VALUES (${source.name}, ${source.url}, ${source.icon}, ${source.color}, ${source.isActive})
-          ON CONFLICT (url) DO NOTHING
-        `);
+        await db.execute(
+          sql`INSERT INTO rss_sources (name, url, icon, color, is_active) 
+              VALUES (${name}, ${url}, ${icon}, ${color}, true)
+              ON CONFLICT (url) DO NOTHING`
+        );
         sourcesAdded++;
+        console.log(`Added source: ${name}`);
       } catch (error) {
-        console.log(`Source ${source.name} already exists or failed to insert`);
+        console.log(`Source ${name} already exists or failed to insert:`, error);
       }
     }
+
+    console.log(`Initialization complete. Added ${sourcesAdded} sources.`);
 
     res.json({
       success: true,
@@ -133,6 +108,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(500).json({
       error: 'Database initialization failed',
       message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack?.split('\n').slice(0, 5) : undefined,
       timestamp: new Date().toISOString()
     });
   }
