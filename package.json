@@ -8,7 +8,8 @@
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "validate-deployment": "node scripts/validate-deployment.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

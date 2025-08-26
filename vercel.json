@@ -1,26 +1,43 @@
 {
   "version": 2,
-  "builds": [
+  "name": "threat-intel-digest",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/public",
+  "installCommand": "npm install",
+  "devCommand": "npm run dev",
+  "framework": null,
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "@vercel/node"
+    }
+  },
+  "rewrites": [
     {
-      "src": "api/*.ts",
-      "use": "@vercel/node"
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
     },
     {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist/public"
-      }
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ],
-  "routes": [
+  "headers": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
+        }
+      ]
     }
   ]
 }
