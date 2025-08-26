@@ -1,8 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { PostgresStorage } from '../server/postgres-storage';
 import Parser from 'rss-parser';
 
-const storage = new PostgresStorage();
 const parser = new Parser();
 
 // Helper functions
@@ -49,59 +47,86 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const sources = await storage.getRssSources();
-    const activeFeeds = sources.filter(source => source.isActive);
+    console.log('Starting RSS feed fetch process...');
+    
+    if (!process.env.DATABASE_URL) {
+      return res.status(500).json({ 
+        error: 'DATABASE_URL environment variable is required'
+      });
+    }
+    
+    // Import modules dynamically
+    const { drizzle } = await import('drizzle-orm/neon-serverless');
+    const { Pool } = await import('@neondatabase/serverless');
+    const { sql } = await import('drizzle-orm');
+    
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const db = drizzle(pool);
+    
+    // Get active RSS sources
+    console.log('Fetching active RSS sources...');
+    const sourcesResult = await db.execute(sql`
+      SELECT id, name, url, icon, color, is_active 
+      FROM rss_sources 
+      WHERE is_active = true
+    `);
+    
+    const activeSources = sourcesResult.rows;
+    console.log(`Found ${activeSources.length} active RSS sources`);
     
     let totalFetched = 0;
-
-    for (const source of activeFeeds) {
+    
+    for (const source of activeSources) {
       try {
+        console.log(`Fetching feed from ${source.name}...`);
         const feed = await parser.parseURL(source.url);
         
         for (const item of feed.items.slice(0, 10)) { // Limit to 10 latest items per source
           if (!item.title || !item.link) continue;
 
           // Check if article already exists
-          const existingArticles = await storage.getArticles({ search: item.title });
-          const exists = existingArticles.some(article => article.title === item.title);
+          const existingResult = await db.execute(sql`
+            SELECT id FROM articles WHERE url = ${item.link}
+          `);
           
-          if (!exists) {
+          if (existingResult.rows.length === 0) {
             const threatLevel = determineThreatLevel(item.title || "", item.contentSnippet || "");
             const tags = extractTags(item.title || "", item.contentSnippet || "");
+            const readTime = estimateReadTime(item.contentSnippet || item.content || "");
+            const summary = item.contentSnippet || item.content?.substring(0, 300) + "..." || "";
+            const publishedAt = item.pubDate ? new Date(item.pubDate) : new Date();
             
-            await storage.createArticle({
-              title: item.title,
-              summary: item.contentSnippet || item.content?.substring(0, 300) + "..." || "",
-              url: item.link,
-              source: source.name,
-              sourceIcon: source.icon || "fas fa-rss",
-              publishedAt: item.pubDate ? new Date(item.pubDate) : new Date(),
-              threatLevel,
-              tags,
-              readTime: estimateReadTime(item.contentSnippet || item.content || ""),
-            });
+            await db.execute(sql`
+              INSERT INTO articles (title, summary, url, source, threat_level, tags, read_time, published_at)
+              VALUES (${item.title}, ${summary}, ${item.link}, ${source.name}, ${threatLevel}, ${tags}, ${readTime}, ${publishedAt})
+            `);
             
             totalFetched++;
           }
         }
 
-        // Update last fetched timestamp
-        await storage.updateRssSource(source.id, {
-          name: source.name,
-          url: source.url,
-          icon: source.icon,
-          color: source.color,
-          isActive: source.isActive,
-        });
+        // Update last fetched timestamp for the source
+        await db.execute(sql`
+          UPDATE rss_sources 
+          SET last_fetched = NOW() 
+          WHERE id = ${source.id}
+        `);
+        
+        console.log(`Processed feed from ${source.name}`);
         
       } catch (feedError) {
         console.error(`Error fetching feed for ${source.name}:`, feedError);
       }
     }
 
+    console.log(`Feed fetch complete. Fetched ${totalFetched} new articles.`);
     res.json({ message: `Successfully fetched ${totalFetched} new articles` });
+    
   } catch (error) {
     console.error("Error fetching feeds:", error);
-    res.status(500).json({ message: "Failed to fetch RSS feeds" });
+    res.status(500).json({ 
+      message: "Failed to fetch RSS feeds",
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 }
