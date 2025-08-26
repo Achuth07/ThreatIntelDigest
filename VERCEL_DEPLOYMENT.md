@@ -132,6 +132,10 @@ The `vercel.json` configuration handles:
 
 #### Build Failures
 ```bash
+# Issue: "Cannot find package '@replit/vite-plugin-*'" 
+# Solution: Replit plugins conditionally loaded (already fixed)
+npm run build  # Test locally first
+
 # Issue: "vite: command not found" or "esbuild: command not found"
 # Solution: Build tools moved to dependencies (already fixed)
 npm run build  # Test locally first

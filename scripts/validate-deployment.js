@@ -93,6 +93,22 @@ try {
   warnings.push('⚠️  TypeScript configuration issues detected');
 }
 
+// Check Vite configuration for Replit plugins
+if (fs.existsSync('vite.config.ts')) {
+  try {
+    const viteConfig = fs.readFileSync('vite.config.ts', 'utf8');
+    if (viteConfig.includes('@replit/vite-plugin') && viteConfig.includes('process.env.REPL_ID')) {
+      success.push('✅ Replit plugins are conditionally loaded');
+    } else if (viteConfig.includes('@replit/vite-plugin')) {
+      warnings.push('⚠️  Replit plugins detected but may not be conditionally loaded');
+    }
+  } catch (e) {
+    warnings.push('⚠️  Could not parse vite.config.ts');
+  }
+} else {
+  warnings.push('⚠️  vite.config.ts not found');
+}
+
 // Display results
 console.log('📋 VALIDATION RESULTS:\n');
 
