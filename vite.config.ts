@@ -1,19 +1,21 @@
 import { defineConfig } from "vite";
+import type { PluginOption } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 
 export default defineConfig(async () => {
-  const plugins = [react()];
+  const plugins: PluginOption[] = [react()];
 
   // Only load Replit plugins in Replit environment
   if (process.env.NODE_ENV !== "production" && process.env.REPL_ID !== undefined) {
     try {
       const { cartographer } = await import("@replit/vite-plugin-cartographer");
       const runtimeErrorOverlay = await import("@replit/vite-plugin-runtime-error-modal");
-      plugins.push(
+      const replitPlugins: PluginOption[] = [
         runtimeErrorOverlay.default(),
         cartographer()
-      );
+      ];
+      plugins.push(...replitPlugins);
     } catch (error) {
       console.warn("Replit plugins not available, skipping...");
     }
