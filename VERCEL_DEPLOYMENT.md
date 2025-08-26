@@ -152,6 +152,20 @@ npm install --production
 4. Test connection locally
 ```
 
+#### Function Runtime Issues
+```bash
+# Issue: "Function Runtimes must have a valid version"
+# Solutions:
+1. Use simplified vercel.json (current configuration)
+2. Or specify exact runtime version: "@vercel/node@18"
+3. Ensure API files have default exports
+4. Check Node.js version compatibility
+
+# Alternative approach if issues persist:
+# Rename vercel.json to vercel-backup.json
+# Copy vercel-alternative.json to vercel.json
+```
+
 #### API Route Issues
 ```bash
 # Issue: API routes return 404
