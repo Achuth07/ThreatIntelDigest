@@ -114,7 +114,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               INSERT INTO vulnerabilities (
                 id, description, published_date, last_modified_date, vuln_status,
                 cvss_v3_score, cvss_v3_severity, cvss_v2_score, cvss_v2_severity,
-                weaknesses, configurations, references
+                weaknesses, configurations, reference_urls
               )
               VALUES (
                 ${cveId}, ${description}, ${cve.published}, ${cve.lastModified}, ${cve.vulnStatus},

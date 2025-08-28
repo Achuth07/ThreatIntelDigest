@@ -1,8 +1,38 @@
 import { type Article, type InsertArticle, type Bookmark, type InsertBookmark, type RssSource, type InsertRssSource } from "@shared/schema";
 import { randomUUID } from "crypto";
 
+// Define CVE types for in-memory storage
+interface CVE {
+  id: string;
+  description: string;
+  publishedDate: Date;
+  lastModifiedDate: Date;
+  vulnStatus: string;
+  cvssV3Score: number | null;
+  cvssV3Severity: string | null;
+  cvssV2Score: number | null;
+  cvssV2Severity: string | null;
+  weaknesses: string[];
+  references: { url: string; source: string; tags?: string[] }[];
+  createdAt: Date;
+}
+
+interface InsertCVE {
+  id: string;
+  description: string;
+  publishedDate: Date;
+  lastModifiedDate: Date;
+  vulnStatus: string;
+  cvssV3Score?: number | null;
+  cvssV3Severity?: string | null;
+  cvssV2Score?: number | null;
+  cvssV2Severity?: string | null;
+  weaknesses?: string[];
+  references?: { url: string; source: string; tags?: string[] }[];
+}
+
 // Re-export types for use in other files
-export { type Article, type InsertArticle, type Bookmark, type InsertBookmark, type RssSource, type InsertRssSource };
+export { type Article, type InsertArticle, type Bookmark, type InsertBookmark, type RssSource, type InsertRssSource, type CVE, type InsertCVE };
 
 export interface IStorage {
   // Articles
@@ -24,17 +54,25 @@ export interface IStorage {
   createRssSource(source: InsertRssSource): Promise<RssSource>;
   updateRssSource(id: string, source: Partial<InsertRssSource>): Promise<RssSource | undefined>;
   deleteRssSource(id: string): Promise<boolean>;
+  
+  // CVE/Vulnerabilities
+  getCVEs(params?: { limit?: number; offset?: number; severity?: string }): Promise<CVE[]>;
+  getCVE(id: string): Promise<CVE | undefined>;
+  createCVE(cve: InsertCVE): Promise<CVE>;
+  cveExists(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
   private articles: Map<string, Article>;
   private bookmarks: Map<string, Bookmark>;
   private rssSources: Map<string, RssSource>;
+  private cves: Map<string, CVE>;
 
   constructor() {
     this.articles = new Map();
     this.bookmarks = new Map();
     this.rssSources = new Map();
+    this.cves = new Map();
     this.initializeDefaultSources();
   }
 
@@ -232,6 +270,52 @@ export class MemStorage implements IStorage {
 
   async deleteRssSource(id: string): Promise<boolean> {
     return this.rssSources.delete(id);
+  }
+
+  // CVE/Vulnerabilities
+  async getCVEs(params?: { limit?: number; offset?: number; severity?: string }): Promise<CVE[]> {
+    let cves = Array.from(this.cves.values());
+    
+    // Filter by severity if provided
+    if (params?.severity) {
+      const severityUpper = params.severity.toUpperCase();
+      cves = cves.filter(cve => 
+        cve.cvssV3Severity === severityUpper || cve.cvssV2Severity === severityUpper
+      );
+    }
+    
+    // Sort by last modified date (newest first)
+    cves.sort((a, b) => 
+      new Date(b.lastModifiedDate).getTime() - new Date(a.lastModifiedDate).getTime()
+    );
+    
+    // Apply pagination
+    const offset = params?.offset || 0;
+    const limit = params?.limit || 50;
+    return cves.slice(offset, offset + limit);
+  }
+
+  async getCVE(id: string): Promise<CVE | undefined> {
+    return this.cves.get(id);
+  }
+
+  async createCVE(insertCVE: InsertCVE): Promise<CVE> {
+    const cve: CVE = {
+      ...insertCVE,
+      cvssV3Score: insertCVE.cvssV3Score ?? null,
+      cvssV3Severity: insertCVE.cvssV3Severity ?? null,
+      cvssV2Score: insertCVE.cvssV2Score ?? null,
+      cvssV2Severity: insertCVE.cvssV2Severity ?? null,
+      weaknesses: insertCVE.weaknesses ?? [],
+      references: insertCVE.references ?? [],
+      createdAt: new Date(),
+    };
+    this.cves.set(cve.id, cve);
+    return cve;
+  }
+
+  async cveExists(id: string): Promise<boolean> {
+    return this.cves.has(id);
   }
 }
 

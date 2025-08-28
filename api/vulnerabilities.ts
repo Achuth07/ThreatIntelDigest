@@ -45,7 +45,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         cvss_v2_score,
         cvss_v2_severity,
         weaknesses,
-        references,
+        reference_urls,
         created_at
       FROM vulnerabilities
     `;
@@ -98,7 +98,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       cvssV2Score: row.cvss_v2_score ? parseFloat(row.cvss_v2_score) : null,
       cvssV2Severity: row.cvss_v2_severity,
       weaknesses: row.weaknesses || [],
-      references: row.references || [],
+      references: row.reference_urls || [],
       createdAt: row.created_at,
     }));
     

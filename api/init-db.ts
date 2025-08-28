@@ -58,7 +58,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS bookmarks (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        article_id UUID REFERENCES articles(id) ON DELETE CASCADE,
+        article_id UUID,
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
@@ -67,18 +67,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Create vulnerabilities table
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS vulnerabilities (
-        id VARCHAR(20) PRIMARY KEY, -- CVE ID like CVE-2024-1234
+        id VARCHAR(20) PRIMARY KEY,
         description TEXT NOT NULL,
         published_date TIMESTAMP NOT NULL,
         last_modified_date TIMESTAMP NOT NULL,
-        vuln_status TEXT NOT NULL, -- Analyzed, Modified, etc.
+        vuln_status TEXT NOT NULL,
         cvss_v3_score DECIMAL(3,1),
-        cvss_v3_severity TEXT, -- CRITICAL, HIGH, MEDIUM, LOW
+        cvss_v3_severity TEXT,
         cvss_v2_score DECIMAL(3,1),
         cvss_v2_severity TEXT,
-        weaknesses JSONB DEFAULT '[]'::jsonb, -- CWE IDs
-        configurations JSONB DEFAULT '[]'::jsonb, -- CPE configurations
-        references JSONB DEFAULT '[]'::jsonb, -- Reference URLs and sources
+        weaknesses JSON,
+        configurations JSON,
+        reference_urls JSON,
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);

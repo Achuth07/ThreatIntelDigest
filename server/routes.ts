@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { insertArticleSchema, insertBookmarkSchema, insertRssSourceSchema } from "@shared/schema";
 import type { IStorage } from "./storage";
 import { PostgresStorage } from "./postgres-storage";
-import { MemStorage } from "./storage";
+import { MemStorage, type CVE } from "./storage";
 import Parser from "rss-parser";
 import axios from "axios";
 import { JSDOM } from 'jsdom';
@@ -211,6 +211,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Database initialization endpoint
+  app.post("/api/init-db", async (req, res) => {
+    try {
+      // Import the init-db handler
+      const { default: initDbHandler } = await import('../api/init-db');
+      // Create a mock Vercel request/response for compatibility
+      const vercelReq = { ...req, method: 'POST' } as any;
+      const vercelRes = { 
+        status: (code: number) => ({ json: (data: any) => res.status(code).json(data) }),
+        json: (data: any) => res.json(data)
+      } as any;
+      
+      await initDbHandler(vercelReq, vercelRes);
+    } catch (error) {
+      console.error('Error in init-db endpoint:', error);
+      res.status(500).json({ message: 'Failed to initialize database' });
+    }
+  });
+
+  // CVE/Vulnerabilities endpoints
+  app.post("/api/fetch-cves", async (req, res) => {
+    try {
+      // Check if using memory storage
+      if (!process.env.DATABASE_URL) {
+        // Use in-memory storage implementation
+        await fetchCVEsToMemory(storage, res);
+      } else {
+        // Import the fetch-cves handler for PostgreSQL
+        const { default: fetchCVEsHandler } = await import('../api/fetch-cves');
+        // Create a mock Vercel request/response for compatibility
+        const vercelReq = { ...req, method: 'POST' } as any;
+        const vercelRes = { 
+          status: (code: number) => ({ json: (data: any) => res.status(code).json(data) }),
+          json: (data: any) => res.json(data)
+        } as any;
+        
+        await fetchCVEsHandler(vercelReq, vercelRes);
+      }
+    } catch (error) {
+      console.error('Error in fetch-cves endpoint:', error);
+      res.status(500).json({ message: 'Failed to fetch CVEs' });
+    }
+  });
+
+  app.get("/api/vulnerabilities", async (req, res) => {
+    try {
+      // Check if using memory storage
+      if (!process.env.DATABASE_URL) {
+        // Use in-memory storage implementation
+        await getVulnerabilitiesFromMemory(storage, req, res);
+      } else {
+        // Import the vulnerabilities handler for PostgreSQL
+        const { default: vulnerabilitiesHandler } = await import('../api/vulnerabilities');
+        // Create a mock Vercel request/response for compatibility
+        const vercelReq = { ...req, method: 'GET', query: req.query } as any;
+        const vercelRes = { 
+          status: (code: number) => ({ json: (data: any) => res.status(code).json(data) }),
+          json: (data: any) => res.json(data)
+        } as any;
+        
+        await vulnerabilitiesHandler(vercelReq, vercelRes);
+      }
+    } catch (error) {
+      console.error('Error in vulnerabilities endpoint:', error);
+      res.status(500).json({ message: 'Failed to fetch vulnerabilities' });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Fetch Article Content
@@ -311,6 +379,199 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   return httpServer;
+}
+
+// Helper functions for in-memory CVE support
+async function fetchCVEsToMemory(storage: any, res: any) {
+  console.log('Fetching CVEs to in-memory storage...');
+  
+  if (!process.env.NVD_API_KEY) {
+    return res.status(500).json({ 
+      error: 'NVD_API_KEY environment variable is required'
+    });
+  }
+  
+  try {
+    // Calculate date range for recent CVEs (last 7 days)
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 7);
+    
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+    
+    // Fetch CVEs from NVD API
+    const nvdResponse = await fetch(
+      `https://services.nvd.nist.gov/rest/json/cves/2.0/?lastModStartDate=${startDateStr}T00:00:00.000&lastModEndDate=${endDateStr}T23:59:59.999&resultsPerPage=50`,
+      {
+        headers: {
+          'apiKey': process.env.NVD_API_KEY,
+          'User-Agent': 'ThreatIntelDigest/1.0',
+          'Accept': 'application/json'
+        }
+      }
+    );
+    
+    if (!nvdResponse.ok) {
+      throw new Error(`NVD API error: ${nvdResponse.status} ${nvdResponse.statusText}`);
+    }
+    
+    const nvdData = await nvdResponse.json();
+    console.log(`Found ${nvdData.vulnerabilities?.length || 0} CVEs from NVD`);
+    
+    let processedCount = 0;
+    let errors: string[] = [];
+    
+    if (nvdData.vulnerabilities && nvdData.vulnerabilities.length > 0) {
+      for (const vuln of nvdData.vulnerabilities) {
+        try {
+          const cve = vuln.cve;
+          const cveId = cve.id;
+          
+          // Check if CVE already exists
+          const exists = await storage.cveExists(cveId);
+          
+          if (!exists) {
+            // Extract description
+            const description = cve.descriptions?.find((desc: any) => desc.lang === 'en')?.value || 'No description available';
+            
+            // Extract CVSS scores
+            let cvssV3Score = null;
+            let cvssV3Severity = null;
+            let cvssV2Score = null;
+            let cvssV2Severity = null;
+            
+            const metrics = cve.metrics;
+            if (metrics?.cvssMetricV31?.[0]) {
+              cvssV3Score = metrics.cvssMetricV31[0].cvssData.baseScore;
+              cvssV3Severity = metrics.cvssMetricV31[0].cvssData.baseSeverity;
+            } else if (metrics?.cvssMetricV30?.[0]) {
+              cvssV3Score = metrics.cvssMetricV30[0].cvssData.baseScore;
+              cvssV3Severity = metrics.cvssMetricV30[0].cvssData.baseSeverity;
+            }
+            
+            if (metrics?.cvssMetricV2?.[0]) {
+              cvssV2Score = metrics.cvssMetricV2[0].cvssData.baseScore;
+              cvssV2Severity = metrics.cvssMetricV2[0].baseSeverity;
+            }
+            
+            // Extract weaknesses (CWEs)
+            const weaknesses = cve.weaknesses?.map((weakness: any) => 
+              weakness.description?.find((desc: any) => desc.lang === 'en')?.value
+            ).filter(Boolean) || [];
+            
+            // Extract references
+            const references = cve.references?.map((ref: any) => ({
+              url: ref.url,
+              source: ref.source || 'Unknown',
+              tags: ref.tags || []
+            })) || [];
+            
+            await storage.createCVE({
+              id: cveId,
+              description,
+              publishedDate: new Date(cve.published),
+              lastModifiedDate: new Date(cve.lastModified),
+              vulnStatus: cve.vulnStatus,
+              cvssV3Score,
+              cvssV3Severity,
+              cvssV2Score,
+              cvssV2Severity,
+              weaknesses,
+              references
+            });
+            
+            processedCount++;
+            console.log(`Saved CVE: ${cveId}`);
+          } else {
+            console.log(`CVE already exists: ${cveId}`);
+          }
+        } catch (cveError) {
+          console.error(`Failed to process CVE:`, cveError);
+          errors.push(`Failed to process CVE: ${cveError instanceof Error ? cveError.message : 'Unknown error'}`);
+        }
+      }
+    }
+    
+    console.log(`CVE fetch complete. Processed ${processedCount} new CVEs.`);
+    res.json({ 
+      message: `Successfully fetched ${processedCount} new CVEs`,
+      totalProcessed: processedCount,
+      totalFromAPI: nvdData.vulnerabilities?.length || 0,
+      errors: errors.length > 0 ? errors.slice(0, 5) : [],
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error("Error fetching CVEs:", error);
+    res.status(500).json({ 
+      message: "Failed to fetch CVEs from NVD",
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
+
+async function getVulnerabilitiesFromMemory(storage: any, req: any, res: any) {
+  try {
+    const { 
+      limit = '50', 
+      severity, 
+      page = '1' 
+    } = req.query;
+    
+    const limitNum = Math.min(parseInt(limit as string, 10) || 50, 100);
+    const pageNum = Math.max(parseInt(page as string, 10) || 1, 1);
+    const offset = (pageNum - 1) * limitNum;
+    
+    const cves = await storage.getCVEs({
+      limit: limitNum,
+      offset,
+      severity: severity as string
+    });
+    
+    // Get total count for pagination (simplified for memory storage)
+    const allCVEs = await storage.getCVEs({});
+    const totalCount = allCVEs.length;
+    
+    // Transform CVEs to match the API response format
+    const vulnerabilities = cves.map((cve: any) => ({
+      id: cve.id,
+      description: cve.description,
+      publishedDate: cve.publishedDate.toISOString(),
+      lastModifiedDate: cve.lastModifiedDate.toISOString(),
+      vulnStatus: cve.vulnStatus,
+      cvssV3Score: cve.cvssV3Score,
+      cvssV3Severity: cve.cvssV3Severity,
+      cvssV2Score: cve.cvssV2Score,
+      cvssV2Severity: cve.cvssV2Severity,
+      weaknesses: cve.weaknesses || [],
+      references: cve.references || [],
+      createdAt: cve.createdAt.toISOString(),
+    }));
+    
+    res.json({
+      vulnerabilities,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / limitNum),
+        hasNext: pageNum * limitNum < totalCount,
+        hasPrev: pageNum > 1,
+      },
+      meta: {
+        count: vulnerabilities.length,
+        lastUpdated: new Date().toISOString(),
+      },
+    });
+    
+  } catch (error) {
+    console.error("Error fetching vulnerabilities from memory:", error);
+    res.status(500).json({ 
+      message: "Failed to fetch vulnerabilities",
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 }
 
 // Helper functions
