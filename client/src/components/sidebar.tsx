@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Globe, Rss, Filter, Zap, RefreshCw, Download, Plus, Minus } from 'lucide-react';
+import { Globe, Rss, Filter, Zap, RefreshCw, Download, Plus, Minus, Shield } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { AddSourcesDialog } from '@/components/add-sources-dialog';
@@ -19,6 +19,8 @@ interface SidebarProps {
   onTimeFilterChange: (filter: string) => void;
   threatFilters: string[];
   onThreatFilterChange: (filters: string[]) => void;
+  onClose?: () => void;
+  onVulnerabilitiesClick?: () => void;
 }
 
 export function Sidebar({
@@ -28,6 +30,8 @@ export function Sidebar({
   onTimeFilterChange,
   threatFilters,
   onThreatFilterChange,
+  onClose,
+  onVulnerabilitiesClick,
 }: SidebarProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -69,6 +73,23 @@ export function Sidebar({
       toast({
         title: "Export Failed",
         description: error.message || "Failed to export bookmarks. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const fetchCVEsMutation = useMutation({
+    mutationFn: () => apiRequest('POST', '/api/fetch-cves'),
+    onSuccess: () => {
+      toast({
+        title: "CVEs Updated",
+        description: "Successfully fetched latest CVEs from NVD",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to fetch CVEs. Please try again.",
         variant: "destructive",
       });
     },
@@ -136,8 +157,21 @@ export function Sidebar({
 
   if (isLoading) {
     return (
-      <aside className="w-80 bg-slate-800 border-r border-slate-700 overflow-y-auto">
-        <div className="p-6">
+      <aside className="w-80 lg:w-80 bg-slate-800 border-r border-slate-700 overflow-y-auto h-full">
+        <div className="p-4 lg:p-6">
+          {/* Mobile Close Button */}
+          {onClose && (
+            <div className="lg:hidden flex justify-end mb-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onClose}
+                className="text-slate-400 hover:text-slate-100"
+              >
+                ×
+              </Button>
+            </div>
+          )}
           <div className="animate-pulse space-y-4">
             <div className="h-6 bg-slate-700 rounded"></div>
             <div className="space-y-3">
@@ -154,8 +188,21 @@ export function Sidebar({
   const totalArticles = sources.reduce((sum, source) => sum + (source.isActive ? 10 : 0), 0); // Rough estimate
 
   return (
-    <aside className="w-80 bg-slate-800 border-r border-slate-700 overflow-y-auto">
-      <div className="p-6">
+    <aside className="w-80 lg:w-80 bg-slate-800 border-r border-slate-700 overflow-y-auto h-full">
+      <div className="p-4 lg:p-6">
+        {/* Mobile Close Button */}
+        {onClose && (
+          <div className="lg:hidden flex justify-end mb-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="text-slate-400 hover:text-slate-100"
+            >
+              ×
+            </Button>
+          </div>
+        )}
         {/* Feed Sources */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
@@ -230,6 +277,44 @@ export function Sidebar({
                 </button>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Vulnerabilities Section */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-slate-100 flex items-center">
+              <Shield className="w-5 h-5 text-cyber-cyan mr-2" />
+              Vulnerabilities
+            </h2>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 text-slate-400 hover:text-slate-100 hover:bg-slate-700"
+              onClick={() => fetchCVEsMutation.mutate()}
+              disabled={fetchCVEsMutation.isPending}
+              title="Refresh CVEs from NVD"
+            >
+              <RefreshCw className={`w-4 h-4 ${fetchCVEsMutation.isPending ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
+          
+          <div className="space-y-2">
+            <button
+              className="w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors hover:bg-slate-700"
+              onClick={onVulnerabilitiesClick}
+              data-testid="button-vulnerabilities"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="w-5 h-5 bg-red-500 rounded-sm flex items-center justify-center text-white text-xs">
+                  CVE
+                </div>
+                <span className="font-medium text-slate-100">Latest CVEs</span>
+              </div>
+              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-medium">
+                NEW
+              </span>
+            </button>
           </div>
         </div>
 

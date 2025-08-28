@@ -1,0 +1,154 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node';
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
+
+  try {
+    console.log('Starting CVE fetch process...');
+    
+    if (!process.env.DATABASE_URL) {
+      return res.status(500).json({ 
+        error: 'DATABASE_URL environment variable is required'
+      });
+    }
+
+    if (!process.env.NVD_API_KEY) {
+      return res.status(500).json({ 
+        error: 'NVD_API_KEY environment variable is required'
+      });
+    }
+    
+    // Import modules dynamically
+    const { drizzle } = await import('drizzle-orm/neon-serverless');
+    const { Pool } = await import('@neondatabase/serverless');
+    const { sql } = await import('drizzle-orm');
+    
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const db = drizzle(pool);
+    
+    console.log('Fetching latest CVEs from NVD API...');
+    
+    // Calculate date range for recent CVEs (last 7 days)
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 7);
+    
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+    
+    // Fetch CVEs from NVD API
+    const nvdResponse = await fetch(
+      `https://services.nvd.nist.gov/rest/json/cves/2.0/?lastModStartDate=${startDateStr}T00:00:00.000&lastModEndDate=${endDateStr}T23:59:59.999&resultsPerPage=50`,
+      {
+        headers: {
+          'apiKey': process.env.NVD_API_KEY,
+          'User-Agent': 'ThreatIntelDigest/1.0',
+          'Accept': 'application/json'
+        }
+      }
+    );
+    
+    if (!nvdResponse.ok) {
+      throw new Error(`NVD API error: ${nvdResponse.status} ${nvdResponse.statusText}`);
+    }
+    
+    const nvdData = await nvdResponse.json();
+    console.log(`Found ${nvdData.vulnerabilities?.length || 0} CVEs from NVD`);
+    
+    let processedCount = 0;
+    let errors: string[] = [];
+    
+    if (nvdData.vulnerabilities && nvdData.vulnerabilities.length > 0) {
+      for (const vuln of nvdData.vulnerabilities) {
+        try {
+          const cve = vuln.cve;
+          const cveId = cve.id;
+          
+          // Check if CVE already exists
+          const existingResult = await db.execute(sql`
+            SELECT id FROM vulnerabilities WHERE id = ${cveId}
+          `);
+          
+          if (existingResult.rows.length === 0) {
+            // Extract description
+            const description = cve.descriptions?.find((desc: any) => desc.lang === 'en')?.value || 'No description available';
+            
+            // Extract CVSS scores
+            let cvssV3Score = null;
+            let cvssV3Severity = null;
+            let cvssV2Score = null;
+            let cvssV2Severity = null;
+            
+            const metrics = cve.metrics;
+            if (metrics?.cvssMetricV31?.[0]) {
+              cvssV3Score = metrics.cvssMetricV31[0].cvssData.baseScore;
+              cvssV3Severity = metrics.cvssMetricV31[0].cvssData.baseSeverity;
+            } else if (metrics?.cvssMetricV30?.[0]) {
+              cvssV3Score = metrics.cvssMetricV30[0].cvssData.baseScore;
+              cvssV3Severity = metrics.cvssMetricV30[0].cvssData.baseSeverity;
+            }
+            
+            if (metrics?.cvssMetricV2?.[0]) {
+              cvssV2Score = metrics.cvssMetricV2[0].cvssData.baseScore;
+              cvssV2Severity = metrics.cvssMetricV2[0].baseSeverity;
+            }
+            
+            // Extract weaknesses (CWEs)
+            const weaknesses = cve.weaknesses?.map((weakness: any) => 
+              weakness.description?.find((desc: any) => desc.lang === 'en')?.value
+            ).filter(Boolean) || [];
+            
+            // Extract references
+            const references = cve.references?.map((ref: any) => ({
+              url: ref.url,
+              source: ref.source || 'Unknown',
+              tags: ref.tags || []
+            })) || [];
+            
+            // Extract configurations (simplified)
+            const configurations = cve.configurations?.nodes || [];
+            
+            await db.execute(sql`
+              INSERT INTO vulnerabilities (
+                id, description, published_date, last_modified_date, vuln_status,
+                cvss_v3_score, cvss_v3_severity, cvss_v2_score, cvss_v2_severity,
+                weaknesses, configurations, references
+              )
+              VALUES (
+                ${cveId}, ${description}, ${cve.published}, ${cve.lastModified}, ${cve.vulnStatus},
+                ${cvssV3Score}, ${cvssV3Severity}, ${cvssV2Score}, ${cvssV2Severity},
+                ${JSON.stringify(weaknesses)}, ${JSON.stringify(configurations)}, ${JSON.stringify(references)}
+              )
+            `);
+            
+            processedCount++;
+            console.log(`Saved CVE: ${cveId}`);
+          } else {
+            console.log(`CVE already exists: ${cveId}`);
+          }
+        } catch (cveError) {
+          console.error(`Failed to process CVE:`, cveError);
+          errors.push(`Failed to process CVE: ${cveError instanceof Error ? cveError.message : 'Unknown error'}`);
+        }
+      }
+    }
+    
+    console.log(`CVE fetch complete. Processed ${processedCount} new CVEs.`);
+    res.json({ 
+      message: `Successfully fetched ${processedCount} new CVEs`,
+      totalProcessed: processedCount,
+      totalFromAPI: nvdData.vulnerabilities?.length || 0,
+      errors: errors.length > 0 ? errors.slice(0, 5) : [], // Return first 5 errors
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error("Error fetching CVEs:", error);
+    res.status(500).json({ 
+      message: "Failed to fetch CVEs from NVD",
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}

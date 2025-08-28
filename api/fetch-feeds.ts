@@ -75,15 +75,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log(`Found ${activeSources.length} active RSS sources`);
     
     let totalFetched = 0;
-    let feedResults = [];
+    let feedResults: any[] = [];
     
     for (const source of activeSources) {
-      let sourceResult = {
+      let sourceResult: any = {
         name: source.name,
         url: source.url,
         itemsFound: 0,
         itemsProcessed: 0,
-        errors: []
+        errors: [] as string[]
       };
       try {
         console.log(`Fetching feed from ${source.name} (${source.url})...`);

@@ -4,6 +4,7 @@ import { Header } from '@/components/header';
 import { Sidebar } from '@/components/sidebar';
 import { ArticleCard } from '@/components/article-card';
 import { ArticleViewer } from '@/components/article-viewer';
+import { CVEList } from '@/components/cve-list';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -23,8 +24,10 @@ export default function Home() {
   const [timeFilter, setTimeFilter] = useState('today');
   const [threatFilters, setThreatFilters] = useState(['CRITICAL', 'HIGH', 'MEDIUM']);
   const [showBookmarks, setShowBookmarks] = useState(false);
+  const [showVulnerabilities, setShowVulnerabilities] = useState(false);
   const [page, setPage] = useState(0);
   const [selectedArticleUrl, setSelectedArticleUrl] = useState<string | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const ARTICLES_PER_PAGE = 10;
 
   // Fetch articles
@@ -101,6 +104,24 @@ export default function Home() {
     setSelectedArticleUrl(null);
   };
 
+  const handleSidebarToggle = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  const handleSidebarClose = () => {
+    setIsSidebarOpen(false);
+  };
+
+  const handleVulnerabilitiesClick = () => {
+    setShowVulnerabilities(true);
+    setShowBookmarks(false);
+    handleSidebarClose(); // Auto-close sidebar on mobile
+  };
+
+  const handleVulnerabilitiesClose = () => {
+    setShowVulnerabilities(false);
+  };
+
   // Filter articles based on current filters
   const filteredArticles = articles.filter(article => {
     // Time filter
@@ -147,137 +168,161 @@ export default function Home() {
         onSearch={handleSearch}
         bookmarkCount={bookmarks.length}
         onBookmarksClick={handleBookmarksClick}
+        onSidebarToggle={handleSidebarToggle}
+        isSidebarOpen={isSidebarOpen}
       />
       
-      <div className="flex h-screen pt-16">
-        <Sidebar
-          selectedSource={selectedSource}
-          onSourceSelect={handleSourceSelect}
-          timeFilter={timeFilter}
-          onTimeFilterChange={handleTimeFilterChange}
-          threatFilters={threatFilters}
-          onThreatFilterChange={handleThreatFilterChange}
-        />
+      <div className="flex h-screen pt-16 relative">
+        {/* Mobile Overlay */}
+        {isSidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
+            onClick={handleSidebarClose}
+          />
+        )}
+        
+        {/* Sidebar */}
+        <div className={`${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } fixed left-0 top-16 h-full z-30 lg:relative lg:translate-x-0 lg:z-10 transition-transform duration-300 ease-in-out`}>
+          <Sidebar
+            selectedSource={selectedSource}
+            onSourceSelect={(source) => {
+              handleSourceSelect(source);
+              handleSidebarClose(); // Auto-close on mobile after selection
+            }}
+            timeFilter={timeFilter}
+            onTimeFilterChange={handleTimeFilterChange}
+            threatFilters={threatFilters}
+            onThreatFilterChange={handleThreatFilterChange}
+            onClose={handleSidebarClose}
+            onVulnerabilitiesClick={handleVulnerabilitiesClick}
+          />
+        </div>
 
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto bg-dark-slate">
-          <div className="max-w-4xl mx-auto p-6">
-            {/* Content Header */}
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h1 className="text-2xl font-bold text-slate-100 mb-2" data-testid="text-page-title">
-                  {showBookmarks ? 'Bookmarked Articles' : 'Latest Threat Intelligence'}
-                </h1>
-                <p className="text-slate-400" data-testid="text-page-description">
-                  {showBookmarks 
-                    ? 'Your saved articles for later reading'
-                    : 'Stay updated with the latest cybersecurity threats and vulnerabilities'
-                  }
-                </p>
-              </div>
-              <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2 text-sm text-slate-400">
-                  <Clock className="w-4 h-4" />
-                  <span data-testid="text-last-updated">Last updated: {lastUpdated}</span>
+          {showVulnerabilities ? (
+            <CVEList onClose={handleVulnerabilitiesClose} />
+          ) : (
+            <div className="max-w-4xl mx-auto p-4 lg:p-6">
+              {/* Content Header */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 space-y-4 lg:space-y-0">
+                <div>
+                  <h1 className="text-xl lg:text-2xl font-bold text-slate-100 mb-2" data-testid="text-page-title">
+                    {showBookmarks ? 'Bookmarked Articles' : 'Latest Threat Intelligence'}
+                  </h1>
+                  <p className="text-sm lg:text-base text-slate-400" data-testid="text-page-description">
+                    {showBookmarks 
+                      ? 'Your saved articles for later reading'
+                      : 'Stay updated with the latest cybersecurity threats and vulnerabilities'
+                    }
+                  </p>
                 </div>
-                {!showBookmarks && (
-                  <Select value={sortBy} onValueChange={handleSortChange}>
-                    <SelectTrigger className="bg-slate-700 border-slate-600 text-slate-100" data-testid="select-sort">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="newest">Newest First</SelectItem>
-                      <SelectItem value="oldest">Oldest First</SelectItem>
-                      <SelectItem value="relevance">Most Relevant</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                  <div className="flex items-center space-x-2 text-sm text-slate-400">
+                    <Clock className="w-4 h-4" />
+                    <span data-testid="text-last-updated">Last updated: {lastUpdated}</span>
+                  </div>
+                  {!showBookmarks && (
+                    <Select value={sortBy} onValueChange={handleSortChange}>
+                      <SelectTrigger className="bg-slate-700 border-slate-600 text-slate-100 w-full sm:w-auto" data-testid="select-sort">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="newest">Newest First</SelectItem>
+                        <SelectItem value="oldest">Oldest First</SelectItem>
+                        <SelectItem value="relevance">Most Relevant</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
               </div>
-            </div>
 
-            {/* Loading State */}
-            {articlesLoading && (
-              <div className="grid gap-6">
-                {[...Array(5)].map((_, i) => (
-                  <div key={i} className="bg-slate-800 rounded-xl border border-slate-700 p-6">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center space-x-3">
-                        <Skeleton className="w-6 h-6 rounded-sm" />
-                        <Skeleton className="w-24 h-4" />
-                        <Skeleton className="w-16 h-6 rounded-full" />
-                      </div>
-                      <Skeleton className="w-20 h-4" />
-                    </div>
-                    <Skeleton className="w-full h-6 mb-3" />
-                    <Skeleton className="w-full h-4 mb-2" />
-                    <Skeleton className="w-3/4 h-4 mb-4" />
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <Skeleton className="w-20 h-4" />
-                        <div className="flex space-x-1">
+              {/* Loading State */}
+              {articlesLoading && (
+                <div className="grid gap-6">
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="bg-slate-800 rounded-xl border border-slate-700 p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center space-x-3">
+                          <Skeleton className="w-6 h-6 rounded-sm" />
+                          <Skeleton className="w-24 h-4" />
                           <Skeleton className="w-16 h-6 rounded-full" />
-                          <Skeleton className="w-20 h-6 rounded-full" />
                         </div>
+                        <Skeleton className="w-20 h-4" />
                       </div>
-                      <Skeleton className="w-24 h-4" />
+                      <Skeleton className="w-full h-6 mb-3" />
+                      <Skeleton className="w-full h-4 mb-2" />
+                      <Skeleton className="w-3/4 h-4 mb-4" />
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <Skeleton className="w-20 h-4" />
+                          <div className="flex space-x-1">
+                            <Skeleton className="w-16 h-6 rounded-full" />
+                            <Skeleton className="w-20 h-6 rounded-full" />
+                          </div>
+                        </div>
+                        <Skeleton className="w-24 h-4" />
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
 
-            {/* Articles Grid */}
-            {!articlesLoading && (
-              <>
-                {displayArticles.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="text-slate-400 text-lg mb-2" data-testid="text-no-articles">
-                      {showBookmarks 
-                        ? "No bookmarked articles yet"
-                        : searchQuery 
-                          ? "No articles found matching your search"
-                          : "No articles available"
-                      }
+              {/* Articles Grid */}
+              {!articlesLoading && (
+                <>
+                  {displayArticles.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="text-slate-400 text-lg mb-2" data-testid="text-no-articles">
+                        {showBookmarks 
+                          ? "No bookmarked articles yet"
+                          : searchQuery 
+                            ? "No articles found matching your search"
+                            : "No articles available"
+                        }
+                      </div>
+                      <p className="text-slate-500 text-sm" data-testid="text-no-articles-description">
+                        {showBookmarks 
+                          ? "Bookmark articles to read them later"
+                          : searchQuery
+                            ? "Try adjusting your search terms or filters"
+                            : "Articles will appear here once feeds are loaded"
+                        }
+                      </p>
                     </div>
-                    <p className="text-slate-500 text-sm" data-testid="text-no-articles-description">
-                      {showBookmarks 
-                        ? "Bookmark articles to read them later"
-                        : searchQuery
-                          ? "Try adjusting your search terms or filters"
-                          : "Articles will appear here once feeds are loaded"
-                      }
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid gap-6">
-                    {displayArticles.map((article, index) => (
-                      <ArticleCard
-                        key={article.id}
-                        article={article}
-                        isFeatured={index === 0 && !showBookmarks && !searchQuery}
-                        onReadHere={handleReadHere}
-                      />
-                    ))}
-                  </div>
-                )}
+                  ) : (
+                    <div className="grid gap-6">
+                      {displayArticles.map((article, index) => (
+                        <ArticleCard
+                          key={article.id}
+                          article={article}
+                          isFeatured={index === 0 && !showBookmarks && !searchQuery}
+                          onReadHere={handleReadHere}
+                        />
+                      ))}
+                    </div>
+                  )}
 
-                {/* Load More Button */}
-                {!showBookmarks && displayArticles.length > 0 && displayArticles.length >= ARTICLES_PER_PAGE && (
-                  <div className="flex justify-center mt-8">
-                    <Button
-                      variant="outline"
-                      onClick={handleLoadMore}
-                      className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-slate-100 border-slate-600"
-                      data-testid="button-load-more"
-                    >
-                      <ChevronDown className="w-4 h-4 mr-2" />
-                      Load More Articles
-                    </Button>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+                  {/* Load More Button */}
+                  {!showBookmarks && displayArticles.length > 0 && displayArticles.length >= ARTICLES_PER_PAGE && (
+                    <div className="flex justify-center mt-8">
+                      <Button
+                        variant="outline"
+                        onClick={handleLoadMore}
+                        className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-slate-100 border-slate-600"
+                        data-testid="button-load-more"
+                      >
+                        <ChevronDown className="w-4 h-4 mr-2" />
+                        Load More Articles
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
         </main>
       </div>
       

@@ -153,7 +153,55 @@
 
 /* Ensure article reader sheet is properly sized */
 [data-state="open"][data-side="right"] {
-  width: 70vw !important;
-  min-width: 600px !important;
+  width: 90vw !important;
+  min-width: 320px !important;
   max-width: 85vw !important;
+}
+
+@media (min-width: 640px) {
+  [data-state="open"][data-side="right"] {
+    width: 85vw !important;
+    min-width: 500px !important;
+  }
+}
+
+@media (min-width: 1024px) {
+  [data-state="open"][data-side="right"] {
+    width: 70vw !important;
+    min-width: 600px !important;
+  }
+}
+
+/* Mobile touch optimizations */
+@media (max-width: 768px) {
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+  
+  /* Increase touch target sizes on mobile */
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Make inputs more touch-friendly */
+  input, select, textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  /* Improve scrolling on mobile */
+  .overflow-y-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Focus visible improvements for accessibility */
+.focus-visible {
+  outline: 2px solid var(--cyber-cyan);
+  outline-offset: 2px;
 }

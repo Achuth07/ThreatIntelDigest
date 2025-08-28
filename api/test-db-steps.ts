@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const steps = [];
+  const steps: string[] = [];
   
   try {
     steps.push('Starting database connection test...');

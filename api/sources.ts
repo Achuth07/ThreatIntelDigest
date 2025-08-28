@@ -77,62 +77,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       const { isActive, name, url, icon, color } = req.body;
       
-      // Build update query dynamically based on provided fields
-      let updateQuery = 'UPDATE rss_sources SET ';
-      const updateFields = [];
-      const values = [sourceId];
-      let paramIndex = 2;
-      
+      // For now, just handle isActive field (most common use case)
       if (isActive !== undefined) {
-        updateFields.push(`is_active = $${paramIndex}`);
-        values.push(isActive);
-        paramIndex++;
-      }
-      if (name !== undefined) {
-        updateFields.push(`name = $${paramIndex}`);
-        values.push(name);
-        paramIndex++;
-      }
-      if (url !== undefined) {
-        updateFields.push(`url = $${paramIndex}`);
-        values.push(url);
-        paramIndex++;
-      }
-      if (icon !== undefined) {
-        updateFields.push(`icon = $${paramIndex}`);
-        values.push(icon);
-        paramIndex++;
-      }
-      if (color !== undefined) {
-        updateFields.push(`color = $${paramIndex}`);
-        values.push(color);
-        paramIndex++;
-      }
-      
-      if (updateFields.length === 0) {
+        const result = await db.execute(sql`
+          UPDATE rss_sources 
+          SET is_active = ${isActive}
+          WHERE id = ${sourceId}
+          RETURNING id, name, url, icon, color, is_active, last_fetched
+        `);
+        
+        if (result.rows.length === 0) {
+          return res.status(404).json({ message: "Source not found" });
+        }
+        
+        const source = result.rows[0];
+        console.log('Successfully updated RSS source:', sourceId);
+        res.json({
+          id: source.id,
+          name: source.name,
+          url: source.url,
+          icon: source.icon,
+          color: source.color,
+          isActive: source.is_active,
+          lastFetched: source.last_fetched
+        });
+      } else {
         return res.status(400).json({ message: "No valid fields to update" });
       }
-      
-      updateQuery += updateFields.join(', ');
-      updateQuery += ' WHERE id = $1 RETURNING id, name, url, icon, color, is_active, last_fetched';
-      
-      const result = await db.execute(sql.raw(updateQuery, values));
-      
-      if (result.rows.length === 0) {
-        return res.status(404).json({ message: "Source not found" });
-      }
-      
-      const source = result.rows[0];
-      console.log('Successfully updated RSS source:', sourceId);
-      res.json({
-        id: source.id,
-        name: source.name,
-        url: source.url,
-        icon: source.icon,
-        color: source.color,
-        isActive: source.is_active,
-        lastFetched: source.last_fetched
-      });
       
     } else if (req.method === 'DELETE') {
       console.log('Deleting RSS source...');

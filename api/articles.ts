@@ -27,7 +27,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       let baseQuery = sql`SELECT id, title, summary, url, source, threat_level, tags, read_time, published_at, created_at FROM articles`;
       
       // Add WHERE conditions
-      const conditions = [];
+      const conditions: any[] = [];
       
       if (source && source !== 'all') {
         conditions.push(sql`source = ${source}`);
@@ -122,3 +122,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       stack: error instanceof Error ? error.stack?.split('\n').slice(0, 5) : undefined
     });
   }
+}

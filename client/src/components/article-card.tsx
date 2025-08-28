@@ -85,26 +85,28 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
 
   return (
     <Card className="bg-slate-800 border border-slate-700 hover:border-slate-600 transition-colors group overflow-hidden">
-      <div className="p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            {getSourceIcon(article.source)}
+      <div className="p-4 lg:p-6">
+        <div className="flex items-start justify-between mb-3 lg:mb-4">
+          <div className="flex items-center space-x-2 lg:space-x-3 min-w-0 flex-1">
+            <div className="flex-shrink-0">
+              {getSourceIcon(article.source)}
+            </div>
             <span 
-              className="text-sm font-medium text-slate-300" 
+              className="text-xs lg:text-sm font-medium text-slate-300 truncate" 
               data-testid={`text-source-${article.id}`}
             >
               {article.source}
             </span>
             <Badge 
-              className={`text-xs px-2 py-1 rounded-full ${getThreatLevelColor(article.threatLevel)}`}
+              className={`text-xs px-1.5 lg:px-2 py-0.5 lg:py-1 rounded-full flex-shrink-0 ${getThreatLevelColor(article.threatLevel)}`}
               data-testid={`badge-threat-level-${article.id}`}
             >
               {article.threatLevel}
             </Badge>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-1 lg:space-x-2 flex-shrink-0 ml-2">
             <span 
-              className="text-sm text-slate-400"
+              className="text-xs lg:text-sm text-slate-400 hidden sm:block"
               data-testid={`text-publish-time-${article.id}`}
             >
               {formatTimeAgo(article.publishedAt)}
@@ -112,7 +114,7 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
             <Button
               variant="ghost"
               size="sm"
-              className={`p-1 transition-colors ${
+              className={`p-1.5 lg:p-1 transition-colors touch-manipulation ${
                 isBookmarked ? 'text-cyber-cyan' : 'text-slate-400 hover:text-cyber-cyan'
               }`}
               onClick={() => bookmarkMutation.mutate()}
@@ -125,31 +127,41 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
           </div>
         </div>
         
-        <h2 className={`font-semibold text-slate-100 mb-3 group-hover:text-cyber-cyan transition-colors line-clamp-2 ${
-          isFeatured ? 'text-xl' : 'text-lg'
+        {/* Mobile time display */}
+        <div className="sm:hidden mb-2">
+          <span 
+            className="text-xs text-slate-400"
+            data-testid={`text-publish-time-mobile-${article.id}`}
+          >
+            {formatTimeAgo(article.publishedAt)}
+          </span>
+        </div>
+        
+        <h2 className={`font-semibold text-slate-100 mb-2 lg:mb-3 group-hover:text-cyber-cyan transition-colors line-clamp-2 ${
+          isFeatured ? 'text-lg lg:text-xl' : 'text-base lg:text-lg'
         }`} data-testid={`text-title-${article.id}`}>
           {article.title}
         </h2>
         
-        <p className={`text-slate-300 text-sm leading-relaxed mb-4 ${
+        <p className={`text-slate-300 text-sm leading-relaxed mb-3 lg:mb-4 ${
           isFeatured ? 'line-clamp-3' : 'line-clamp-2'
         }`} data-testid={`text-summary-${article.id}`}>
           {article.summary}
         </p>
         
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2 text-sm text-slate-400">
-              <Eye className="w-4 h-4" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">
+          <div className="flex items-center space-x-3 lg:space-x-4">
+            <div className="flex items-center space-x-1 lg:space-x-2 text-xs lg:text-sm text-slate-400">
+              <Eye className="w-3 lg:w-4 h-3 lg:h-4" />
               <span data-testid={`text-read-time-${article.id}`}>{article.readTime} min read</span>
             </div>
             {article.tags && article.tags.length > 0 && (
-              <div className="flex items-center space-x-1">
-                {article.tags.slice(0, 3).map((tag, index) => (
+              <div className="flex items-center space-x-1 overflow-x-auto">
+                {article.tags.slice(0, 2).map((tag, index) => (
                   <Badge
                     key={index}
                     variant="secondary"
-                    className="text-xs bg-slate-700 text-slate-300 px-2 py-1"
+                    className="text-xs bg-slate-700 text-slate-300 px-1.5 lg:px-2 py-0.5 lg:py-1 flex-shrink-0"
                     data-testid={`badge-tag-${article.id}-${index}`}
                   >
                     {tag}
@@ -158,27 +170,29 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
               </div>
             )}
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 justify-end">
             {onReadHere && (
               <Button
                 variant="outline"
                 size="sm"
-                className="text-cyber-cyan border-cyber-cyan hover:bg-cyber-cyan hover:text-slate-900 text-sm font-medium px-3 py-1"
+                className="text-cyber-cyan border-cyber-cyan hover:bg-cyber-cyan hover:text-slate-900 text-xs lg:text-sm font-medium px-2 lg:px-3 py-1 touch-manipulation"
                 onClick={() => onReadHere(article.url)}
                 data-testid={`button-read-here-${article.id}`}
               >
                 <BookOpen className="w-3 h-3 mr-1" />
-                Read Here
+                <span className="hidden sm:inline">Read Here</span>
+                <span className="sm:hidden">Read</span>
               </Button>
             )}
             <Button
               variant="link"
               size="sm"
-              className="text-slate-400 hover:text-slate-300 text-sm font-medium p-0"
+              className="text-slate-400 hover:text-slate-300 text-xs lg:text-sm font-medium p-0 touch-manipulation"
               onClick={() => window.open(article.url, '_blank', 'noopener,noreferrer')}
               data-testid={`button-read-article-${article.id}`}
             >
-              Read {isFeatured ? 'Full Article' : 'More'} 
+              <span className="hidden sm:inline">{isFeatured ? 'Full Article' : 'More'}</span>
+              <span className="sm:hidden">View</span>
               <ExternalLink className="w-3 h-3 ml-1" />
             </Button>
           </div>

@@ -63,6 +63,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       )
     `);
 
+    console.log('Creating vulnerabilities table...');
+    // Create vulnerabilities table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS vulnerabilities (
+        id VARCHAR(20) PRIMARY KEY, -- CVE ID like CVE-2024-1234
+        description TEXT NOT NULL,
+        published_date TIMESTAMP NOT NULL,
+        last_modified_date TIMESTAMP NOT NULL,
+        vuln_status TEXT NOT NULL, -- Analyzed, Modified, etc.
+        cvss_v3_score DECIMAL(3,1),
+        cvss_v3_severity TEXT, -- CRITICAL, HIGH, MEDIUM, LOW
+        cvss_v2_score DECIMAL(3,1),
+        cvss_v2_severity TEXT,
+        weaknesses JSONB DEFAULT '[]'::jsonb, -- CWE IDs
+        configurations JSONB DEFAULT '[]'::jsonb, -- CPE configurations
+        references JSONB DEFAULT '[]'::jsonb, -- Reference URLs and sources
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
     console.log('Database schema created successfully');
 
     // Add default sources using individual INSERT statements
