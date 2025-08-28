@@ -75,12 +75,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log(`Found ${activeSources.length} active RSS sources`);
     
     let totalFetched = 0;
+    let feedResults = [];
     
     for (const source of activeSources) {
+      let sourceResult = {
+        name: source.name,
+        url: source.url,
+        itemsFound: 0,
+        itemsProcessed: 0,
+        errors: []
+      };
       try {
         console.log(`Fetching feed from ${source.name} (${source.url})...`);
-        const feed = await parser.parseURL(source.url);
+        const feed = await parser.parseURL(source.url as string);
         console.log(`Feed parsed successfully. Found ${feed.items.length} items`);
+        
+        sourceResult.itemsFound = feed.items.length;
         
         let processedCount = 0;
         for (const item of feed.items.slice(0, 10)) { // Limit to 10 latest items per source
@@ -98,7 +108,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const threatLevel = determineThreatLevel(item.title || "", item.contentSnippet || "");
             const tags = extractTags(item.title || "", item.contentSnippet || "");
             const readTime = estimateReadTime(item.contentSnippet || item.content || "");
-            const summary = (item.contentSnippet || item.content?.substring(0, 300) || "") + (item.content?.length > 300 ? "..." : "");
+            const summary = (item.contentSnippet || item.content?.substring(0, 300) || "") + ((item.content && item.content.length > 300) ? "..." : "");
             
             // Handle published date - use current time if parsing fails
             let publishedAt: Date;
@@ -113,16 +123,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
             
             try {
+              console.log(`Inserting article: ${item.title}`);
+              console.log(`Published At:`, publishedAt);
+              
+              // Temporarily skip tags field to get basic insertion working
               await db.execute(sql`
-                INSERT INTO articles (title, summary, url, source, threat_level, tags, read_time, published_at)
-                VALUES (${item.title}, ${summary}, ${item.link}, ${source.name}, ${threatLevel}, ${tags}, ${readTime}, ${publishedAt})
+                INSERT INTO articles (title, summary, url, source, threat_level, read_time, published_at)
+                VALUES (${item.title}, ${summary}, ${item.link}, ${source.name}, ${threatLevel}, ${readTime}, ${publishedAt})
               `);
               
               totalFetched++;
               processedCount++;
+              sourceResult.itemsProcessed++;
               console.log(`Saved article: ${item.title}`);
             } catch (insertError) {
               console.error(`Failed to insert article "${item.title}":`, insertError);
+              sourceResult.errors.push(`Insert failed: ${insertError.message}`);
             }
           } else {
             console.log(`Article already exists: ${item.title}`);
@@ -142,11 +158,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.error(`Error fetching feed for ${source.name}:`, feedError);
         console.error('Feed URL:', source.url);
         console.error('Error details:', feedError instanceof Error ? feedError.message : feedError);
+        sourceResult.errors.push(feedError instanceof Error ? feedError.message : 'Unknown error');
       }
+      
+      feedResults.push(sourceResult);
     }
 
     console.log(`Feed fetch complete. Fetched ${totalFetched} new articles.`);
-    res.json({ message: `Successfully fetched ${totalFetched} new articles` });
+    res.json({ 
+      message: `Successfully fetched ${totalFetched} new articles`,
+      totalFetched,
+      sourceResults: feedResults,
+      timestamp: new Date().toISOString()
+    });
     
   } catch (error) {
     console.error("Error fetching feeds:", error);
