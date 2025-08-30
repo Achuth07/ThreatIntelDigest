@@ -1,7 +1,7 @@
 import { and, desc, asc, ilike, inArray, eq } from 'drizzle-orm';
 import { getDb } from './db';
-import { articles, bookmarks, rssSources } from '@shared/schema';
-import type { IStorage } from './storage';
+import { articles, bookmarks, rssSources, vulnerabilities } from '@shared/schema';
+import type { IStorage, CVE, InsertCVE } from './storage';
 import type { Article, InsertArticle, Bookmark, InsertBookmark, RssSource, InsertRssSource } from '@shared/schema';
 
 export class PostgresStorage implements IStorage {
@@ -264,6 +264,131 @@ export class PostgresStorage implements IStorage {
       return (result.rowCount || 0) > 0;
     } catch (error) {
       console.error('Error deleting RSS source:', error);
+      return false;
+    }
+  }
+
+  // CVE/Vulnerabilities
+  async getCVEs(params?: { limit?: number; offset?: number; severity?: string }): Promise<CVE[]> {
+    try {
+      let queryBuilder = this.db.select().from(vulnerabilities);
+      
+      const conditions = [];
+      
+      if (params?.severity) {
+        const severityUpper = params.severity.toUpperCase();
+        conditions.push(
+          // Check both CVSS v2 and v3 severity
+          eq(vulnerabilities.cvssV3Severity, severityUpper)
+        );
+      }
+
+      if (conditions.length > 0) {
+        queryBuilder = queryBuilder.where(and(...conditions)) as typeof queryBuilder;
+      }
+
+      // Apply sorting by last modified date (newest first)
+      queryBuilder = queryBuilder.orderBy(desc(vulnerabilities.lastModifiedDate)) as typeof queryBuilder;
+
+      // Apply pagination
+      const limit = params?.limit || 50;
+      const offset = params?.offset || 0;
+      queryBuilder = queryBuilder.limit(limit).offset(offset) as typeof queryBuilder;
+
+      const result = await queryBuilder;
+      
+      // Transform to CVE format
+      return result.map(row => ({
+        id: row.id,
+        description: row.description,
+        publishedDate: row.publishedDate,
+        lastModifiedDate: row.lastModifiedDate,
+        vulnStatus: row.vulnStatus,
+        cvssV3Score: row.cvssV3Score ? parseFloat(row.cvssV3Score.toString()) : null,
+        cvssV3Severity: row.cvssV3Severity,
+        cvssV2Score: row.cvssV2Score ? parseFloat(row.cvssV2Score.toString()) : null,
+        cvssV2Severity: row.cvssV2Severity,
+        weaknesses: (row.weaknesses as string[]) || [],
+        references: (row.referenceUrls as { url: string; source: string; tags?: string[] }[]) || [],
+        createdAt: row.createdAt!,
+      }));
+    } catch (error) {
+      console.error('Error fetching CVEs:', error);
+      return [];
+    }
+  }
+
+  async getCVE(id: string): Promise<CVE | undefined> {
+    try {
+      const result = await this.db.select().from(vulnerabilities).where(eq(vulnerabilities.id, id)).limit(1);
+      const row = result[0];
+      if (!row) return undefined;
+      
+      return {
+        id: row.id,
+        description: row.description,
+        publishedDate: row.publishedDate,
+        lastModifiedDate: row.lastModifiedDate,
+        vulnStatus: row.vulnStatus,
+        cvssV3Score: row.cvssV3Score ? parseFloat(row.cvssV3Score.toString()) : null,
+        cvssV3Severity: row.cvssV3Severity,
+        cvssV2Score: row.cvssV2Score ? parseFloat(row.cvssV2Score.toString()) : null,
+        cvssV2Severity: row.cvssV2Severity,
+        weaknesses: (row.weaknesses as string[]) || [],
+        references: (row.referenceUrls as { url: string; source: string; tags?: string[] }[]) || [],
+        createdAt: row.createdAt!,
+      };
+    } catch (error) {
+      console.error('Error fetching CVE:', error);
+      return undefined;
+    }
+  }
+
+  async createCVE(insertCVE: InsertCVE): Promise<CVE> {
+    try {
+      const cveData = {
+        id: insertCVE.id,
+        description: insertCVE.description,
+        publishedDate: insertCVE.publishedDate,
+        lastModifiedDate: insertCVE.lastModifiedDate,
+        vulnStatus: insertCVE.vulnStatus,
+        cvssV3Score: insertCVE.cvssV3Score?.toString() || null,
+        cvssV3Severity: insertCVE.cvssV3Severity || null,
+        cvssV2Score: insertCVE.cvssV2Score?.toString() || null,
+        cvssV2Severity: insertCVE.cvssV2Severity || null,
+        weaknesses: insertCVE.weaknesses || [],
+        referenceUrls: insertCVE.references || [],
+      };
+      
+      const result = await this.db.insert(vulnerabilities).values(cveData).returning();
+      const row = result[0];
+      
+      return {
+        id: row.id,
+        description: row.description,
+        publishedDate: row.publishedDate,
+        lastModifiedDate: row.lastModifiedDate,
+        vulnStatus: row.vulnStatus,
+        cvssV3Score: row.cvssV3Score ? parseFloat(row.cvssV3Score.toString()) : null,
+        cvssV3Severity: row.cvssV3Severity,
+        cvssV2Score: row.cvssV2Score ? parseFloat(row.cvssV2Score.toString()) : null,
+        cvssV2Severity: row.cvssV2Severity,
+        weaknesses: (row.weaknesses as string[]) || [],
+        references: (row.referenceUrls as { url: string; source: string; tags?: string[] }[]) || [],
+        createdAt: row.createdAt!,
+      };
+    } catch (error) {
+      console.error('Error creating CVE:', error);
+      throw error;
+    }
+  }
+
+  async cveExists(id: string): Promise<boolean> {
+    try {
+      const result = await this.db.select().from(vulnerabilities).where(eq(vulnerabilities.id, id)).limit(1);
+      return result.length > 0;
+    } catch (error) {
+      console.error('Error checking CVE existence:', error);
       return false;
     }
   }

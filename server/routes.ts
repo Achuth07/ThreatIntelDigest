@@ -214,19 +214,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Database initialization endpoint
   app.post("/api/init-db", async (req, res) => {
     try {
-      // Import the init-db handler
-      const { default: initDbHandler } = await import('../api/init-db');
+      // Import the database handler
+      const { default: databaseHandler } = await import('../api/database');
       // Create a mock Vercel request/response for compatibility
-      const vercelReq = { ...req, method: 'POST' } as any;
+      const vercelReq = { ...req, method: 'POST', query: { action: 'init' } } as any;
       const vercelRes = { 
         status: (code: number) => ({ json: (data: any) => res.status(code).json(data) }),
         json: (data: any) => res.json(data)
       } as any;
       
-      await initDbHandler(vercelReq, vercelRes);
+      await databaseHandler(vercelReq, vercelRes);
     } catch (error) {
       console.error('Error in init-db endpoint:', error);
       res.status(500).json({ message: 'Failed to initialize database' });
+    }
+  });
+
+  // Database check endpoint
+  app.get("/api/check-db", async (req, res) => {
+    try {
+      const { default: databaseHandler } = await import('../api/database');
+      const vercelReq = { ...req, method: 'GET', query: { action: 'check' } } as any;
+      const vercelRes = { 
+        status: (code: number) => ({ json: (data: any) => res.status(code).json(data) }),
+        json: (data: any) => res.json(data)
+      } as any;
+      
+      await databaseHandler(vercelReq, vercelRes);
+    } catch (error) {
+      console.error('Error in check-db endpoint:', error);
+      res.status(500).json({ message: 'Failed to check database' });
+    }
+  });
+
+  // Ping endpoint
+  app.get("/api/ping", async (req, res) => {
+    try {
+      const { default: databaseHandler } = await import('../api/database');
+      const vercelReq = { ...req, method: 'GET', query: { action: 'ping' } } as any;
+      const vercelRes = { 
+        status: (code: number) => ({ json: (data: any) => res.status(code).json(data) }),
+        json: (data: any) => res.json(data)
+      } as any;
+      
+      await databaseHandler(vercelReq, vercelRes);
+    } catch (error) {
+      console.error('Error in ping endpoint:', error);
+      res.status(500).json({ message: 'Failed to ping API' });
+    }
+  });
+
+  // Initialize sources endpoint
+  app.post("/api/initialize-sources", async (req, res) => {
+    try {
+      const { default: databaseHandler } = await import('../api/database');
+      const vercelReq = { ...req, method: 'POST', query: { action: 'initialize-sources' } } as any;
+      const vercelRes = { 
+        status: (code: number) => ({ json: (data: any) => res.status(code).json(data) }),
+        json: (data: any) => res.json(data)
+      } as any;
+      
+      await databaseHandler(vercelReq, vercelRes);
+    } catch (error) {
+      console.error('Error in initialize-sources endpoint:', error);
+      res.status(500).json({ message: 'Failed to initialize sources' });
     }
   });
 

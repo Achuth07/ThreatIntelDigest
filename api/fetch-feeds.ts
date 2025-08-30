@@ -138,7 +138,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               console.log(`Saved article: ${item.title}`);
             } catch (insertError) {
               console.error(`Failed to insert article "${item.title}":`, insertError);
-              sourceResult.errors.push(`Insert failed: ${insertError.message}`);
+              sourceResult.errors.push(`Insert failed: ${insertError instanceof Error ? insertError.message : 'Unknown error'}`);
             }
           } else {
             console.log(`Article already exists: ${item.title}`);
