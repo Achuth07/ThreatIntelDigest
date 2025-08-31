@@ -144,6 +144,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             // Extract configurations (simplified) - Skip for now since column doesn't exist
             // const configurations = cve.configurations?.nodes || [];
             
+            // Convert arrays to proper PostgreSQL format
+            const weaknessesArray = weaknesses;
+            const referencesJson = JSON.stringify(references);
+            
             await db.execute(sql`
               INSERT INTO vulnerabilities (
                 id, description, published_date, last_modified_date, vuln_status,
@@ -153,7 +157,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               VALUES (
                 ${cveId}, ${description}, ${cve.published}, ${cve.lastModified}, ${cve.vulnStatus},
                 ${cvssV3Score}, ${cvssV3Severity}, ${cvssV2Score}, ${cvssV2Severity},
-                ${weaknesses}, ${references}
+                ${weaknessesArray}, ${referencesJson}
               )
             `);
             
