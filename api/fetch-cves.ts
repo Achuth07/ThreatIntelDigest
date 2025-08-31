@@ -145,8 +145,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             // const configurations = cve.configurations?.nodes || [];
             
             // Convert arrays to proper PostgreSQL format
-            const weaknessesArray = weaknesses;
+            // Ensure weaknesses is a proper string array for PostgreSQL text[]
+            const weaknessesArray = Array.isArray(weaknesses) ? weaknesses : [];
             const referencesJson = JSON.stringify(references);
+            
+            console.log(`Processing CVE ${cveId} with weaknesses:`, weaknessesArray);
+            
+            // Construct array literal for PostgreSQL
+            const weaknessesLiteral = '{' + weaknessesArray.map(w => `"${w?.replace(/"/g, '\\"') || ''}"`).join(',') + '}';
             
             await db.execute(sql`
               INSERT INTO vulnerabilities (
@@ -156,8 +162,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               )
               VALUES (
                 ${cveId}, ${description}, ${cve.published}, ${cve.lastModified}, ${cve.vulnStatus},
-                ${cvssV3Score}, ${cvssV3Severity}, ${cvssV2Score}, ${cvssV2Severity},
-                ${weaknessesArray}, ${referencesJson}
+                ${cvssV3Score ? cvssV3Score.toString() : null}, ${cvssV3Severity}, 
+                ${cvssV2Score ? cvssV2Score.toString() : null}, ${cvssV2Severity},
+                ${weaknessesLiteral}::text[], ${referencesJson}::jsonb
               )
             `);
             
