@@ -2,9 +2,9 @@
 
 ## Overview
 
-CyberFeed is a cybersecurity-focused RSS news aggregator that provides real-time threat intelligence and security news from multiple sources. The application allows users to browse, search, filter, and bookmark security articles with threat level classification. It features a modern dark theme UI optimized for security professionals who need to stay updated on the latest cybersecurity threats and developments.
+CyberFeed is a cybersecurity-focused RSS news aggregator that provides real-time threat intelligence and security news from multiple sources. The application allows users to browse, search, filter, and bookmark security articles with threat level classification, as well as monitor CVE/vulnerability data from the National Vulnerability Database (NVD). It features a modern dark theme UI optimized for security professionals who need to stay updated on the latest cybersecurity threats and developments.
 
-The application includes advanced source management with non-destructive deactivation/reactivation functionality, allowing users to temporarily remove sources from their sidebar while preserving the ability to re-add them later. RSS sources are organized into categories (Vendor & Private Threat Research, Government & Agency Alerts, Specialized & Malware Focus, General Security News) for better discoverability.
+The application includes advanced source management with non-destructive deactivation/reactivation functionality, allowing users to temporarily remove sources from their sidebar while preserving the ability to re-add them later. RSS sources are organized into categories (Vendor & Private Threat Research, Government & Agency Alerts, Specialized & Malware Focus, General Security News) for better discoverability. Additionally, it integrates with the NVD API to provide comprehensive CVE data with CVSS scoring and severity filtering.
 
 ## User Preferences
 
@@ -23,8 +23,9 @@ Preferred communication style: Simple, everyday language.
 ### Backend Architecture
 - **Runtime**: Node.js with Express.js framework
 - **Language**: TypeScript with ES modules
-- **API Design**: RESTful API endpoints for articles, bookmarks, and RSS sources
+- **API Design**: RESTful API endpoints with consolidated serverless functions for Vercel deployment
 - **RSS Processing**: rss-parser library for fetching and parsing RSS feeds
+- **CVE Integration**: National Vulnerability Database (NVD) API integration for real-time CVE data
 - **HTTP Client**: Axios for external API requests
 - **Development**: tsx for TypeScript execution and hot reloading
 
@@ -39,6 +40,7 @@ Preferred communication style: Simple, everyday language.
 - **Articles**: Stores news articles with metadata (title, summary, URL, source, threat level, tags, read time)
 - **Bookmarks**: User bookmarks linking to articles with timestamps
 - **RSS Sources**: Configuration for RSS feeds (name, URL, icon, color, active status) with support for deactivation/reactivation
+- **Vulnerabilities**: CVE data from NVD API (CVE ID, description, CVSS scores, severity levels, weaknesses, references)
 - **Relationships**: Foreign key constraints between bookmarks and articles
 - **Source Management**: Non-destructive operations using isActive field for source lifecycle management
 
@@ -77,6 +79,11 @@ Preferred communication style: Simple, everyday language.
 ### Database Services
 - **Neon Database**: Serverless PostgreSQL hosting with connection pooling
 - **DATABASE_URL**: Environment variable for database connection string
+
+### CVE/Vulnerability Data
+- **National Vulnerability Database (NVD)**: CVE data source via REST API
+- **NVD_API_KEY**: Environment variable for NVD API authentication
+- **CVSS Scoring**: Support for CVSS v2 and v3 scoring systems
 
 ### RSS Data Sources
 - **Vendor & Private Threat Research**: Google Mandiant, Cisco Talos, CrowdStrike, Red Canary, Kaspersky, ESET, Trustwave, FireEye, McAfee, Symantec

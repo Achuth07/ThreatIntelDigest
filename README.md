@@ -7,9 +7,11 @@ A cybersecurity-focused RSS news aggregator that provides real-time threat intel
 CyberFeed is a threat intelligence aggregation platform that enables security analysts and researchers to:
 
 - **Aggregate** threat intelligence from multiple RSS sources into a unified interface
-- **Monitor** and manage threat intelligence sources efficiently  
+- **Monitor** CVE/vulnerability data from the National Vulnerability Database (NVD)
+- **Manage** threat intelligence sources efficiently  
 - **Bookmark** important articles for future reference
 - **Filter** articles by threat level (Critical, High, Medium, Low)
+- **Browse** CVE data with CVSS scoring and severity filtering
 - **Search** through security news and threat intelligence
 - **Stay updated** with the latest cybersecurity threats and developments
 
@@ -36,12 +38,18 @@ CyberFeed is a threat intelligence aggregation platform that enables security an
 - PostgreSQL (Neon Serverless)
 - Drizzle ORM for type-safe database operations
 - Zod for schema validation and type safety
+- CVE/vulnerability data storage and management
 
 **Development Tools:**
 - tsx for TypeScript execution and hot reloading
 - Vite for frontend bundling
 - esbuild for backend bundling
 - ESLint and TypeScript for code quality
+
+**Deployment Optimization:**
+- Consolidated API architecture for Vercel serverless functions
+- Database utilities consolidated into single endpoint with action-based routing
+- Optimized for Vercel Hobby plan function limits (under 12 functions)
 
 ### Built-in RSS Sources
 
@@ -104,10 +112,13 @@ The application comes pre-configured with 25+ categorized cybersecurity news sou
 
 3. **Set up environment variables:**
    
-   Create a `.env` file in the root directory (optional - app works with in-memory storage):
+   Create a `.env` file in the root directory:
    ```env
-   # Optional: PostgreSQL Database URL for persistent storage
+   # Required: PostgreSQL Database URL for persistent storage
    DATABASE_URL=postgresql://username:password@localhost:5432/cyberfeed
+   
+   # Required: NVD API Key for CVE data fetching
+   NVD_API_KEY=your-nvd-api-key-here
    
    # Server Configuration
    PORT=5000
@@ -132,7 +143,8 @@ The application comes pre-configured with 25+ categorized cybersecurity news sou
 1. **Add RSS Sources:** Use the "Add RSS Source" dialog to select from categorized built-in cybersecurity RSS feeds
 2. **Manage Sources:** Remove sources from sidebar by hovering and clicking minus icon - they can be re-added later
 3. **Fetch Articles:** Click "Refresh All Feeds" to populate the application with latest articles
-4. **Explore:** Browse articles, filter by threat level, and bookmark important intelligence
+4. **Get CVE Data:** Navigate to the Vulnerabilities section and click refresh to fetch latest CVE data from NVD
+5. **Explore:** Browse articles, filter by threat level, explore CVE data, and bookmark important intelligence
 
 ## 📁 Project Structure
 
@@ -142,7 +154,10 @@ ThreatIntelDigest/
 │   ├── articles.ts         # Articles API endpoints
 │   ├── bookmarks.ts        # Bookmarks management
 │   ├── fetch-feeds.ts      # RSS feed fetching logic
+│   ├── fetch-cves.ts       # CVE data fetching from NVD API
+│   ├── vulnerabilities.ts  # CVE/vulnerability data endpoints
 │   ├── sources.ts          # RSS sources management
+│   ├── database.ts         # Database management utilities
 │   └── index.ts            # API routes index
 ├── client/                 # React frontend application
 │   ├── src/
@@ -150,6 +165,7 @@ ThreatIntelDigest/
 │   │   │   ├── ui/         # shadcn/ui components
 │   │   │   ├── sidebar.tsx # Main navigation sidebar with source management
 │   │   │   ├── article-card.tsx # Article display component
+│   │   │   ├── cve-list.tsx # CVE/vulnerability display component
 │   │   │   ├── add-sources-dialog.tsx # Categorized RSS sources selector
 │   │   │   └── article-viewer.tsx # Slide-in article reader
 │   │   ├── pages/          # Application pages
@@ -190,14 +206,19 @@ npm start
 
 # Push database schema changes
 npm run db:push
+
+# Validate deployment readiness (custom script)
+npm run validate-deployment
 ```
 
 ## 🎨 Features
 
 ### Core Functionality
 - **RSS Feed Aggregation:** Automatic fetching and parsing of cybersecurity RSS feeds
+- **CVE/Vulnerability Management:** Integration with National Vulnerability Database (NVD) API
 - **Article Management:** Browse, search, and filter security articles
 - **Threat Level Classification:** Automatic categorization (Critical, High, Medium, Low)
+- **CVSS Scoring:** Display CVE data with CVSS v2/v3 scores and severity levels
 - **Bookmarking System:** Save important articles for future reference
 - **Real-time Updates:** Manual refresh with planned automatic scheduling
 - **Source Management:** Add, deactivate, and reactivate RSS sources without data loss
@@ -241,7 +262,8 @@ DATABASE_URL=postgresql://username:password@host:port/database
 
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
-| `DATABASE_URL` | PostgreSQL connection string | - | No |
+| `DATABASE_URL` | PostgreSQL connection string | - | Yes |
+| `NVD_API_KEY` | National Vulnerability Database API key | - | Yes |
 | `PORT` | Server port | `5000` | No |
 | `NODE_ENV` | Environment mode | `development` | No |
 
@@ -250,6 +272,10 @@ DATABASE_URL=postgresql://username:password@host:port/database
 ### Articles
 - `GET /api/articles` - Fetch articles with filtering options
 - `POST /api/articles` - Create new article
+
+### CVE/Vulnerabilities
+- `GET /api/vulnerabilities` - Fetch CVE data with filtering and pagination
+- `POST /api/fetch-cves` - Fetch latest CVE data from NVD API
 
 ### RSS Sources  
 - `GET /api/sources` - Get all RSS sources
@@ -264,6 +290,15 @@ DATABASE_URL=postgresql://username:password@host:port/database
 
 ### Feed Management
 - `POST /api/fetch-feeds` - Manually refresh all RSS feeds
+- `POST /api/fetch-article` - Extract full article content from URL
+
+### Database Management
+- `GET /api/database?action=check` - Check database connectivity
+- `POST /api/database?action=init` - Initialize database schema
+- `GET /api/database?action=ping` - API health check
+- `GET /api/database?action=test` - Basic database test
+- `GET /api/database?action=test-steps` - Detailed database test
+- `POST /api/database?action=initialize-sources` - Initialize default RSS sources
 
 ## 🔒 Security Features
 
@@ -311,6 +346,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Check internet connectivity
 - Verify RSS source URLs are accessible
 - Some feeds may have rate limiting or require specific user agents
+
+**CVE data not loading:**
+- Verify NVD_API_KEY is set correctly in environment variables
+- Check internet connectivity to National Vulnerability Database
+- Run database initialization: `POST /api/database?action=init`
+- Manually fetch CVE data: `POST /api/fetch-cves`
+- Check database connectivity: `GET /api/database?action=check`
+- Run detailed database tests: `GET /api/database?action=test-steps`
 
 **macOS-specific issues:**
 - The application is configured to use `localhost` instead of `0.0.0.0` for macOS compatibility

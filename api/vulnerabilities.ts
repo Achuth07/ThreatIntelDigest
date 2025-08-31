@@ -90,50 +90,86 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       page = '1' 
     } = req.query;
     
+    console.log('Query parameters:', { limit, severity, page });
+    
     const limitNum = Math.min(parseInt(limit as string, 10) || 50, 100);
     const pageNum = Math.max(parseInt(page as string, 10) || 1, 1);
     const offset = (pageNum - 1) * limitNum;
     
-    let query = sql`
-      SELECT 
-        id,
-        description,
-        published_date,
-        last_modified_date,
-        vuln_status,
-        cvss_v3_score,
-        cvss_v3_severity,
-        cvss_v2_score,
-        cvss_v2_severity,
-        weaknesses,
-        reference_urls,
-        created_at
-      FROM vulnerabilities
-    `;
-    
-    // Add severity filter if provided
+    // Build query based on whether severity filter is applied
+    let query;
     if (severity && typeof severity === 'string') {
       const severityUpper = severity.toUpperCase();
       if (['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].includes(severityUpper)) {
         query = sql`
-          ${query}
+          SELECT 
+            id,
+            description,
+            published_date,
+            last_modified_date,
+            vuln_status,
+            cvss_v3_score,
+            cvss_v3_severity,
+            cvss_v2_score,
+            cvss_v2_severity,
+            weaknesses,
+            reference_urls,
+            created_at
+          FROM vulnerabilities
           WHERE (cvss_v3_severity = ${severityUpper} OR cvss_v2_severity = ${severityUpper})
+          ORDER BY last_modified_date DESC, published_date DESC
+          LIMIT ${limitNum}
+          OFFSET ${offset}
+        `;
+      } else {
+        // Invalid severity filter, return all
+        query = sql`
+          SELECT 
+            id,
+            description,
+            published_date,
+            last_modified_date,
+            vuln_status,
+            cvss_v3_score,
+            cvss_v3_severity,
+            cvss_v2_score,
+            cvss_v2_severity,
+            weaknesses,
+            reference_urls,
+            created_at
+          FROM vulnerabilities
+          ORDER BY last_modified_date DESC, published_date DESC
+          LIMIT ${limitNum}
+          OFFSET ${offset}
         `;
       }
+    } else {
+      // No severity filter, return all
+      query = sql`
+        SELECT 
+          id,
+          description,
+          published_date,
+          last_modified_date,
+          vuln_status,
+          cvss_v3_score,
+          cvss_v3_severity,
+          cvss_v2_score,
+          cvss_v2_severity,
+          weaknesses,
+          reference_urls,
+          created_at
+        FROM vulnerabilities
+        ORDER BY last_modified_date DESC, published_date DESC
+        LIMIT ${limitNum}
+        OFFSET ${offset}
+      `;
     }
-    
-    // Add ordering and pagination
-    query = sql`
-      ${query}
-      ORDER BY last_modified_date DESC, published_date DESC
-      LIMIT ${limitNum}
-      OFFSET ${offset}
-    `;
     
     const result = await db.execute(query);
     
     // Get total count for pagination
-    let countQuery = sql`SELECT COUNT(*) as total FROM vulnerabilities`;
+    let countQuery;
     if (severity && typeof severity === 'string') {
       const severityUpper = severity.toUpperCase();
       if (['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].includes(severityUpper)) {
@@ -141,7 +177,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           SELECT COUNT(*) as total FROM vulnerabilities
           WHERE (cvss_v3_severity = ${severityUpper} OR cvss_v2_severity = ${severityUpper})
         `;
+      } else {
+        // Invalid severity filter, count all
+        countQuery = sql`SELECT COUNT(*) as total FROM vulnerabilities`;
       }
+    } else {
+      // No severity filter, count all
+      countQuery = sql`SELECT COUNT(*) as total FROM vulnerabilities`;
     }
     
     const countResult = await db.execute(countQuery);
