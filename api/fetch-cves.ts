@@ -8,17 +8,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     console.log('Starting CVE fetch process...');
     
+    // Enhanced environment variable checking
     if (!process.env.DATABASE_URL) {
+      console.error('DATABASE_URL environment variable is missing');
       return res.status(500).json({ 
-        error: 'DATABASE_URL environment variable is required'
+        error: 'DATABASE_URL environment variable is required',
+        debug: 'Check Vercel environment variables configuration'
       });
     }
 
     if (!process.env.NVD_API_KEY) {
+      console.error('NVD_API_KEY environment variable is missing');
       return res.status(500).json({ 
-        error: 'NVD_API_KEY environment variable is required'
+        error: 'NVD_API_KEY environment variable is required',
+        debug: 'Check Vercel environment variables configuration'
       });
     }
+    
+    console.log('Environment variables are set correctly');
     
     // Import modules dynamically
     const { drizzle } = await import('drizzle-orm/neon-serverless');
@@ -27,6 +34,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
     const db = drizzle(pool);
+    
+    console.log('Database connection established');
+    
+    // Test database connectivity and table existence
+    try {
+      const tableCheck = await db.execute(sql`
+        SELECT COUNT(*) as count 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'vulnerabilities'
+      `);
+      
+      if (parseInt(tableCheck.rows[0]?.count as string || '0') === 0) {
+        console.error('vulnerabilities table does not exist');
+        return res.status(500).json({
+          error: 'vulnerabilities table does not exist',
+          debug: 'Run database initialization first: POST /api/database?action=init'
+        });
+      }
+      
+      console.log('vulnerabilities table exists');
+    } catch (dbError) {
+      console.error('Database connectivity test failed:', dbError);
+      return res.status(500).json({
+        error: 'Database connectivity failed',
+        debug: dbError instanceof Error ? dbError.message : 'Unknown database error'
+      });
+    }
     
     console.log('Fetching latest CVEs from NVD API...');
     
