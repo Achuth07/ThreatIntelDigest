@@ -153,7 +153,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               VALUES (
                 ${cveId}, ${description}, ${cve.published}, ${cve.lastModified}, ${cve.vulnStatus},
                 ${cvssV3Score}, ${cvssV3Severity}, ${cvssV2Score}, ${cvssV2Severity},
-                ${JSON.stringify(weaknesses)}, ${JSON.stringify(references)}
+                ${weaknesses}, ${references}
               )
             `);
             
