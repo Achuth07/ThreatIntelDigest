@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Globe, Rss, Filter, Zap, RefreshCw, Download, Plus, Minus, Shield } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Globe, Rss, Filter, Zap, RefreshCw, Download, Plus, Minus, Shield, ChevronDown, ChevronUp } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { AddSourcesDialog } from '@/components/add-sources-dialog';
@@ -38,6 +39,7 @@ export function Sidebar({
   const [showAddSourcesDialog, setShowAddSourcesDialog] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [sourceToDeactivate, setSourceToDeactivate] = useState<{ id: string; name: string } | null>(null);
+  const [isSourcesCollapsed, setIsSourcesCollapsed] = useState(false);
 
   const { data: sources = [], isLoading } = useQuery<RssSource[]>({
     queryKey: ['/api/sources'],
@@ -203,25 +205,84 @@ export function Sidebar({
             </Button>
           </div>
         )}
-        {/* Feed Sources */}
+        {/* Filter Options - Moved to top */}
         <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-slate-100 flex items-center">
-              <Rss className="w-5 h-5 text-cyber-cyan mr-2" />
-              Threat Intel Sources
-            </h2>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-8 w-8 p-0 text-slate-400 hover:text-slate-100 hover:bg-slate-700"
-              onClick={() => setShowAddSourcesDialog(true)}
-              data-testid="button-add-sources"
-            >
-              <Plus className="w-4 h-4" />
-            </Button>
-          </div>
+          <h3 className="text-md font-medium text-slate-200 mb-3 flex items-center">
+            <Filter className="w-5 h-5 text-cyber-cyan mr-2" />
+            Filters
+          </h3>
           
+          {/* Time Filter */}
           <div className="space-y-2">
+            <Label className="block text-sm text-slate-400">Time Range</Label>
+            <Select value={timeFilter} onValueChange={onTimeFilterChange}>
+              <SelectTrigger className="w-full bg-slate-700 border-slate-600 text-slate-100" data-testid="select-time-filter">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
+                <SelectItem value="today">Today</SelectItem>
+                <SelectItem value="week">This Week</SelectItem>
+                <SelectItem value="month">This Month</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Threat Level Filter */}
+          <div className="space-y-2 mt-4">
+            <Label className="block text-sm text-slate-400">Threat Level</Label>
+            <div className="space-y-2">
+              {[
+                { id: 'CRITICAL', label: 'Critical', color: 'text-red-400' },
+                { id: 'HIGH', label: 'High', color: 'text-yellow-400' },
+                { id: 'MEDIUM', label: 'Medium', color: 'text-blue-400' },
+              ].map((threat) => (
+                <div key={threat.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={threat.id}
+                    checked={threatFilters.includes(threat.id)}
+                    onCheckedChange={(checked) => handleThreatFilterChange(threat.id, !!checked)}
+                    className="bg-slate-700 border-slate-600"
+                    data-testid={`checkbox-threat-${threat.id.toLowerCase()}`}
+                  />
+                  <Label htmlFor={threat.id} className={`text-sm ${threat.color} cursor-pointer`}>
+                    {threat.label}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Collapsible Feed Sources */}
+        <Collapsible open={!isSourcesCollapsed} onOpenChange={(open) => setIsSourcesCollapsed(!open)} className="mb-6">
+          <CollapsibleTrigger className="w-full">
+            <div className="flex items-center justify-between mb-4 group">
+              <h2 className="text-lg font-semibold text-slate-100 flex items-center">
+                <Rss className="w-5 h-5 text-cyber-cyan mr-2" />
+                Threat Intel Sources
+              </h2>
+              <div className="flex items-center space-x-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 w-8 p-0 text-slate-400 hover:text-slate-100 hover:bg-slate-700"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowAddSourcesDialog(true);
+                  }}
+                  data-testid="button-add-sources"
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+                <div className="text-slate-400 hover:text-slate-100 transition-colors">
+                  {isSourcesCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+                </div>
+              </div>
+            </div>
+          </CollapsibleTrigger>
+          
+          <CollapsibleContent className="space-y-2">
             {/* All Sources */}
             <button
               className={`w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
@@ -277,8 +338,8 @@ export function Sidebar({
                 </button>
               </div>
             ))}
-          </div>
-        </div>
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Vulnerabilities Section */}
         <div className="mb-6">
@@ -318,54 +379,7 @@ export function Sidebar({
           </div>
         </div>
 
-        {/* Filter Options */}
-        <div className="mb-6">
-          <h3 className="text-md font-medium text-slate-200 mb-3 flex items-center">
-            <Filter className="w-5 h-5 text-cyber-cyan mr-2" />
-            Filters
-          </h3>
-          
-          {/* Time Filter */}
-          <div className="space-y-2">
-            <Label className="block text-sm text-slate-400">Time Range</Label>
-            <Select value={timeFilter} onValueChange={onTimeFilterChange}>
-              <SelectTrigger className="w-full bg-slate-700 border-slate-600 text-slate-100" data-testid="select-time-filter">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Time</SelectItem>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="week">This Week</SelectItem>
-                <SelectItem value="month">This Month</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
 
-          {/* Threat Level Filter */}
-          <div className="space-y-2 mt-4">
-            <Label className="block text-sm text-slate-400">Threat Level</Label>
-            <div className="space-y-2">
-              {[
-                { id: 'CRITICAL', label: 'Critical', color: 'text-red-400' },
-                { id: 'HIGH', label: 'High', color: 'text-yellow-400' },
-                { id: 'MEDIUM', label: 'Medium', color: 'text-blue-400' },
-              ].map((threat) => (
-                <div key={threat.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={threat.id}
-                    checked={threatFilters.includes(threat.id)}
-                    onCheckedChange={(checked) => handleThreatFilterChange(threat.id, !!checked)}
-                    className="bg-slate-700 border-slate-600"
-                    data-testid={`checkbox-threat-${threat.id.toLowerCase()}`}
-                  />
-                  <Label htmlFor={threat.id} className={`text-sm ${threat.color} cursor-pointer`}>
-                    {threat.label}
-                  </Label>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
 
         {/* Quick Actions */}
         <div>
