@@ -159,7 +159,7 @@ export function Sidebar({
 
   if (isLoading) {
     return (
-      <aside className="w-80 lg:w-80 bg-slate-800 border-r border-slate-700 overflow-y-auto h-full">
+      <aside className="w-80 lg:w-80 bg-whatcyber-dark border-r border-whatcyber-light-gray/30 overflow-y-auto h-full">
         <div className="p-4 lg:p-6">
           {/* Mobile Close Button */}
           {onClose && (
@@ -190,7 +190,7 @@ export function Sidebar({
   const totalArticles = sources.reduce((sum, source) => sum + (source.isActive ? 10 : 0), 0); // Rough estimate
 
   return (
-    <aside className="w-80 lg:w-80 bg-slate-800 border-r border-slate-700 overflow-y-auto h-full">
+    <aside className="w-80 lg:w-80 bg-whatcyber-dark border-r border-whatcyber-light-gray/30 overflow-y-auto h-full">
       <div className="p-4 lg:p-6">
         {/* Mobile Close Button */}
         {onClose && (
@@ -208,7 +208,7 @@ export function Sidebar({
         {/* Filter Options - Moved to top */}
         <div className="mb-6">
           <h3 className="text-md font-medium text-slate-200 mb-3 flex items-center">
-            <Filter className="w-5 h-5 text-cyber-cyan mr-2" />
+            <Filter className="w-5 h-5 text-whatcyber-teal mr-2" />
             Filters
           </h3>
           
@@ -259,7 +259,7 @@ export function Sidebar({
           <CollapsibleTrigger className="w-full">
             <div className="flex items-center justify-between mb-4 group">
               <h2 className="text-lg font-semibold text-slate-100 flex items-center">
-                <Rss className="w-5 h-5 text-cyber-cyan mr-2" />
+                <Rss className="w-5 h-5 text-whatcyber-teal mr-2" />
                 Threat Intel Sources
               </h2>
               <div className="flex items-center space-x-2">
@@ -286,7 +286,7 @@ export function Sidebar({
             {/* All Sources */}
             <button
               className={`w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
-                selectedSource === 'all' ? 'bg-cyber-blue' : 'hover:bg-slate-700'
+                selectedSource === 'all' ? 'bg-whatcyber-teal/20 border border-whatcyber-teal/30' : 'hover:bg-whatcyber-gray/50'
               }`}
               onClick={() => onSourceSelect('all')}
               data-testid="button-source-all"
@@ -295,7 +295,7 @@ export function Sidebar({
                 <Globe className="w-5 h-5 text-slate-100" />
                 <span className="font-medium text-slate-100">All Sources</span>
               </div>
-              <span className="bg-slate-100 text-cyber-blue text-xs px-2 py-1 rounded-full font-medium">
+              <span className="bg-whatcyber-teal text-whatcyber-dark text-xs px-2 py-1 rounded-full font-medium">
                 {totalArticles}
               </span>
             </button>
@@ -305,7 +305,7 @@ export function Sidebar({
               <div
                 key={source.id}
                 className={`relative w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors group ${
-                  selectedSource === source.name ? 'bg-cyber-blue' : 'hover:bg-slate-700'
+                  selectedSource === source.name ? 'bg-whatcyber-teal/20 border border-whatcyber-teal/30' : 'hover:bg-whatcyber-gray/50'
                 }`}
                 data-testid={`button-source-${source.name.replace(/\s+/g, '-').toLowerCase()}`}
               >
@@ -345,7 +345,7 @@ export function Sidebar({
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-slate-100 flex items-center">
-              <Shield className="w-5 h-5 text-cyber-cyan mr-2" />
+              <Shield className="w-5 h-5 text-whatcyber-teal mr-2" />
               Vulnerabilities
             </h2>
             <Button
@@ -384,7 +384,7 @@ export function Sidebar({
         {/* Quick Actions */}
         <div>
           <h3 className="text-md font-medium text-slate-200 mb-3 flex items-center">
-            <Zap className="w-5 h-5 text-cyber-cyan mr-2" />
+            <Zap className="w-5 h-5 text-whatcyber-teal mr-2" />
             Quick Actions
           </h3>
           <div className="space-y-2">

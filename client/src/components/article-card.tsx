@@ -84,7 +84,7 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
   };
 
   return (
-    <Card className="bg-slate-800 border border-slate-700 hover:border-slate-600 transition-colors group overflow-hidden">
+    <Card className="glass-card border border-whatcyber-light-gray/20 hover:border-whatcyber-teal/30 transition-all duration-300 group overflow-hidden hover:shadow-lg hover:shadow-whatcyber-teal/5">
       <div className="p-4 lg:p-6">
         <div className="flex items-start justify-between mb-3 lg:mb-4">
           <div className="flex items-center space-x-2 lg:space-x-3 min-w-0 flex-1">
@@ -115,7 +115,7 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
               variant="ghost"
               size="sm"
               className={`p-1.5 lg:p-1 transition-colors touch-manipulation ${
-                isBookmarked ? 'text-cyber-cyan' : 'text-slate-400 hover:text-cyber-cyan'
+                isBookmarked ? 'text-whatcyber-teal' : 'text-slate-400 hover:text-whatcyber-teal'
               }`}
               onClick={() => bookmarkMutation.mutate()}
               disabled={bookmarkMutation.isPending}
@@ -137,7 +137,7 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
           </span>
         </div>
         
-        <h2 className={`font-semibold text-slate-100 mb-2 lg:mb-3 group-hover:text-cyber-cyan transition-colors line-clamp-2 ${
+        <h2 className={`font-semibold text-slate-100 mb-2 lg:mb-3 group-hover:text-whatcyber-teal transition-colors line-clamp-2 ${
           isFeatured ? 'text-lg lg:text-xl' : 'text-base lg:text-lg'
         }`} data-testid={`text-title-${article.id}`}>
           {article.title}
@@ -175,7 +175,7 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
               <Button
                 variant="outline"
                 size="sm"
-                className="text-cyber-cyan border-cyber-cyan hover:bg-cyber-cyan hover:text-slate-900 text-xs lg:text-sm font-medium px-2 lg:px-3 py-1 touch-manipulation"
+                className="text-whatcyber-teal border-whatcyber-teal hover:bg-whatcyber-teal hover:text-whatcyber-dark text-xs lg:text-sm font-medium px-2 lg:px-3 py-1 touch-manipulation"
                 onClick={() => onReadHere(article.url)}
                 data-testid={`button-read-here-${article.id}`}
               >

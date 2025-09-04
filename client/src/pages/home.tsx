@@ -163,7 +163,7 @@ export default function Home() {
   });
 
   return (
-    <div className="min-h-screen bg-dark-slate text-slate-100">
+    <div className="min-h-screen bg-whatcyber-darker text-slate-100">
       <Header 
         onSearch={handleSearch}
         bookmarkCount={bookmarks.length}
@@ -172,7 +172,7 @@ export default function Home() {
         isSidebarOpen={isSidebarOpen}
       />
       
-      <div className="flex h-screen pt-16 relative">
+      <div className="flex min-h-[calc(100vh-4rem)] relative">
         {/* Mobile Overlay */}
         {isSidebarOpen && (
           <div 
@@ -184,7 +184,7 @@ export default function Home() {
         {/* Sidebar */}
         <div className={`${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } fixed left-0 top-16 h-full z-30 lg:relative lg:translate-x-0 lg:z-10 transition-transform duration-300 ease-in-out`}>
+        } fixed left-0 top-16 h-[calc(100vh-4rem)] z-30 lg:relative lg:translate-x-0 lg:z-10 lg:top-0 lg:h-full transition-transform duration-300 ease-in-out`}>
           <Sidebar
             selectedSource={selectedSource}
             onSourceSelect={(source) => {
@@ -201,7 +201,7 @@ export default function Home() {
         </div>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-dark-slate">
+        <main className="flex-1 overflow-y-auto bg-whatcyber-darker">
           {showVulnerabilities ? (
             <CVEList onClose={handleVulnerabilitiesClose} />
           ) : (

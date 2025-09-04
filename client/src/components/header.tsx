@@ -30,7 +30,7 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
   };
 
   return (
-    <header className="bg-slate-800 border-b border-slate-700 sticky top-0 z-50">
+    <header className="bg-whatcyber-dark border-b border-whatcyber-light-gray/30 sticky top-0 z-50 backdrop-blur-sm bg-whatcyber-dark/95">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Mobile Menu Button & Logo */}
@@ -46,10 +46,12 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
             </Button>
             
             <div className="flex items-center space-x-3">
-              <Shield className="w-6 lg:w-8 h-6 lg:h-8 text-cyber-cyan" data-testid="logo-icon" />
+              <div className="w-8 h-8 lg:w-10 lg:h-10 bg-whatcyber-teal rounded-lg flex items-center justify-center logo-glow">
+                <Shield className="w-5 h-5 lg:w-6 lg:h-6 text-whatcyber-dark" data-testid="logo-icon" />
+              </div>
               <div className="flex flex-col">
                 <h1 className="text-lg lg:text-xl font-bold text-slate-100 leading-tight" data-testid="logo-text">WhatCyber</h1>
-                <span className="text-xs text-slate-400 font-medium -mt-1" data-testid="logo-tagline">CyberFeed</span>
+                <span className="text-xs text-whatcyber-teal font-medium -mt-1" data-testid="logo-tagline">CyberFeed</span>
               </div>
             </div>
           </div>
@@ -63,7 +65,7 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
               <Input
                 type="text"
                 placeholder="Search threat intelligence articles..."
-                className="w-full pl-10 pr-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyber-cyan focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 bg-whatcyber-gray border border-whatcyber-light-gray rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-whatcyber-teal focus:border-transparent"
                 value={searchQuery}
                 onChange={handleSearchChange}
                 data-testid="input-search"
@@ -95,7 +97,7 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
               <Bookmark className="w-5 h-5" />
               {bookmarkCount > 0 && (
                 <span 
-                  className="absolute -top-1 -right-1 bg-cyber-cyan text-xs rounded-full h-5 w-5 flex items-center justify-center text-dark-slate font-medium"
+                  className="absolute -top-1 -right-1 bg-whatcyber-teal text-xs rounded-full h-5 w-5 flex items-center justify-center text-whatcyber-dark font-medium"
                   data-testid="text-bookmark-count"
                 >
                   {bookmarkCount}
@@ -134,7 +136,7 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
               <Input
                 type="text"
                 placeholder="Search threat intelligence articles..."
-                className="w-full pl-10 pr-4 py-2 bg-slate-700 border border-slate-600 rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyber-cyan focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 bg-whatcyber-gray border border-whatcyber-light-gray rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-whatcyber-teal focus:border-transparent"
                 value={searchQuery}
                 onChange={handleSearchChange}
                 data-testid="input-search-mobile"
