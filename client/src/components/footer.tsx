@@ -5,42 +5,36 @@ interface FooterProps {
 }
 
 export function Footer({ className = '' }: FooterProps) {
-  const [visitorCount, setVisitorCount] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [visitorCount, setVisitorCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchVisitorCount = async () => {
       try {
-        // Use our server-side proxy to avoid CORS issues
-        const response = await fetch('/api/counter');
+        // Use simple CounterAPI without authentication (public endpoint)
+        const counterUrl = `https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed`;
+
+        const response = await fetch(counterUrl, {
+          method: 'GET'
+        });
         
-        if (response.ok) {
-          const data = await response.json();
-          console.log('Counter API response:', data);
-          // Use the count field from the response
-          setVisitorCount(data.count || 0);
-        } else {
-          // Try to parse error response as JSON, but handle case where it's not JSON
-          try {
-            const errorData = await response.json();
-            console.error('Failed to fetch visitor count:', errorData);
-          } catch (jsonError) {
-            // If JSON parsing fails, log the text response
-            const errorText = await response.text();
-            console.error('Failed to fetch visitor count (non-JSON response):', errorText);
-          }
-          
-          // Fallback to localStorage
-          const localCount = localStorage.getItem('visitorCount');
-          setVisitorCount(localCount ? parseInt(localCount, 10) : 0);
+        if (!response.ok) {
+          throw new Error(`Counter API failed: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.count !== undefined) {
+          setVisitorCount(data.count);
         }
       } catch (error) {
-        console.error('Network error fetching visitor count:', error);
+        console.error('Error fetching visitor count:', error);
         // Fallback to localStorage
-        const localCount = localStorage.getItem('visitorCount');
-        setVisitorCount(localCount ? parseInt(localCount, 10) : 0);
+        const stored = localStorage.getItem('visitorCount');
+        const count = stored ? parseInt(stored) : 0;
+        setVisitorCount(count);
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
@@ -56,11 +50,11 @@ export function Footer({ className = '' }: FooterProps) {
           </div>
           <div className="flex items-center space-x-4">
             <div className="text-slate-400 text-sm">
-              {loading ? (
+              {isLoading ? (
                 <span>Loading visitor count...</span>
               ) : (
                 <span>
-                  Visitors: <span className="font-semibold text-slate-200">{visitorCount?.toLocaleString()}</span>
+                  Visitors: <span className="font-semibold text-slate-200">{visitorCount.toLocaleString()}</span>
                 </span>
               )}
             </div>

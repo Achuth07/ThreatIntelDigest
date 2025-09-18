@@ -20,39 +20,31 @@ function Router() {
 
 function App() {
   useEffect(() => {
-    // Increment visitor count on app load through our proxy endpoint
+    // Increment visitor count on app load through CounterAPI
     const incrementVisitorCount = async () => {
       try {
-        // Use our server-side proxy to avoid CORS issues
-        const response = await fetch('/api/counter/increment', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+        // Use simple CounterAPI without authentication (public endpoint)
+        const counterUrl = `https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed/up`;
+
+        const response = await fetch(counterUrl, {
+          method: 'GET'
         });
         
         if (!response.ok) {
-          // Try to parse error response as JSON, but handle case where it's not JSON
-          try {
-            const errorData = await response.json();
-            console.error('Failed to increment visitor count:', errorData);
-          } catch (jsonError) {
-            // If JSON parsing fails, log the text response
-            const errorText = await response.text();
-            console.error('Failed to increment visitor count (non-JSON response):', errorText);
-          }
-          
-          // Fallback to localStorage
-          const localCount = localStorage.getItem('visitorCount');
-          const newCount = localCount ? parseInt(localCount, 10) + 1 : 1;
-          localStorage.setItem('visitorCount', newCount.toString());
+          throw new Error(`Counter API failed: ${response.status}`);
         }
+
+        const data = await response.json();
+
+        // The counter is automatically incremented by the API call
+        // We don't need to do anything with the response data here
+        // The footer component will fetch the updated count
       } catch (error) {
-        console.error('Network error incrementing visitor count:', error);
+        console.error('Error incrementing visitor count:', error);
         // Fallback to localStorage
-        const localCount = localStorage.getItem('visitorCount');
-        const newCount = localCount ? parseInt(localCount, 10) + 1 : 1;
-        localStorage.setItem('visitorCount', newCount.toString());
+        const stored = localStorage.getItem('visitorCount');
+        const count = stored ? parseInt(stored) + 1 : 1;
+        localStorage.setItem('visitorCount', count.toString());
       }
     };
 
