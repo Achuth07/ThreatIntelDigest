@@ -18,6 +18,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create HTTP server
   const httpServer = createServer(app);
   
+  // Log when API routes are being registered
+  console.log('Registering API routes...');
+  
   // Fetch Article Content
   app.get("/api/fetch-article", async (req, res) => {
     const { url } = req.query;
@@ -117,6 +120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // CounterAPI Proxy Endpoint
   app.get("/api/counter", async (req, res) => {
+    console.log('GET /api/counter called');
     try {
       // Proxy request to CounterAPI
       const counterResponse = await fetch('https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed');
@@ -142,6 +146,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/counter/increment", async (req, res) => {
+    console.log('POST /api/counter/increment called');
     try {
       // Try different approaches to increment the counter
       // Approach 1: POST to the counter endpoint with up action
@@ -188,6 +193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  console.log('API routes registered successfully');
   return httpServer;
 }
 
