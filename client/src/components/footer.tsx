@@ -20,8 +20,16 @@ export function Footer({ className = '' }: FooterProps) {
           // Use the count field from the response
           setVisitorCount(data.count || 0);
         } else {
-          const errorData = await response.json();
-          console.error('Failed to fetch visitor count:', errorData);
+          // Try to parse error response as JSON, but handle case where it's not JSON
+          try {
+            const errorData = await response.json();
+            console.error('Failed to fetch visitor count:', errorData);
+          } catch (jsonError) {
+            // If JSON parsing fails, log the text response
+            const errorText = await response.text();
+            console.error('Failed to fetch visitor count (non-JSON response):', errorText);
+          }
+          
           // Fallback to localStorage
           const localCount = localStorage.getItem('visitorCount');
           setVisitorCount(localCount ? parseInt(localCount, 10) : 0);

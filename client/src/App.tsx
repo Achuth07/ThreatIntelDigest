@@ -32,8 +32,16 @@ function App() {
         });
         
         if (!response.ok) {
-          const errorData = await response.json();
-          console.error('Failed to increment visitor count:', errorData);
+          // Try to parse error response as JSON, but handle case where it's not JSON
+          try {
+            const errorData = await response.json();
+            console.error('Failed to increment visitor count:', errorData);
+          } catch (jsonError) {
+            // If JSON parsing fails, log the text response
+            const errorText = await response.text();
+            console.error('Failed to increment visitor count (non-JSON response):', errorText);
+          }
+          
           // Fallback to localStorage
           const localCount = localStorage.getItem('visitorCount');
           const newCount = localCount ? parseInt(localCount, 10) + 1 : 1;
