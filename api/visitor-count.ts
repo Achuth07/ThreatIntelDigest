@@ -25,14 +25,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Increment visitor count
       if (apiToken) {
         // Use CounterAPI v2 with authentication
-        const counterUrl = `https://api.counterapi.dev/v2/threatfeed/visitorstothreatfeed/up`;
+        // Based on the error, let's try a different endpoint structure
+        const counterUrl = `https://api.counterapi.dev/v2/up`;
         
         const response = await fetch(counterUrl, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${apiToken}`,
             'Content-Type': 'application/json'
-          }
+          },
+          body: JSON.stringify({
+            namespace: 'threatfeed',
+            slug: 'visitorstothreatfeed'
+          })
         });
         
         if (!response.ok) {
@@ -65,14 +70,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Get visitor count
       if (apiToken) {
         // Use CounterAPI v2 with authentication
-        const counterUrl = `https://api.counterapi.dev/v2/threatfeed/visitorstothreatfeed`;
+        // Based on the error, let's try a different endpoint structure
+        const counterUrl = `https://api.counterapi.dev/v2/count`;
         
         const response = await fetch(counterUrl, {
-          method: 'GET',
+          method: 'POST',
           headers: {
             'Authorization': `Bearer ${apiToken}`,
             'Content-Type': 'application/json'
-          }
+          },
+          body: JSON.stringify({
+            namespace: 'threatfeed',
+            slug: 'visitorstothreatfeed'
+          })
         });
         
         if (!response.ok) {
