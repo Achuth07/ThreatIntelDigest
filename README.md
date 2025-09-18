@@ -316,6 +316,25 @@ DATABASE_URL=postgresql://username:password@host:port/database
 - **API Documentation:** OpenAPI/Swagger integration
 - **Testing Suite:** Comprehensive test coverage
 
+## 📈 Visitor Analytics
+
+This project integrates with CounterAPI to track visitor statistics. The visitor count is displayed in the footer of the application.
+
+### Setting up CounterAPI
+
+1. **Create a CounterAPI account** at [https://counterapi.com](https://counterapi.com)
+2. **Create a workspace** called `threatfeed`
+3. **Create a counter** with these details:
+   - Name: `visitors`
+   - Slug: `visitorstothreatfeed`
+   - Workspace: `threatfeed`
+4. **Get your API token** from the CounterAPI dashboard
+5. **Add the token to your Vercel environment variables**:
+   - Variable name: `VITE_THREATFEED_COUNTER`
+   - Value: Your CounterAPI token
+
+The integration automatically increments the counter each time a user visits the site and displays the current count in the footer.
+
 ## 🤝 Contributing
 
 1. Fork the repository

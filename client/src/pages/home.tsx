@@ -163,7 +163,7 @@ export default function Home() {
   });
 
   return (
-    <div className="min-h-screen bg-whatcyber-darker text-slate-100">
+    <div className="min-h-screen bg-whatcyber-darker text-slate-100 flex flex-col">
       <Header 
         onSearch={handleSearch}
         bookmarkCount={bookmarks.length}
@@ -172,7 +172,7 @@ export default function Home() {
         isSidebarOpen={isSidebarOpen}
       />
       
-      <div className="flex min-h-[calc(100vh-4rem)] relative">
+      <div className="flex flex-1 min-h-0 relative">
         {/* Mobile Overlay */}
         {isSidebarOpen && (
           <div 
