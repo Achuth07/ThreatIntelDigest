@@ -23,8 +23,8 @@ function App() {
     // Increment visitor count on app load using direct API call
     const incrementVisitorCount = async () => {
       try {
-        // Direct POST request to increment the counter
-        await fetch('https://counterapi.com/api/v1/threatfeed/visitorstothreatfeed/up', {
+        // Direct POST request to increment the counter with correct domain
+        await fetch('https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed/up', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

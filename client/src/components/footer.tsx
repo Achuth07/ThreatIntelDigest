@@ -12,7 +12,7 @@ export function Footer({ className = '' }: FooterProps) {
     const fetchVisitorCount = async () => {
       try {
         // Direct API call to CounterAPI with the correct endpoint
-        const response = await fetch('https://counterapi.com/api/v1/threatfeed/visitorstothreatfeed');
+        const response = await fetch('https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed');
         if (response.ok) {
           const data = await response.json();
           setVisitorCount(data.value || 0);
