@@ -18,99 +18,40 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Use CounterAPI v2 with token if available
-    const apiToken = process.env.VITE_THREATFEED_COUNTER;
-    
     if (req.method === 'POST') {
-      // Increment visitor count
-      if (apiToken) {
-        // Use CounterAPI v2 with authentication
-        // Based on the error, let's try a different endpoint structure
-        const counterUrl = `https://api.counterapi.dev/v2/up`;
-        
-        const response = await fetch(counterUrl, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${apiToken}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            namespace: 'threatfeed',
-            slug: 'visitorstothreatfeed'
-          })
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`CounterAPI v2 failed: ${response.status} ${response.statusText}`, errorText);
-          throw new Error(`CounterAPI v2 failed: ${response.status} ${response.statusText} - ${errorText}`);
-        }
-        
-        const data = await response.json();
-        res.status(200).json(data);
-      } else {
-        // Fallback to CounterAPI v1
-        console.log('No API token found, using CounterAPI v1');
-        const counterUrl = `https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed/up/`;
-        
-        const response = await fetch(counterUrl, {
-          method: 'GET'
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`CounterAPI v1 failed: ${response.status} ${response.statusText}`, errorText);
-          throw new Error(`CounterAPI v1 failed: ${response.status} ${response.statusText} - ${errorText}`);
-        }
-        
-        const data = await response.json();
-        res.status(200).json(data);
+      // Increment visitor count using CounterAPI v1 (no authentication needed)
+      // Added trailing slash to avoid 301 redirect that causes CORS issues
+      const counterUrl = `https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed/up/`;
+      
+      const response = await fetch(counterUrl, {
+        method: 'GET'  // CounterAPI v1 uses GET for incrementing
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`CounterAPI v1 increment failed: ${response.status} ${response.statusText}`, errorText);
+        throw new Error(`CounterAPI v1 increment failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
+      
+      const data = await response.json();
+      res.status(200).json(data);
     } else if (req.method === 'GET') {
-      // Get visitor count
-      if (apiToken) {
-        // Use CounterAPI v2 with authentication
-        // Based on the error, let's try a different endpoint structure
-        const counterUrl = `https://api.counterapi.dev/v2/count`;
-        
-        const response = await fetch(counterUrl, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${apiToken}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            namespace: 'threatfeed',
-            slug: 'visitorstothreatfeed'
-          })
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`CounterAPI v2 failed: ${response.status} ${response.statusText}`, errorText);
-          throw new Error(`CounterAPI v2 failed: ${response.status} ${response.statusText} - ${errorText}`);
-        }
-        
-        const data = await response.json();
-        res.status(200).json(data);
-      } else {
-        // Fallback to CounterAPI v1
-        console.log('No API token found, using CounterAPI v1');
-        const counterUrl = `https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed/`;
-        
-        const response = await fetch(counterUrl, {
-          method: 'GET'
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`CounterAPI v1 failed: ${response.status} ${response.statusText}`, errorText);
-          throw new Error(`CounterAPI v1 failed: ${response.status} ${response.statusText} - ${errorText}`);
-        }
-        
-        const data = await response.json();
-        res.status(200).json(data);
+      // Get visitor count using CounterAPI v1 (no authentication needed)
+      // Added trailing slash to avoid 301 redirect that causes CORS issues
+      const counterUrl = `https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed/`;
+      
+      const response = await fetch(counterUrl, {
+        method: 'GET'
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`CounterAPI v1 fetch failed: ${response.status} ${response.statusText}`, errorText);
+        throw new Error(`CounterAPI v1 fetch failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
+      
+      const data = await response.json();
+      res.status(200).json(data);
     } else {
       res.status(405).json({ error: 'Method not allowed' });
     }
