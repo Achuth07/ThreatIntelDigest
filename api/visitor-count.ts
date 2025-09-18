@@ -36,13 +36,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
         
         if (!response.ok) {
-          throw new Error(`CounterAPI v2 failed: ${response.status} ${response.statusText}`);
+          const errorText = await response.text();
+          console.error(`CounterAPI v2 failed: ${response.status} ${response.statusText}`, errorText);
+          throw new Error(`CounterAPI v2 failed: ${response.status} ${response.statusText} - ${errorText}`);
         }
         
         const data = await response.json();
         res.status(200).json(data);
       } else {
         // Fallback to CounterAPI v1
+        console.log('No API token found, using CounterAPI v1');
         const counterUrl = `https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed/up/`;
         
         const response = await fetch(counterUrl, {
@@ -50,7 +53,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
         
         if (!response.ok) {
-          throw new Error(`CounterAPI v1 failed: ${response.status} ${response.statusText}`);
+          const errorText = await response.text();
+          console.error(`CounterAPI v1 failed: ${response.status} ${response.statusText}`, errorText);
+          throw new Error(`CounterAPI v1 failed: ${response.status} ${response.statusText} - ${errorText}`);
         }
         
         const data = await response.json();
@@ -71,13 +76,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
         
         if (!response.ok) {
-          throw new Error(`CounterAPI v2 failed: ${response.status} ${response.statusText}`);
+          const errorText = await response.text();
+          console.error(`CounterAPI v2 failed: ${response.status} ${response.statusText}`, errorText);
+          throw new Error(`CounterAPI v2 failed: ${response.status} ${response.statusText} - ${errorText}`);
         }
         
         const data = await response.json();
         res.status(200).json(data);
       } else {
         // Fallback to CounterAPI v1
+        console.log('No API token found, using CounterAPI v1');
         const counterUrl = `https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed/`;
         
         const response = await fetch(counterUrl, {
@@ -85,7 +93,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
         
         if (!response.ok) {
-          throw new Error(`CounterAPI v1 failed: ${response.status} ${response.statusText}`);
+          const errorText = await response.text();
+          console.error(`CounterAPI v1 failed: ${response.status} ${response.statusText}`, errorText);
+          throw new Error(`CounterAPI v1 failed: ${response.status} ${response.statusText} - ${errorText}`);
         }
         
         const data = await response.json();
@@ -96,6 +106,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   } catch (error) {
     console.error('Visitor count API error:', error);
-    res.status(500).json({ error: 'Failed to process visitor count request' });
+    res.status(500).json({ error: 'Failed to process visitor count request', details: error.message });
   }
 }
