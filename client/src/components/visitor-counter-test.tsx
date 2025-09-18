@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Counter } from 'counterapi';
 
 export function VisitorCounterTest() {
   const [count, setCount] = useState<number | null>(null);
@@ -9,18 +8,18 @@ export function VisitorCounterTest() {
   useEffect(() => {
     const testCounter = async () => {
       try {
-        // Initialize CounterAPI V1 client with your specific workspace
-        const counter = new Counter({
-          version: 'v1',
-          namespace: 'threatfeed', // Your workspace name
-        });
-
-        // Try to get the counter value using your specific counter slug
-        const result = await counter.get('visitorstothreatfeed');
-        setCount(result.value);
+        // Direct API call to CounterAPI with the correct endpoint
+        const response = await fetch('https://counterapi.com/api/v1/threatfeed/visitorstothreatfeed');
+        if (response.ok) {
+          const data = await response.json();
+          setCount(data.value || 0);
+        } else {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
         console.error('CounterAPI test error:', err);
+        setCount(0);
       } finally {
         setLoading(false);
       }

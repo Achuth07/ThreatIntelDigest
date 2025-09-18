@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { Counter } from 'counterapi';
 
 interface FooterProps {
   className?: string;
@@ -12,18 +11,17 @@ export function Footer({ className = '' }: FooterProps) {
   useEffect(() => {
     const fetchVisitorCount = async () => {
       try {
-        // Initialize CounterAPI V1 client with your specific workspace
-        const counter = new Counter({
-          version: 'v1',
-          namespace: 'threatfeed', // Your workspace name
-        });
-
-        // Get the current visitor count using your specific counter slug
-        const count = await counter.get('visitorstothreatfeed');
-        setVisitorCount(count.value);
+        // Direct API call to CounterAPI with the correct endpoint
+        const response = await fetch('https://counterapi.com/api/v1/threatfeed/visitorstothreatfeed');
+        if (response.ok) {
+          const data = await response.json();
+          setVisitorCount(data.value || 0);
+        } else {
+          console.error('Failed to fetch visitor count:', response.status);
+          setVisitorCount(0);
+        }
       } catch (error) {
         console.error('Error fetching visitor count:', error);
-        // Set a default value if there's an error
         setVisitorCount(0);
       } finally {
         setLoading(false);

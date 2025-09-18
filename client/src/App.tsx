@@ -8,7 +8,6 @@ import Home from "@/pages/home";
 import NotFound from "@/pages/not-found";
 import { Footer } from "@/components/footer";
 import { useEffect } from "react";
-import { Counter } from 'counterapi';
 
 function Router() {
   return (
@@ -21,17 +20,16 @@ function Router() {
 
 function App() {
   useEffect(() => {
-    // Increment visitor count on app load
+    // Increment visitor count on app load using direct API call
     const incrementVisitorCount = async () => {
       try {
-        // Initialize CounterAPI V1 client with your specific workspace
-        const counter = new Counter({
-          version: 'v1',
-          namespace: 'threatfeed', // Your workspace name
+        // Direct POST request to increment the counter
+        await fetch('https://counterapi.com/api/v1/threatfeed/visitorstothreatfeed/up', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
         });
-
-        // Increment the visitor counter using your specific counter slug
-        await counter.up('visitorstothreatfeed');
       } catch (error) {
         console.error('Error incrementing visitor count:', error);
       }
