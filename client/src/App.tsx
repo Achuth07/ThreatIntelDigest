@@ -20,23 +20,18 @@ function Router() {
 
 function App() {
   useEffect(() => {
-    // Increment visitor count on app load through CounterAPI
+    // Increment visitor count on app load through our backend proxy
     const incrementVisitorCount = async () => {
       try {
-        // Use simple CounterAPI without authentication (public endpoint)
-        // Added trailing slash to avoid 301 redirect that causes CORS issues
-        const counterUrl = `https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed/up/`;
-
-        const response = await fetch(counterUrl, {
-          method: 'GET'
+        const response = await fetch('/api/visitor-count/increment', {
+          method: 'POST'
         });
         
         if (!response.ok) {
-          throw new Error(`Counter API failed: ${response.status}`);
+          throw new Error(`Counter API proxy failed: ${response.status}`);
         }
 
         const data = await response.json();
-
         // The counter is automatically incremented by the API call
         // We don't need to do anything with the response data here
         // The footer component will fetch the updated count

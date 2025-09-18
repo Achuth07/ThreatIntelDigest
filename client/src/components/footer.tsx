@@ -6,14 +6,9 @@ export function Footer() {
   useEffect(() => {
     const fetchVisitorCount = async () => {
       try {
-        // Use simple CounterAPI without authentication (public endpoint)
-        // Added trailing slash to avoid 301 redirect that causes CORS issues
-        const counterUrl = `https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed/`;
-
-        const response = await fetch(counterUrl, {
-          method: 'GET'
-        });
-
+        // Use our backend proxy endpoint to avoid CORS issues
+        const response = await fetch('/api/visitor-count');
+        
         if (!response.ok) {
           throw new Error(`Failed to fetch visitor count: ${response.status}`);
         }

@@ -448,6 +448,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/visitor-count/increment', async (req, res) => {
+    try {
+      console.log('POST /api/visitor-count/increment - Starting request');
+      
+      // Use CounterAPI v2 with token if available
+      const apiToken = process.env.VITE_THREATFEED_COUNTER;
+      
+      if (apiToken) {
+        // Use CounterAPI v2 with authentication
+        const counterUrl = `https://api.counterapi.dev/v2/threatfeed/visitorstothreatfeed/up`;
+        
+        const response = await fetch(counterUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`CounterAPI v2 failed: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('POST /api/visitor-count/increment - Success', data);
+        res.json(data);
+      } else {
+        // Fallback to CounterAPI v1
+        const counterUrl = `https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed/up/`;
+        
+        const response = await fetch(counterUrl, {
+          method: 'GET'
+        });
+        
+        if (!response.ok) {
+          throw new Error(`CounterAPI v1 failed: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('POST /api/visitor-count/increment - Success', data);
+        res.json(data);
+      }
+    } catch (error) {
+      console.error('POST /api/visitor-count/increment - Error:', error);
+      res.status(500).json({ error: 'Failed to increment visitor count' });
+    }
+  });
+
+  app.get('/api/visitor-count', async (req, res) => {
+    try {
+      console.log('GET /api/visitor-count - Starting request');
+      
+      // Use CounterAPI v2 with token if available
+      const apiToken = process.env.VITE_THREATFEED_COUNTER;
+      
+      if (apiToken) {
+        // Use CounterAPI v2 with authentication
+        const counterUrl = `https://api.counterapi.dev/v2/threatfeed/visitorstothreatfeed`;
+        
+        const response = await fetch(counterUrl, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${apiToken}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`CounterAPI v2 failed: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('GET /api/visitor-count - Success', data);
+        res.json(data);
+      } else {
+        // Fallback to CounterAPI v1
+        const counterUrl = `https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed/`;
+        
+        const response = await fetch(counterUrl, {
+          method: 'GET'
+        });
+        
+        if (!response.ok) {
+          throw new Error(`CounterAPI v1 failed: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('GET /api/visitor-count - Success', data);
+        res.json(data);
+      }
+    } catch (error) {
+      console.error('GET /api/visitor-count - Error:', error);
+      res.status(500).json({ error: 'Failed to fetch visitor count' });
+    }
+  });
+
   console.log('API routes registered successfully');
   return httpServer;
 }
@@ -518,7 +614,7 @@ async function fetchCVEsToMemory(storage: any, res: any) {
               cvssV3Severity = metrics.cvssMetricV31[0].cvssData.baseSeverity;
             } else if (metrics?.cvssMetricV30?.[0]) {
               cvssV3Score = metrics.cvssMetricV30[0].cvssData.baseScore;
-              cvssV3Severity = metrics.cvssMetricV30[0].cvssData.baseSeverity;
+              cvssV3Severity = metrics.cvssMetricV30[0].baseSeverity;
             }
             
             if (metrics?.cvssMetricV2?.[0]) {
