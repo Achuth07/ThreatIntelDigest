@@ -2,9 +2,86 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { PostgresStorage } from '../server/postgres-storage';
 import { insertBookmarkSchema } from '../shared/schema';
 
-const storage = new PostgresStorage();
+// In-memory storage for local development
+let inMemoryBookmarks: any[] = [];
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Use in-memory storage when no DATABASE_URL is provided
+  if (!process.env.DATABASE_URL) {
+    console.log('Using in-memory storage for bookmarks');
+    
+    if (req.method === 'GET') {
+      try {
+        const { export: isExport } = req.query;
+        
+        if (isExport === 'true') {
+          // Export bookmarks with full article details
+          const exportData = {
+            exportedAt: new Date().toISOString(),
+            totalBookmarks: inMemoryBookmarks.length,
+            bookmarks: inMemoryBookmarks.map(bookmark => ({
+              title: bookmark.title,
+              summary: bookmark.summary,
+              url: bookmark.url,
+              source: bookmark.source,
+              publishedAt: bookmark.publishedAt,
+              threatLevel: bookmark.threatLevel,
+              tags: bookmark.tags,
+              bookmarkedAt: bookmark.createdAt
+            }))
+          };
+          
+          res.setHeader('Content-Type', 'application/json');
+          res.setHeader('Content-Disposition', `attachment; filename="cyberfeed-bookmarks-${new Date().toISOString().split('T')[0]}.json"`);
+          return res.json(exportData);
+        } else {
+          // Regular bookmarks fetch
+          return res.json(inMemoryBookmarks);
+        }
+      } catch (error) {
+        return res.status(500).json({ message: "Failed to fetch bookmarks" });
+      }
+    } else if (req.method === 'POST') {
+      try {
+        const validatedData = insertBookmarkSchema.parse(req.body);
+        const newBookmark = {
+          ...validatedData,
+          id: String(inMemoryBookmarks.length + 1),
+          createdAt: new Date().toISOString()
+        };
+        inMemoryBookmarks.push(newBookmark);
+        return res.status(201).json(newBookmark);
+      } catch (error) {
+        return res.status(400).json({ message: "Invalid bookmark data" });
+      }
+    } else if (req.method === 'DELETE') {
+      try {
+        const { pathname } = new URL(req.url!, `https://${req.headers.host}`);
+        const articleId = pathname.split('/').pop();
+        
+        if (!articleId) {
+          return res.status(400).json({ message: "Article ID is required" });
+        }
+        
+        const bookmarkIndex = inMemoryBookmarks.findIndex(bookmark => bookmark.articleId === articleId);
+        
+        if (bookmarkIndex !== -1) {
+          inMemoryBookmarks.splice(bookmarkIndex, 1);
+          return res.json({ message: "Bookmark removed successfully" });
+        } else {
+          return res.status(404).json({ message: "Bookmark not found" });
+        }
+      } catch (error) {
+        return res.status(500).json({ message: "Failed to remove bookmark" });
+      }
+    } else {
+      return res.status(405).json({ message: 'Method not allowed' });
+    }
+  }
+  
+  // Use database storage when DATABASE_URL is provided
+  const storage = new PostgresStorage();
+  
   if (req.method === 'GET') {
     try {
       const { export: isExport } = req.query;

@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { insertArticleSchema, insertBookmarkSchema, insertRssSourceSchema } from "@shared/schema";
+import { insertArticleSchema, insertBookmarkSchema, insertRssSourceSchema } from "../shared/schema";
 import type { IStorage } from "./storage";
 import { PostgresStorage } from "./postgres-storage";
 import { MemStorage, type CVE } from "./storage";
@@ -20,6 +20,261 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Log when API routes are being registered
   console.log('Registering API routes...');
+  
+  // Import and register all API routes
+  // Sources API
+  app.get('/api/sources', async (req, res) => {
+    const { default: sourcesHandler } = await import('../api/sources');
+    // Create mock VercelRequest and VercelResponse objects
+    const mockReq = {
+      method: 'GET',
+      url: '/api/sources',
+      headers: req.headers,
+      query: req.query,
+    };
+    
+    const mockRes = {
+      status: (code: number) => {
+        res.status(code);
+        return mockRes;
+      },
+      json: (data: any) => {
+        res.json(data);
+        return mockRes;
+      },
+      send: (data: any) => {
+        res.send(data);
+        return mockRes;
+      }
+    };
+    
+    await sourcesHandler(mockReq as any, mockRes as any);
+  });
+  
+  app.post('/api/sources', async (req, res) => {
+    const { default: sourcesHandler } = await import('../api/sources');
+    // Create mock VercelRequest and VercelResponse objects
+    const mockReq = {
+      method: 'POST',
+      url: '/api/sources',
+      headers: req.headers,
+      body: req.body,
+    };
+    
+    const mockRes = {
+      status: (code: number) => {
+        res.status(code);
+        return mockRes;
+      },
+      json: (data: any) => {
+        res.json(data);
+        return mockRes;
+      },
+      send: (data: any) => {
+        res.send(data);
+        return mockRes;
+      }
+    };
+    
+    await sourcesHandler(mockReq as any, mockRes as any);
+  });
+  
+  app.patch('/api/sources/:id', async (req, res) => {
+    const { default: sourcesHandler } = await import('../api/sources');
+    // Create mock VercelRequest and VercelResponse objects
+    const mockReq = {
+      method: 'PATCH',
+      url: `/api/sources/${req.params.id}`,
+      headers: req.headers,
+      body: req.body,
+    };
+    
+    const mockRes = {
+      status: (code: number) => {
+        res.status(code);
+        return mockRes;
+      },
+      json: (data: any) => {
+        res.json(data);
+        return mockRes;
+      },
+      send: (data: any) => {
+        res.send(data);
+        return mockRes;
+      }
+    };
+    
+    await sourcesHandler(mockReq as any, mockRes as any);
+  });
+  
+  app.delete('/api/sources/:id', async (req, res) => {
+    const { default: sourcesHandler } = await import('../api/sources');
+    // Create mock VercelRequest and VercelResponse objects
+    const mockReq = {
+      method: 'DELETE',
+      url: `/api/sources/${req.params.id}`,
+      headers: req.headers,
+    };
+    
+    const mockRes = {
+      status: (code: number) => {
+        res.status(code);
+        return mockRes;
+      },
+      json: (data: any) => {
+        res.json(data);
+        return mockRes;
+      },
+      send: (data: any) => {
+        res.send(data);
+        return mockRes;
+      }
+    };
+    
+    await sourcesHandler(mockReq as any, mockRes as any);
+  });
+  
+  // Articles API
+  app.get('/api/articles', async (req, res) => {
+    const { default: articlesHandler } = await import('../api/articles');
+    // Create mock VercelRequest and VercelResponse objects
+    const mockReq = {
+      method: 'GET',
+      url: '/api/articles',
+      headers: req.headers,
+      query: req.query,
+    };
+    
+    const mockRes = {
+      status: (code: number) => {
+        res.status(code);
+        return mockRes;
+      },
+      json: (data: any) => {
+        res.json(data);
+        return mockRes;
+      },
+      send: (data: any) => {
+        res.send(data);
+        return mockRes;
+      }
+    };
+    
+    await articlesHandler(mockReq as any, mockRes as any);
+  });
+  
+  // Bookmarks API
+  app.get('/api/bookmarks', async (req, res) => {
+    const { default: bookmarksHandler } = await import('../api/bookmarks');
+    // Create mock VercelRequest and VercelResponse objects
+    const mockReq = {
+      method: 'GET',
+      url: '/api/bookmarks',
+      headers: req.headers,
+      query: req.query,
+    };
+    
+    const mockRes = {
+      status: (code: number) => {
+        res.status(code);
+        return mockRes;
+      },
+      json: (data: any) => {
+        res.json(data);
+        return mockRes;
+      },
+      send: (data: any) => {
+        res.send(data);
+        return mockRes;
+      }
+    };
+    
+    await bookmarksHandler(mockReq as any, mockRes as any);
+  });
+  
+  app.post('/api/bookmarks', async (req, res) => {
+    const { default: bookmarksHandler } = await import('../api/bookmarks');
+    // Create mock VercelRequest and VercelResponse objects
+    const mockReq = {
+      method: 'POST',
+      url: '/api/bookmarks',
+      headers: req.headers,
+      body: req.body,
+    };
+    
+    const mockRes = {
+      status: (code: number) => {
+        res.status(code);
+        return mockRes;
+      },
+      json: (data: any) => {
+        res.json(data);
+        return mockRes;
+      },
+      send: (data: any) => {
+        res.send(data);
+        return mockRes;
+      }
+    };
+    
+    await bookmarksHandler(mockReq as any, mockRes as any);
+  });
+  
+  app.delete('/api/bookmarks/:articleId', async (req, res) => {
+    const { default: bookmarksHandler } = await import('../api/bookmarks');
+    // Create mock VercelRequest and VercelResponse objects
+    const mockReq = {
+      method: 'DELETE',
+      url: `/api/bookmarks/${req.params.articleId}`,
+      headers: req.headers,
+    };
+    
+    const mockRes = {
+      status: (code: number) => {
+        res.status(code);
+        return mockRes;
+      },
+      json: (data: any) => {
+        res.json(data);
+        return mockRes;
+      },
+      send: (data: any) => {
+        res.send(data);
+        return mockRes;
+      }
+    };
+    
+    await bookmarksHandler(mockReq as any, mockRes as any);
+  });
+  
+  // Fetch feeds API
+  app.post('/api/fetch-feeds', async (req, res) => {
+    const { default: fetchFeedsHandler } = await import('../api/fetch-feeds');
+    // Create mock VercelRequest and VercelResponse objects
+    const mockReq = {
+      method: 'POST',
+      url: '/api/fetch-feeds',
+      headers: req.headers,
+      body: req.body,
+    };
+    
+    const mockRes = {
+      status: (code: number) => {
+        res.status(code);
+        return mockRes;
+      },
+      json: (data: any) => {
+        res.json(data);
+        return mockRes;
+      },
+      send: (data: any) => {
+        res.send(data);
+        return mockRes;
+      }
+    };
+    
+    await fetchFeedsHandler(mockReq as any, mockRes as any);
+  });
   
   // Fetch Article Content
   app.get("/api/fetch-article", async (req, res) => {
@@ -368,62 +623,19 @@ async function getVulnerabilitiesFromMemory(storage: any, req: any, res: any) {
     res.json({
       vulnerabilities,
       pagination: {
-        page: pageNum,
-        limit: limitNum,
-        total: totalCount,
+        currentPage: pageNum,
         totalPages: Math.ceil(totalCount / limitNum),
-        hasNext: pageNum * limitNum < totalCount,
+        totalCount,
+        hasNext: pageNum < Math.ceil(totalCount / limitNum),
         hasPrev: pageNum > 1,
-      },
-      meta: {
-        count: vulnerabilities.length,
-        lastUpdated: new Date().toISOString(),
-      },
+        limit: limitNum
+      }
     });
-    
   } catch (error) {
-    console.error("Error fetching vulnerabilities from memory:", error);
+    console.error("Error getting vulnerabilities:", error);
     res.status(500).json({ 
-      message: "Failed to fetch vulnerabilities",
+      message: "Failed to get vulnerabilities",
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
-}
-
-// Helper functions
-function determineThreatLevel(title: string, content: string): string {
-  const text = (title + " " + content).toLowerCase();
-  
-  if (text.includes("critical") || text.includes("zero-day") || text.includes("ransomware")) {
-    return "CRITICAL";
-  } else if (text.includes("high") || text.includes("vulnerability") || text.includes("exploit")) {
-    return "HIGH";
-  } else {
-    return "MEDIUM";
-  }
-}
-
-function extractTags(title: string, content: string): string[] {
-  const text = (title + " " + content).toLowerCase();
-  const tags: string[] = [];
-  
-  const commonTags = [
-    "malware", "ransomware", "phishing", "zero-day", "vulnerability", 
-    "exploit", "apt", "microsoft", "google", "apple", "android", "ios",
-    "windows", "linux", "cloud", "aws", "azure", "kubernetes", "docker"
-  ];
-  
-  commonTags.forEach(tag => {
-    if (text.includes(tag)) {
-      tags.push(tag.charAt(0).toUpperCase() + tag.slice(1));
-    }
-  });
-  
-  return tags.slice(0, 3); // Limit to 3 tags
-}
-
-function estimateReadTime(content: string): number {
-  const wordsPerMinute = 200;
-  const wordCount = content.split(/\s+/).length;
-  return Math.max(1, Math.ceil(wordCount / wordsPerMinute));
 }

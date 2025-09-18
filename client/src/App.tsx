@@ -24,7 +24,8 @@ function App() {
     const incrementVisitorCount = async () => {
       try {
         // Use simple CounterAPI without authentication (public endpoint)
-        const counterUrl = `https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed/up`;
+        // Added trailing slash to avoid 301 redirect that causes CORS issues
+        const counterUrl = `https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed/up/`;
 
         const response = await fetch(counterUrl, {
           method: 'GET'

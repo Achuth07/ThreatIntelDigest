@@ -56,6 +56,7 @@ export const getQueryFn: <T>(options: {
       url = queryKey.join("/") as string;
     }
 
+    // Make the actual API request
     const res = await fetch(url, {
       credentials: "include",
     });
@@ -74,8 +75,8 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
-      retry: false,
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      retry: 1,
     },
     mutations: {
       retry: false,

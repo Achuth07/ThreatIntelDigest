@@ -1,14 +1,120 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
+// In-memory storage for local development
+let inMemoryArticles: any[] = [
+  {
+    id: '1',
+    title: 'New Zero-Day Exploit Targets Popular Web Browsers',
+    summary: 'Security researchers have discovered a critical zero-day vulnerability affecting major web browsers that could allow remote code execution.',
+    url: 'https://example.com/article1',
+    source: 'Bleeping Computer',
+    threatLevel: 'HIGH',
+    tags: ['browser', 'zero-day', 'exploit'],
+    readTime: 5,
+    publishedAt: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
+    createdAt: new Date(Date.now() - 3600000).toISOString()
+  },
+  {
+    id: '2',
+    title: 'Ransomware Group Claims Responsibility for Healthcare Data Breach',
+    summary: 'A notorious ransomware gang has announced they breached a major healthcare provider and are demanding payment.',
+    url: 'https://example.com/article2',
+    source: 'The Hacker News',
+    threatLevel: 'CRITICAL',
+    tags: ['ransomware', 'healthcare', 'breach'],
+    readTime: 8,
+    publishedAt: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
+    createdAt: new Date(Date.now() - 7200000).toISOString()
+  },
+  {
+    id: '3',
+    title: 'New Phishing Campaign Targets Financial Institutions',
+    summary: 'Cybercriminals are using sophisticated techniques to bypass email security filters and target banking customers.',
+    url: 'https://example.com/article3',
+    source: 'Dark Reading',
+    threatLevel: 'MEDIUM',
+    tags: ['phishing', 'finance', 'email'],
+    readTime: 4,
+    publishedAt: new Date(Date.now() - 10800000).toISOString(), // 3 hours ago
+    createdAt: new Date(Date.now() - 10800000).toISOString()
+  }
+];
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     console.log(`${req.method} /api/articles - Starting request`);
     
+    // Use in-memory storage when no DATABASE_URL is provided
     if (!process.env.DATABASE_URL) {
-      return res.status(500).json({ 
-        error: 'DATABASE_URL environment variable is required',
-        hasDbUrl: false
-      });
+      console.log('Using in-memory storage for articles');
+      
+      if (req.method === 'GET') {
+        console.log('Fetching articles from memory...');
+        const { source, limit = '10', offset = '0', search, sortBy = 'newest' } = req.query;
+        
+        // Filter by source if provided
+        let filteredArticles = [...inMemoryArticles];
+        if (source && source !== 'all') {
+          filteredArticles = filteredArticles.filter(article => article.source === source);
+        }
+        
+        // Filter by search term if provided
+        if (search) {
+          const searchTerm = (search as string).toLowerCase();
+          filteredArticles = filteredArticles.filter(article => 
+            article.title.toLowerCase().includes(searchTerm) || 
+            article.summary.toLowerCase().includes(searchTerm)
+          );
+        }
+        
+        // Sort articles
+        if (sortBy === 'newest') {
+          filteredArticles.sort((a, b) => 
+            new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+          );
+        } else if (sortBy === 'oldest') {
+          filteredArticles.sort((a, b) => 
+            new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime()
+          );
+        }
+        
+        // Apply pagination
+        const limitNum = parseInt(limit as string);
+        const offsetNum = parseInt(offset as string);
+        const paginatedArticles = filteredArticles.slice(offsetNum, offsetNum + limitNum);
+        
+        console.log(`Successfully fetched ${paginatedArticles.length} articles`);
+        return res.json(paginatedArticles);
+        
+      } else if (req.method === 'POST') {
+        console.log('Creating new article in memory...');
+        const { title, summary, url, source, threatLevel = 'LOW', tags = [], readTime = 1 } = req.body;
+        
+        if (!title || !url || !source) {
+          return res.status(400).json({ message: "Title, URL, and source are required" });
+        }
+        
+        const newArticle = {
+          id: String(inMemoryArticles.length + 1),
+          title,
+          summary,
+          url,
+          source,
+          threatLevel,
+          tags,
+          readTime,
+          publishedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          isBookmarked: false
+        };
+        
+        inMemoryArticles.push(newArticle);
+        console.log('Successfully created article:', newArticle.id);
+        return res.status(201).json(newArticle);
+        
+      } else {
+        return res.status(405).json({ message: 'Method not allowed' });
+      }
     }
     
     // Import modules dynamically

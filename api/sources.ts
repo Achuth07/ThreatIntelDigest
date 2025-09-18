@@ -1,14 +1,119 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
+// In-memory storage for local development
+let inMemorySources: any[] = [
+  {
+    id: '1',
+    name: 'Bleeping Computer',
+    url: 'https://www.bleepingcomputer.com/feed/',
+    icon: 'fas fa-exclamation',
+    color: '#ef4444',
+    isActive: true,
+    lastFetched: new Date().toISOString()
+  },
+  {
+    id: '2',
+    name: 'The Hacker News',
+    url: 'https://feeds.feedburner.com/TheHackersNews',
+    icon: 'fas fa-user-secret',
+    color: '#f97316',
+    isActive: true,
+    lastFetched: new Date().toISOString()
+  },
+  {
+    id: '3',
+    name: 'Dark Reading',
+    url: 'https://www.darkreading.com/rss_simple.asp',
+    icon: 'fas fa-eye',
+    color: '#8b5cf6',
+    isActive: true,
+    lastFetched: new Date().toISOString()
+  }
+];
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     console.log(`${req.method} /api/sources - Starting request`);
     
+    // Use in-memory storage when no DATABASE_URL is provided
     if (!process.env.DATABASE_URL) {
-      return res.status(500).json({ 
-        error: 'DATABASE_URL environment variable is required',
-        hasDbUrl: false
-      });
+      console.log('Using in-memory storage for sources');
+      
+      if (req.method === 'GET') {
+        console.log('Fetching RSS sources from memory...');
+        const sources = inMemorySources.filter(source => source.isActive);
+        console.log(`Successfully fetched ${sources.length} sources`);
+        return res.json(sources);
+        
+      } else if (req.method === 'POST') {
+        console.log('Creating new RSS source in memory...');
+        const { name, url, icon, color, isActive = true } = req.body;
+        
+        if (!name || !url) {
+          return res.status(400).json({ message: "Name and URL are required" });
+        }
+        
+        const newSource = {
+          id: String(inMemorySources.length + 1),
+          name,
+          url,
+          icon: icon || null,
+          color: color || null,
+          isActive,
+          lastFetched: new Date().toISOString()
+        };
+        
+        inMemorySources.push(newSource);
+        console.log('Successfully created RSS source:', newSource.id);
+        return res.status(201).json(newSource);
+        
+      } else if (req.method === 'PATCH') {
+        console.log('Updating RSS source in memory...');
+        const { pathname } = new URL(req.url!, `https://${req.headers.host}`);
+        const sourceId = pathname.split('/').pop();
+        
+        if (!sourceId) {
+          return res.status(400).json({ message: "Source ID is required" });
+        }
+        
+        const sourceIndex = inMemorySources.findIndex(source => source.id === sourceId);
+        if (sourceIndex === -1) {
+          return res.status(404).json({ message: "Source not found" });
+        }
+        
+        const { isActive, name, url, icon, color } = req.body;
+        
+        // Update the source
+        if (name !== undefined) inMemorySources[sourceIndex].name = name;
+        if (url !== undefined) inMemorySources[sourceIndex].url = url;
+        if (icon !== undefined) inMemorySources[sourceIndex].icon = icon;
+        if (color !== undefined) inMemorySources[sourceIndex].color = color;
+        if (isActive !== undefined) inMemorySources[sourceIndex].isActive = isActive;
+        
+        console.log('Successfully updated RSS source:', sourceId);
+        return res.json(inMemorySources[sourceIndex]);
+        
+      } else if (req.method === 'DELETE') {
+        console.log('Deleting RSS source from memory...');
+        const { pathname } = new URL(req.url!, `https://${req.headers.host}`);
+        const sourceId = pathname.split('/').pop();
+        
+        if (!sourceId) {
+          return res.status(400).json({ message: "Source ID is required" });
+        }
+        
+        const sourceIndex = inMemorySources.findIndex(source => source.id === sourceId);
+        if (sourceIndex === -1) {
+          return res.status(404).json({ message: "Source not found" });
+        }
+        
+        inMemorySources.splice(sourceIndex, 1);
+        console.log('Successfully deleted RSS source:', sourceId);
+        return res.status(204).send('');
+        
+      } else {
+        return res.status(405).json({ message: 'Method not allowed' });
+      }
     }
     
     // Import modules dynamically to avoid module loading issues
