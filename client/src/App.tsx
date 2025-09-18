@@ -20,18 +20,30 @@ function Router() {
 
 function App() {
   useEffect(() => {
-    // Increment visitor count on app load using direct API call
+    // Increment visitor count on app load
     const incrementVisitorCount = async () => {
       try {
-        // Direct POST request to increment the counter with correct domain
-        await fetch('https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed/up', {
+        // Try to increment the counter via CounterAPI
+        const response = await fetch('https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed/up', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
         });
+        
+        if (!response.ok) {
+          console.error('Failed to increment visitor count - HTTP Status:', response.status);
+          // Fallback to localStorage
+          const localCount = localStorage.getItem('visitorCount');
+          const newCount = localCount ? parseInt(localCount, 10) + 1 : 1;
+          localStorage.setItem('visitorCount', newCount.toString());
+        }
       } catch (error) {
-        console.error('Error incrementing visitor count:', error);
+        console.error('Network error incrementing visitor count:', error);
+        // Fallback to localStorage
+        const localCount = localStorage.getItem('visitorCount');
+        const newCount = localCount ? parseInt(localCount, 10) + 1 : 1;
+        localStorage.setItem('visitorCount', newCount.toString());
       }
     };
 

@@ -8,16 +8,21 @@ export function VisitorCounterTest() {
   useEffect(() => {
     const testCounter = async () => {
       try {
-        // Direct API call to CounterAPI with the correct endpoint
+        console.log('Testing CounterAPI endpoint...');
         const response = await fetch('https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed');
+        console.log('Response status:', response.status);
+        
         if (response.ok) {
           const data = await response.json();
+          console.log('Response data:', data);
           setCount(data.value || 0);
         } else {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          const errorText = await response.text();
+          throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        setError(errorMessage);
         console.error('CounterAPI test error:', err);
         setCount(0);
       } finally {

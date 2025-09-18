@@ -11,18 +11,24 @@ export function Footer({ className = '' }: FooterProps) {
   useEffect(() => {
     const fetchVisitorCount = async () => {
       try {
-        // Direct API call to CounterAPI with the correct endpoint
+        // Try to fetch the visitor count from CounterAPI
         const response = await fetch('https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed');
+        
         if (response.ok) {
           const data = await response.json();
+          console.log('Counter API response:', data);
           setVisitorCount(data.value || 0);
         } else {
-          console.error('Failed to fetch visitor count:', response.status);
-          setVisitorCount(0);
+          console.error('Failed to fetch visitor count - HTTP Status:', response.status);
+          // Fallback to localStorage
+          const localCount = localStorage.getItem('visitorCount');
+          setVisitorCount(localCount ? parseInt(localCount, 10) : 0);
         }
       } catch (error) {
-        console.error('Error fetching visitor count:', error);
-        setVisitorCount(0);
+        console.error('Network error fetching visitor count:', error);
+        // Fallback to localStorage
+        const localCount = localStorage.getItem('visitorCount');
+        setVisitorCount(localCount ? parseInt(localCount, 10) : 0);
       } finally {
         setLoading(false);
       }
