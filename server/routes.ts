@@ -15,323 +15,9 @@ const storage: IStorage = process.env.DATABASE_URL ? new PostgresStorage() : new
 const parser = new Parser();
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  
-  // RSS Sources
-  app.get("/api/sources", async (req, res) => {
-    try {
-      const sources = await storage.getRssSources();
-      res.json(sources);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch RSS sources" });
-    }
-  });
-
-  app.post("/api/sources", async (req, res) => {
-    try {
-      const validatedData = insertRssSourceSchema.parse(req.body);
-      const source = await storage.createRssSource(validatedData);
-      res.status(201).json(source);
-    } catch (error) {
-      res.status(400).json({ message: "Invalid source data" });
-    }
-  });
-
-  app.patch("/api/sources/:id", async (req, res) => {
-    try {
-      const { id } = req.params;
-      const updateData = req.body;
-      const updatedSource = await storage.updateRssSource(id, updateData);
-      
-      if (updatedSource) {
-        res.json(updatedSource);
-      } else {
-        res.status(404).json({ message: "Source not found" });
-      }
-    } catch (error) {
-      res.status(400).json({ message: "Invalid update data" });
-    }
-  });
-
-  // Articles
-  app.get("/api/articles", async (req, res) => {
-    try {
-      const { source, limit, offset, search, sortBy } = req.query;
-      const articles = await storage.getArticles({
-        source: source as string,
-        limit: limit ? parseInt(limit as string) : undefined,
-        offset: offset ? parseInt(offset as string) : undefined,
-        search: search as string,
-        sortBy: sortBy as string,
-      });
-
-      // Get bookmark status for each article
-      const articlesWithBookmarks = await Promise.all(
-        articles.map(async (article) => ({
-          ...article,
-          isBookmarked: await storage.isBookmarked(article.id),
-        }))
-      );
-
-      res.json(articlesWithBookmarks);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch articles" });
-    }
-  });
-
-  app.post("/api/articles", async (req, res) => {
-    try {
-      const validatedData = insertArticleSchema.parse(req.body);
-      const article = await storage.createArticle(validatedData);
-      res.status(201).json(article);
-    } catch (error) {
-      res.status(400).json({ message: "Invalid article data" });
-    }
-  });
-
-  // Fetch RSS feeds
-  app.post("/api/fetch-feeds", async (req, res) => {
-    try {
-      const sources = await storage.getRssSources();
-      const activeFeeds = sources.filter(source => source.isActive);
-      
-      let totalFetched = 0;
-
-      for (const source of activeFeeds) {
-        try {
-          const feed = await parser.parseURL(source.url);
-          
-          for (const item of feed.items.slice(0, 10)) { // Limit to 10 latest items per source
-            if (!item.title || !item.link) continue;
-
-            // Check if article already exists
-            const existingArticles = await storage.getArticles({ search: item.title });
-            const exists = existingArticles.some(article => article.title === item.title);
-            
-            if (!exists) {
-              const threatLevel = determineThreatLevel(item.title || "", item.contentSnippet || "");
-              const tags = extractTags(item.title || "", item.contentSnippet || "");
-              
-              await storage.createArticle({
-                title: item.title,
-                summary: item.contentSnippet || item.content?.substring(0, 300) + "..." || "",
-                url: item.link,
-                source: source.name,
-                sourceIcon: source.icon || "fas fa-rss",
-                publishedAt: item.pubDate ? new Date(item.pubDate) : new Date(),
-                threatLevel,
-                tags,
-                readTime: estimateReadTime(item.contentSnippet || item.content || ""),
-              });
-              
-              totalFetched++;
-            }
-          }
-
-          // Update last fetched timestamp
-          await storage.updateRssSource(source.id, {
-            name: source.name,
-            url: source.url,
-            icon: source.icon,
-            color: source.color,
-            isActive: source.isActive,
-          });
-          
-        } catch (feedError) {
-          console.error(`Error fetching feed for ${source.name}:`, feedError);
-        }
-      }
-
-      res.json({ message: `Successfully fetched ${totalFetched} new articles` });
-    } catch (error) {
-      console.error("Error fetching feeds:", error);
-      res.status(500).json({ message: "Failed to fetch RSS feeds" });
-    }
-  });
-
-  // Bookmarks
-  app.get("/api/bookmarks", async (req, res) => {
-    try {
-      const { export: isExport } = req.query;
-      
-      if (isExport === 'true') {
-        // Export bookmarks with full article details
-        const bookmarksWithArticles = await storage.getBookmarksWithArticles();
-        
-        // Format for export
-        const exportData = {
-          exportedAt: new Date().toISOString(),
-          totalBookmarks: bookmarksWithArticles.length,
-          bookmarks: bookmarksWithArticles.map(item => ({
-            title: item.article.title,
-            summary: item.article.summary,
-            url: item.article.url,
-            source: item.article.source,
-            publishedAt: item.article.publishedAt,
-            threatLevel: item.article.threatLevel,
-            tags: item.article.tags,
-            bookmarkedAt: item.bookmark.createdAt
-          }))
-        };
-        
-        res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Content-Disposition', `attachment; filename="cyberfeed-bookmarks-${new Date().toISOString().split('T')[0]}.json"`);
-        res.json(exportData);
-      } else {
-        // Regular bookmarks fetch
-        const bookmarks = await storage.getBookmarks();
-        res.json(bookmarks);
-      }
-    } catch (error) {
-      res.status(500).json({ message: "Failed to fetch bookmarks" });
-    }
-  });
-
-  app.post("/api/bookmarks", async (req, res) => {
-    try {
-      const validatedData = insertBookmarkSchema.parse(req.body);
-      const bookmark = await storage.createBookmark(validatedData);
-      res.status(201).json(bookmark);
-    } catch (error) {
-      res.status(400).json({ message: "Invalid bookmark data" });
-    }
-  });
-
-  app.delete("/api/bookmarks/:articleId", async (req, res) => {
-    try {
-      const { articleId } = req.params;
-      const deleted = await storage.deleteBookmark(articleId);
-      
-      if (deleted) {
-        res.json({ message: "Bookmark removed successfully" });
-      } else {
-        res.status(404).json({ message: "Bookmark not found" });
-      }
-    } catch (error) {
-      res.status(500).json({ message: "Failed to remove bookmark" });
-    }
-  });
-
-  // Database initialization endpoint
-  app.post("/api/init-db", async (req, res) => {
-    try {
-      // Import the database handler
-      const { default: databaseHandler } = await import('../api/database');
-      // Create a mock Vercel request/response for compatibility
-      const vercelReq = { ...req, method: 'POST', query: { action: 'init' } } as any;
-      const vercelRes = { 
-        status: (code: number) => ({ json: (data: any) => res.status(code).json(data) }),
-        json: (data: any) => res.json(data)
-      } as any;
-      
-      await databaseHandler(vercelReq, vercelRes);
-    } catch (error) {
-      console.error('Error in init-db endpoint:', error);
-      res.status(500).json({ message: 'Failed to initialize database' });
-    }
-  });
-
-  // Database check endpoint
-  app.get("/api/check-db", async (req, res) => {
-    try {
-      const { default: databaseHandler } = await import('../api/database');
-      const vercelReq = { ...req, method: 'GET', query: { action: 'check' } } as any;
-      const vercelRes = { 
-        status: (code: number) => ({ json: (data: any) => res.status(code).json(data) }),
-        json: (data: any) => res.json(data)
-      } as any;
-      
-      await databaseHandler(vercelReq, vercelRes);
-    } catch (error) {
-      console.error('Error in check-db endpoint:', error);
-      res.status(500).json({ message: 'Failed to check database' });
-    }
-  });
-
-  // Ping endpoint
-  app.get("/api/ping", async (req, res) => {
-    try {
-      const { default: databaseHandler } = await import('../api/database');
-      const vercelReq = { ...req, method: 'GET', query: { action: 'ping' } } as any;
-      const vercelRes = { 
-        status: (code: number) => ({ json: (data: any) => res.status(code).json(data) }),
-        json: (data: any) => res.json(data)
-      } as any;
-      
-      await databaseHandler(vercelReq, vercelRes);
-    } catch (error) {
-      console.error('Error in ping endpoint:', error);
-      res.status(500).json({ message: 'Failed to ping API' });
-    }
-  });
-
-  // Initialize sources endpoint
-  app.post("/api/initialize-sources", async (req, res) => {
-    try {
-      const { default: databaseHandler } = await import('../api/database');
-      const vercelReq = { ...req, method: 'POST', query: { action: 'initialize-sources' } } as any;
-      const vercelRes = { 
-        status: (code: number) => ({ json: (data: any) => res.status(code).json(data) }),
-        json: (data: any) => res.json(data)
-      } as any;
-      
-      await databaseHandler(vercelReq, vercelRes);
-    } catch (error) {
-      console.error('Error in initialize-sources endpoint:', error);
-      res.status(500).json({ message: 'Failed to initialize sources' });
-    }
-  });
-
-  // CVE/Vulnerabilities endpoints
-  app.post("/api/fetch-cves", async (req, res) => {
-    try {
-      // Check if using memory storage
-      if (!process.env.DATABASE_URL) {
-        // Use in-memory storage implementation
-        await fetchCVEsToMemory(storage, res);
-      } else {
-        // Import the fetch-cves handler for PostgreSQL
-        const { default: fetchCVEsHandler } = await import('../api/fetch-cves');
-        // Create a mock Vercel request/response for compatibility
-        const vercelReq = { ...req, method: 'POST' } as any;
-        const vercelRes = { 
-          status: (code: number) => ({ json: (data: any) => res.status(code).json(data) }),
-          json: (data: any) => res.json(data)
-        } as any;
-        
-        await fetchCVEsHandler(vercelReq, vercelRes);
-      }
-    } catch (error) {
-      console.error('Error in fetch-cves endpoint:', error);
-      res.status(500).json({ message: 'Failed to fetch CVEs' });
-    }
-  });
-
-  app.get("/api/vulnerabilities", async (req, res) => {
-    try {
-      // Check if using memory storage
-      if (!process.env.DATABASE_URL) {
-        // Use in-memory storage implementation
-        await getVulnerabilitiesFromMemory(storage, req, res);
-      } else {
-        // Import the vulnerabilities handler for PostgreSQL
-        const { default: vulnerabilitiesHandler } = await import('../api/vulnerabilities');
-        // Create a mock Vercel request/response for compatibility
-        const vercelReq = { ...req, method: 'GET', query: req.query } as any;
-        const vercelRes = { 
-          status: (code: number) => ({ json: (data: any) => res.status(code).json(data) }),
-          json: (data: any) => res.json(data)
-        } as any;
-        
-        await vulnerabilitiesHandler(vercelReq, vercelRes);
-      }
-    } catch (error) {
-      console.error('Error in vulnerabilities endpoint:', error);
-      res.status(500).json({ message: 'Failed to fetch vulnerabilities' });
-    }
-  });
-
+  // Create HTTP server
   const httpServer = createServer(app);
-
+  
   // Fetch Article Content
   app.get("/api/fetch-article", async (req, res) => {
     const { url } = req.query;
@@ -425,6 +111,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generic error response
       res.status(500).json({ 
         message: 'Failed to fetch article content. Please check the URL and try again.' 
+      });
+    }
+  });
+
+  // CounterAPI Proxy Endpoint
+  app.get("/api/counter", async (req, res) => {
+    try {
+      // Proxy request to CounterAPI
+      const counterResponse = await fetch('https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed');
+      
+      if (counterResponse.ok) {
+        const data = await counterResponse.json();
+        res.json(data);
+      } else {
+        // If CounterAPI returns an error, try to get error details
+        const errorText = await counterResponse.text();
+        res.status(counterResponse.status).json({ 
+          error: `CounterAPI error: ${counterResponse.status}`,
+          details: errorText
+        });
+      }
+    } catch (error) {
+      console.error('CounterAPI proxy error:', error);
+      res.status(500).json({ 
+        error: 'Failed to fetch counter data',
+        message: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.post("/api/counter/increment", async (req, res) => {
+    try {
+      // Try different approaches to increment the counter
+      // Approach 1: POST to the counter endpoint with up action
+      const counterResponse = await fetch('https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed/up', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (counterResponse.ok) {
+        const data = await counterResponse.json();
+        res.json(data);
+      } else {
+        // If that fails, try a different approach
+        const errorText = await counterResponse.text();
+        console.log('First approach failed:', errorText);
+        
+        // Approach 2: GET request to the up endpoint
+        const counterResponse2 = await fetch('https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed/up', {
+          method: 'GET',
+        });
+        
+        if (counterResponse2.ok) {
+          const data = await counterResponse2.json();
+          res.json(data);
+        } else {
+          const errorText2 = await counterResponse2.text();
+          console.log('Second approach failed:', errorText2);
+          
+          // If both approaches fail, return error
+          res.status(counterResponse.status).json({ 
+            error: `CounterAPI error: ${counterResponse.status}`,
+            details: errorText
+          });
+        }
+      }
+    } catch (error) {
+      console.error('CounterAPI proxy increment error:', error);
+      res.status(500).json({ 
+        error: 'Failed to increment counter',
+        message: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   });

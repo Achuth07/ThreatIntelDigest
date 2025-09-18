@@ -8,22 +8,22 @@ export function VisitorCounterTest() {
   useEffect(() => {
     const testCounter = async () => {
       try {
-        console.log('Testing CounterAPI endpoint...');
-        const response = await fetch('https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed');
-        console.log('Response status:', response.status);
+        console.log('Testing CounterAPI through proxy endpoint...');
+        const response = await fetch('/api/counter');
+        console.log('Proxy response status:', response.status);
         
         if (response.ok) {
           const data = await response.json();
-          console.log('Response data:', data);
-          setCount(data.value || 0);
+          console.log('Proxy response data:', data);
+          setCount(data.value || data.count || 0);
         } else {
-          const errorText = await response.text();
-          throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
+          const errorData = await response.json();
+          throw new Error(`HTTP ${response.status}: ${JSON.stringify(errorData)}`);
         }
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error';
         setError(errorMessage);
-        console.error('CounterAPI test error:', err);
+        console.error('CounterAPI proxy test error:', err);
         setCount(0);
       } finally {
         setLoading(false);

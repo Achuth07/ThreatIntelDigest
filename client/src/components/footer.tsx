@@ -11,15 +11,17 @@ export function Footer({ className = '' }: FooterProps) {
   useEffect(() => {
     const fetchVisitorCount = async () => {
       try {
-        // Try to fetch the visitor count from CounterAPI
-        const response = await fetch('https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed');
+        // Use our server-side proxy to avoid CORS issues
+        const response = await fetch('/api/counter');
         
         if (response.ok) {
           const data = await response.json();
           console.log('Counter API response:', data);
-          setVisitorCount(data.value || 0);
+          // Use the count field from the response
+          setVisitorCount(data.count || 0);
         } else {
-          console.error('Failed to fetch visitor count - HTTP Status:', response.status);
+          const errorData = await response.json();
+          console.error('Failed to fetch visitor count:', errorData);
           // Fallback to localStorage
           const localCount = localStorage.getItem('visitorCount');
           setVisitorCount(localCount ? parseInt(localCount, 10) : 0);

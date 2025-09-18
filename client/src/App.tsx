@@ -20,11 +20,11 @@ function Router() {
 
 function App() {
   useEffect(() => {
-    // Increment visitor count on app load
+    // Increment visitor count on app load through our proxy endpoint
     const incrementVisitorCount = async () => {
       try {
-        // Try to increment the counter via CounterAPI
-        const response = await fetch('https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed/up', {
+        // Use our server-side proxy to avoid CORS issues
+        const response = await fetch('/api/counter/increment', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -32,7 +32,8 @@ function App() {
         });
         
         if (!response.ok) {
-          console.error('Failed to increment visitor count - HTTP Status:', response.status);
+          const errorData = await response.json();
+          console.error('Failed to increment visitor count:', errorData);
           // Fallback to localStorage
           const localCount = localStorage.getItem('visitorCount');
           const newCount = localCount ? parseInt(localCount, 10) + 1 : 1;
