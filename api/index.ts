@@ -23,6 +23,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { default: fetchFeedsHandler } = await import('./fetch-feeds');
     return fetchFeedsHandler(req, res);
   }
+  
+  if (pathname.startsWith('/api/visitor-count')) {
+    const { default: visitorCountHandler } = await import('./visitor-count');
+    return visitorCountHandler(req, res);
+  }
 
   res.status(404).json({ message: 'API endpoint not found' });
 }

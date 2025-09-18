@@ -104,7 +104,8 @@
     "@types/react-dom": "^18.3.1",
     "@types/ws": "^8.5.13",
     "drizzle-kit": "^0.30.4",
-    "tsx": "^4.20.5"
+    "tsx": "^4.20.5",
+    "vercel": "^48.0.3"
   },
   "optionalDependencies": {
     "@replit/vite-plugin-cartographer": "^0.3.0",

@@ -6,7 +6,7 @@ export function Footer() {
   useEffect(() => {
     const fetchVisitorCount = async () => {
       try {
-        // Use our backend proxy endpoint to avoid CORS issues
+        // Use the correct endpoint for both development and production
         const response = await fetch('/api/visitor-count');
         
         if (!response.ok) {

@@ -23,7 +23,8 @@ function App() {
     // Increment visitor count on app load through our backend proxy
     const incrementVisitorCount = async () => {
       try {
-        const response = await fetch('/api/visitor-count/increment', {
+        // Use the correct endpoint for both development and production
+        const response = await fetch('/api/visitor-count', {
           method: 'POST'
         });
         
