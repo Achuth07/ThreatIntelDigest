@@ -66,7 +66,53 @@ let inMemorySources: any[] = [
     color: '#1ba0d7',
     isActive: true,
     lastFetched: new Date().toISOString()
-  }
+  },
+  // Additional important sources
+  {
+    id: '8',
+    name: 'Krebs on Security',
+    url: 'https://krebsonsecurity.com/feed/',
+    icon: 'fas fa-user-tie',
+    color: '#059669',
+    isActive: true,
+    lastFetched: new Date().toISOString()
+  },
+  {
+    id: '9',
+    name: 'US-Cert (Current Activity)',
+    url: 'https://us-cert.cisa.gov/ncas/current-activity.xml',
+    icon: 'fas fa-flag-usa',
+    color: '#1e40af',
+    isActive: true,
+    lastFetched: new Date().toISOString()
+  },
+  {
+    id: '10',
+    name: 'Google Project Zero',
+    url: 'https://googleprojectzero.blogspot.com/feeds/posts/default',
+    icon: 'fas fa-google',
+    color: '#4285f4',
+    isActive: true,
+    lastFetched: new Date().toISOString()
+  },
+  {
+    id: '11',
+    name: 'Microsoft Security Blog',
+    url: 'https://www.microsoft.com/en-us/security/blog/feed/',
+    icon: 'fas fa-microsoft',
+    color: '#00bcf2',
+    isActive: true,
+    lastFetched: new Date().toISOString()
+  },
+  {
+    id: '12',
+    name: 'CrowdStrike Blog',
+    url: 'https://www.crowdstrike.com/blog/feed/',
+    icon: 'fas fa-crow',
+    color: '#dc2626',
+    isActive: true,
+    lastFetched: new Date().toISOString()
+  },
 ];
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
