@@ -120,6 +120,36 @@ export class MemStorage implements IStorage {
         color: "#16a34a",
         isActive: true,
       },
+      // Updated Cisco Talos Intelligence URL
+      {
+        name: "Cisco Talos Intelligence",
+        url: "https://feeds.feedburner.com/feedburner/Talos",
+        icon: "fas fa-network-wired",
+        color: "#1ba0d7",
+        isActive: true,
+      },
+      // New sources
+      {
+        name: "Cisco Threat Research Blog",
+        url: "https://blogs.cisco.com/feed",
+        icon: "fas fa-network-wired",
+        color: "#1ba0d7",
+        isActive: true,
+      },
+      {
+        name: "Check Point Research",
+        url: "https://research.checkpoint.com/category/threat-research/feed/",
+        icon: "fas fa-shield-alt",
+        color: "#4285f4",
+        isActive: true,
+      },
+      {
+        name: "Juniper Networks Threat Research",
+        url: "https://blogs.juniper.net/threat-research/feed",
+        icon: "fas fa-network-wired",
+        color: "#1ba0d7",
+        isActive: true,
+      },
     ];
 
     defaultSources.forEach(source => {

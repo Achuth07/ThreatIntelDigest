@@ -28,6 +28,44 @@ let inMemorySources: any[] = [
     color: '#8b5cf6',
     isActive: true,
     lastFetched: new Date().toISOString()
+  },
+  // Updated Cisco Talos Intelligence URL
+  {
+    id: '4',
+    name: 'Cisco Talos Intelligence',
+    url: 'https://feeds.feedburner.com/feedburner/Talos',
+    icon: 'fas fa-network-wired',
+    color: '#1ba0d7',
+    isActive: true,
+    lastFetched: new Date().toISOString()
+  },
+  // New sources
+  {
+    id: '5',
+    name: 'Cisco Threat Research Blog',
+    url: 'https://blogs.cisco.com/feed',
+    icon: 'fas fa-network-wired',
+    color: '#1ba0d7',
+    isActive: true,
+    lastFetched: new Date().toISOString()
+  },
+  {
+    id: '6',
+    name: 'Check Point Research',
+    url: 'https://research.checkpoint.com/category/threat-research/feed/',
+    icon: 'fas fa-shield-alt',
+    color: '#4285f4',
+    isActive: true,
+    lastFetched: new Date().toISOString()
+  },
+  {
+    id: '7',
+    name: 'Juniper Networks Threat Research',
+    url: 'https://blogs.juniper.net/threat-research/feed',
+    icon: 'fas fa-network-wired',
+    color: '#1ba0d7',
+    isActive: true,
+    lastFetched: new Date().toISOString()
   }
 ];
 

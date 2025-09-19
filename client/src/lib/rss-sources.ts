@@ -8,7 +8,7 @@ export const VENDOR_THREAT_RESEARCH = [
   },
   {
     name: "Cisco Talos Intelligence",
-    url: "https://blog.talosintelligence.com/rss.xml",
+    url: "https://feeds.feedburner.com/feedburner/Talos", // Updated URL
     icon: "fas fa-network-wired",
     color: "#1ba0d7",
   },
@@ -60,6 +60,18 @@ export const VENDOR_THREAT_RESEARCH = [
     icon: "fas fa-fortress",
     color: "#ee3124",
   },
+  {
+    name: "Cisco Threat Research Blog", // New source
+    url: "https://blogs.cisco.com/feed",
+    icon: "fas fa-network-wired",
+    color: "#1ba0d7",
+  },
+  {
+    name: "Check Point Research", // New source
+    url: "https://research.checkpoint.com/category/threat-research/feed/",
+    icon: "fas fa-shield-alt",
+    color: "#4285f4",
+  },
 ];
 
 // Government & Agency Alerts
@@ -81,6 +93,12 @@ export const GOVERNMENT_ALERTS = [
     url: "https://isc.sans.edu/rssfeed.xml",
     icon: "fas fa-cloud-rain",
     color: "#f59e0b",
+  },
+  {
+    name: "Juniper Networks Threat Research", // New source
+    url: "https://blogs.juniper.net/threat-research/feed",
+    icon: "fas fa-network-wired",
+    color: "#1ba0d7",
   },
 ];
 
