@@ -66,6 +66,8 @@ The application comes pre-configured with 25+ categorized cybersecurity news sou
 - **FireEye Threat Research** - Advanced persistent threat analysis
 - **McAfee Labs** - Malware research and threat intelligence
 - **Symantec Security Response** - Enterprise security research
+- **Flashpoint** - Business risk intelligence and threat analysis
+- **Juniper Networks Threat Research** - Network security research and threat intelligence
 
 **Government & Agency Alerts:**
 - **CISA Alerts** - Official US cybersecurity advisories

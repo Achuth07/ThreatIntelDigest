@@ -367,6 +367,20 @@ export const VENDOR_THREAT_RESEARCH = [
     icon: "fas fa-shield-alt",
     color: "#00a86b",
   },
+  // Moved from Legacy category
+  {
+    name: "Flashpoint",
+    url: "https://flashpoint.io/feed/",
+    icon: "fas fa-flash",
+    color: "#f59e0b",
+  },
+  // Moved from Government & Agency Alerts
+  {
+    name: "Juniper Networks Threat Research",
+    url: "https://blogs.juniper.net/threat-research/feed",
+    icon: "fas fa-network-wired",
+    color: "#1ba0d7",
+  },
 ];
 
 // Government & Agency Alerts
@@ -388,12 +402,6 @@ export const GOVERNMENT_ALERTS = [
     url: "https://isc.sans.edu/rssfeed.xml",
     icon: "fas fa-cloud-rain",
     color: "#f59e0b",
-  },
-  {
-    name: "Juniper Networks Threat Research", // New source
-    url: "https://blogs.juniper.net/threat-research/feed",
-    icon: "fas fa-network-wired",
-    color: "#1ba0d7",
   },
   // Additional Government sources
   {
@@ -666,13 +674,13 @@ export const GENERAL_SECURITY_NEWS = [
   },
 ];
 
-// Legacy sources (for backward compatibility)
+// Legacy Sources
 export const LEGACY_SOURCES = [
   {
-    name: "Flashpoint",
-    url: "https://flashpoint.io/feed/",
-    icon: "fas fa-flash",
-    color: "#f59e0b",
+    name: "The DFIR Report",
+    url: "https://thedfirreport.com/feed/",
+    icon: "fas fa-search",
+    color: "#16a34a",
   },
 ];
 
@@ -682,5 +690,5 @@ export const RSS_SOURCES = [
   ...GOVERNMENT_ALERTS,
   ...MALWARE_RESEARCH,
   ...GENERAL_SECURITY_NEWS,
-  ...LEGACY_SOURCES,
+  ...LEGACY_SOURCES, // Add LEGACY_SOURCES to the combined list
 ];

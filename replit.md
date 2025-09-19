@@ -86,7 +86,7 @@ Preferred communication style: Simple, everyday language.
 - **CVSS Scoring**: Support for CVSS v2 and v3 scoring systems
 
 ### RSS Data Sources
-- **Vendor & Private Threat Research**: Google Mandiant, Cisco Talos, CrowdStrike, Red Canary, Kaspersky, ESET, Trustwave, FireEye, McAfee, Symantec
+- **Vendor & Private Threat Research**: Google Mandiant, Cisco Talos, CrowdStrike, Red Canary, Kaspersky, ESET, Trustwave, FireEye, McAfee, Symantec, Flashpoint, Juniper Networks
 - **Government & Agency Alerts**: CISA Alerts, FBI IC3, NCSC-UK
 - **Specialized & Malware Focus**: Malwarebytes Labs, Recorded Future, ThreatPost, Krebs on Security
 - **General Security News**: Bleeping Computer, The Hacker News, Dark Reading, SecurityWeek, InfoSecurity Magazine

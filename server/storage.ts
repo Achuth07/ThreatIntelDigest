@@ -143,6 +143,7 @@ export class MemStorage implements IStorage {
         color: "#4285f4",
         isActive: true,
       },
+      // Moved from Government & Agency Alerts to Vendor & Private Threat Research
       {
         name: "Juniper Networks Threat Research",
         url: "https://blogs.juniper.net/threat-research/feed",
@@ -177,6 +178,14 @@ export class MemStorage implements IStorage {
         url: "https://www.microsoft.com/en-us/security/blog/feed/",
         icon: "fas fa-microsoft",
         color: "#00bcf2",
+        isActive: true,
+      },
+      // Moved from Legacy category
+      {
+        name: "Flashpoint",
+        url: "https://flashpoint.io/feed/",
+        icon: "fas fa-flash",
+        color: "#f59e0b",
         isActive: true,
       },
     ];

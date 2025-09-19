@@ -58,6 +58,7 @@ let inMemorySources: any[] = [
     isActive: true,
     lastFetched: new Date().toISOString()
   },
+  // Moved from Government & Agency Alerts to Vendor & Private Threat Research
   {
     id: '7',
     name: 'Juniper Networks Threat Research',
@@ -110,6 +111,16 @@ let inMemorySources: any[] = [
     url: 'https://www.crowdstrike.com/blog/feed/',
     icon: 'fas fa-crow',
     color: '#dc2626',
+    isActive: true,
+    lastFetched: new Date().toISOString()
+  },
+  // Moved from Legacy category
+  {
+    id: '13',
+    name: 'Flashpoint',
+    url: 'https://flashpoint.io/feed/',
+    icon: 'fas fa-flash',
+    color: '#f59e0b',
     isActive: true,
     lastFetched: new Date().toISOString()
   },

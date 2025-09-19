@@ -11,6 +11,9 @@ Updated both `README.md` and `replit.md` to reflect the recent implementation of
    - Updated from 7 sources to 25+ categorized sources
    - Organized into 5 categories: Vendor & Private Threat Research, Government & Agency Alerts, Specialized & Malware Focus, General Security News, Legacy Sources
    - Added specific source names and descriptions
+   - Moved Flashpoint from Legacy to Vendor & Private Threat Research category
+   - Moved Juniper Networks Threat Research from Government & Agency Alerts to Vendor & Private Threat Research category
+   - Updated Legacy Sources category to only contain The DFIR Report
 
 2. **Enhanced Features Documentation:**
    - Added "Source Management Features" subsection
@@ -41,6 +44,7 @@ Updated both `README.md` and `replit.md` to reflect the recent implementation of
    - Updated source count and categorization details
    - Added source management features description
    - Documented smart reactivation functionality
+   - Updated Vendor & Private Threat Research category to include Flashpoint and Juniper Networks
 
 4. **UI/UX Design Patterns:**
    - Added hover-based controls documentation
