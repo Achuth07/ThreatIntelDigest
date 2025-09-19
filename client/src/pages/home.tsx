@@ -69,6 +69,10 @@ export default function Home() {
   };
 
   const handleSourceSelect = (source: string) => {
+    // Exit bookmark page when selecting a source
+    if (showBookmarks) {
+      setShowBookmarks(false);
+    }
     setSelectedSource(source);
     setPage(0); // Reset pagination when changing source
   };
