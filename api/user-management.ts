@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { getDb } from '../server/db';
-import { users } from '../shared/schema';
-import { eq } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/neon-serverless';
+import { Pool } from '@neondatabase/serverless';
+import * as schema from '../shared/schema';
 
 // Simple interface for user tracking data
 interface UserLoginRecord {
@@ -15,6 +15,21 @@ interface UserLoginRecord {
 }
 
 /**
+ * Get database connection
+ * @returns Database connection
+ */
+function getDb() {
+  const connectionString = process.env.DATABASE_URL;
+  
+  if (!connectionString) {
+    throw new Error('DATABASE_URL environment variable is required');
+  }
+
+  const pool = new Pool({ connectionString });
+  return drizzle(pool, { schema });
+}
+
+/**
  * Get user statistics
  * @returns User statistics including total users, recent logins, etc.
  */
@@ -22,7 +37,7 @@ async function getUserStatistics() {
   const db = getDb();
   
   try {
-    const allUsers = await db.select().from(users);
+    const allUsers = await db.select().from(schema.users);
     
     // Calculate statistics
     const totalUsers = allUsers.length;
@@ -72,7 +87,7 @@ async function getAllUsers(): Promise<UserLoginRecord[]> {
   const db = getDb();
   
   try {
-    const allUsers = await db.select().from(users);
+    const allUsers = await db.select().from(schema.users);
     
     return allUsers.map(user => ({
       id: user.id,
