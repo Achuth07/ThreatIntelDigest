@@ -74,6 +74,27 @@ async function handleGoogleLogin(req: VercelRequest, res: VercelResponse) {
   res.redirect(googleAuthUrl);
 }
 
+// Handler for checking authentication status
+async function handleAuthStatus(req: VercelRequest, res: VercelResponse) {
+  // Since we're using localStorage for authentication data in the frontend,
+  // we can't actually check a server-side session state in this simple implementation.
+  // In a real implementation, we would check the session or JWT here.
+  // For now, we'll return a response indicating the frontend should check localStorage.
+  res.status(200).json({ 
+    isAuthenticated: false,
+    message: 'Authentication status should be checked via localStorage in the frontend. This endpoint is not used in the current implementation.' 
+  });
+}
+
+// Handler for logging out
+async function handleLogout(req: VercelRequest, res: VercelResponse) {
+  // In this simple implementation, logout is just clearing the user data
+  // In a real implementation, we would destroy the session or JWT here.
+  res.status(200).json({ 
+    message: 'Logged out successfully. In this simple implementation, user data is cleared from URL parameters on the frontend.' 
+  });
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { action } = req.query;
   
@@ -82,6 +103,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return handleGoogleLogin(req, res);
     case 'callback':
       return handleGoogleCallback(req, res);
+    case 'status':
+      return handleAuthStatus(req, res);
+    case 'logout':
+      return handleLogout(req, res);
     default:
       res.status(400).json({ error: 'Invalid action parameter' });
   }

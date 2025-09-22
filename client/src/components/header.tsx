@@ -35,6 +35,8 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
       try {
         const userData = JSON.parse(decodeURIComponent(userDataString));
         setUser(userData);
+        // Store user data in localStorage for persistence
+        localStorage.setItem('cyberfeed_user', JSON.stringify(userData));
         // Remove the user parameter from the URL
         urlParams.delete('user');
         const newUrl = `${window.location.pathname}${urlParams.toString() ? '?' + urlParams.toString() : ''}`;
@@ -49,30 +51,25 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
       const newUrl = `${window.location.pathname}${urlParams.toString() ? '?' + urlParams.toString() : ''}`;
       window.history.replaceState({}, document.title, newUrl);
     } else {
-      // Check authentication status with the API
       checkAuthStatus();
     }
   }, []);
 
   const checkAuthStatus = async () => {
-    try {
-      const isProduction = process.env.NODE_ENV === 'production';
-      const statusUrl = isProduction 
-        ? '/api/auth?action=status'
-        : '/api/auth?action=status';
-        
-      const response = await fetch(statusUrl);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.isAuthenticated) {
-          setUser(data.user);
-        }
+    // Check for existing user data in localStorage
+    const storedUser = localStorage.getItem('cyberfeed_user');
+    if (storedUser) {
+      try {
+        const userData = JSON.parse(storedUser);
+        setUser(userData);
+      } catch (e) {
+        console.error('Failed to parse stored user data:', e);
+        // Clear invalid data
+        localStorage.removeItem('cyberfeed_user');
       }
-    } catch (error) {
-      console.error('Failed to check auth status:', error);
-    } finally {
-      setLoading(false);
     }
+    // Always set loading to false after checking
+    setLoading(false);
   };
 
   const handleGoogleLogin = () => {
@@ -92,13 +89,18 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
         : '/api/auth?action=logout';
         
       const response = await fetch(logoutUrl);
-      if (response.ok) {
-        setUser(null);
-        // Reload the page to ensure clean state
-        window.location.reload();
-      }
+      // Regardless of API response, clear local data
+      setUser(null);
+      // Remove user data from localStorage
+      localStorage.removeItem('cyberfeed_user');
+      // Reload the page to ensure clean state
+      window.location.reload();
     } catch (error) {
       console.error('Failed to logout:', error);
+      // Even if API fails, clear local data
+      setUser(null);
+      localStorage.removeItem('cyberfeed_user');
+      window.location.reload();
     }
   };
 
