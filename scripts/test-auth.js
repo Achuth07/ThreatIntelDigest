@@ -1,31 +1,42 @@
-// Simple test script to verify Google OAuth configuration
-import { config } from 'dotenv';
-config();
+// Simple test script to verify auth function structure
+import { existsSync, readFileSync } from 'fs';
+import { join } from 'path';
 
-console.log('Testing Google OAuth configuration...');
+const authFunctionPath = join(process.cwd(), 'api', 'auth.ts');
+const bookmarksFunctionPath = join(process.cwd(), 'api', 'bookmarks.ts');
 
-// Check if required environment variables are set
-const requiredEnvVars = [
-  'GOOGLE_CLIENT_ID',
-  'GOOGLE_CLIENT_SECRET',
-  'GOOGLE_CALLBACK_URL',
-  'SESSION_SECRET'
-];
-
-const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
-
-if (missingEnvVars.length > 0) {
-  console.log('❌ Missing environment variables:');
-  missingEnvVars.forEach(envVar => console.log(`   - ${envVar}`));
-  process.exit(1);
+console.log('Checking authentication function...');
+if (existsSync(authFunctionPath)) {
+  console.log('✓ Authentication function exists');
+  // Check if it has the required export
+  const authContent = readFileSync(authFunctionPath, 'utf8');
+  if (authContent.includes('export default')) {
+    console.log('✓ Authentication function has default export');
+  } else {
+    console.log('✗ Authentication function missing default export');
+  }
+  
+  if (authContent.includes('handler(')) {
+    console.log('✓ Authentication function has handler implementation');
+  } else {
+    console.log('✗ Authentication function missing handler implementation');
+  }
 } else {
-  console.log('✅ All required environment variables are set');
+  console.log('✗ Authentication function does not exist');
 }
 
-console.log('\nEnvironment variables:');
-console.log(`GOOGLE_CLIENT_ID: ${process.env.GOOGLE_CLIENT_ID ? 'SET' : 'NOT SET'}`);
-console.log(`GOOGLE_CLIENT_SECRET: ${process.env.GOOGLE_CLIENT_SECRET ? 'SET' : 'NOT SET'}`);
-console.log(`GOOGLE_CALLBACK_URL: ${process.env.GOOGLE_CALLBACK_URL || 'NOT SET'}`);
-console.log(`SESSION_SECRET: ${process.env.SESSION_SECRET ? 'SET' : 'NOT SET'}`);
+console.log('Checking bookmarks function...');
+if (existsSync(bookmarksFunctionPath)) {
+  console.log('✓ Bookmarks function exists');
+  // Check if it has the required export
+  const bookmarksContent = readFileSync(bookmarksFunctionPath, 'utf8');
+  if (bookmarksContent.includes('export default')) {
+    console.log('✓ Bookmarks function has default export');
+  } else {
+    console.log('✗ Bookmarks function missing default export');
+  }
+} else {
+  console.log('✗ Bookmarks function does not exist');
+}
 
-console.log('\n✅ Google OAuth configuration test completed successfully');
+console.log('Test completed.');

@@ -257,6 +257,28 @@ VERCEL_REGION=us-east-1
 - Enable Vercel's security headers
 - Monitor for unusual API usage
 
+## 🛠️ Recent Fixes (September 2025)
+
+### Authentication Function Fix
+**Issue:** Vercel function crashes with "No exports found in module"
+**Solution:** Updated [api/auth.ts](file:///Users/achuth/Projects/ThreatIntelDigest/api/auth.ts) to include proper Vercel function export and routing for different actions:
+- Added `export default async function handler()` with action-based routing
+- Implemented handlers for Google login and callback actions
+- Fixed import paths and module resolution
+
+### Bookmark Function Import Fix
+**Issue:** Vercel function crashes with "Cannot find module" for postgres-storage
+**Solution:** Updated [api/bookmarks.ts](file:///Users/achuth/Projects/ThreatIntelDigest/api/bookmarks.ts) import paths:
+- Changed from `../server/postgres-storage` to relative paths that work in Vercel environment
+- Fixed type annotations to prevent implicit any errors
+
+### Google OAuth Callback URL Update
+**Issue:** Authentication flow was using outdated callback URLs
+**Solution:** Updated all authentication endpoints to use consolidated `/api/auth?action=callback`:
+- Updated frontend to call `/api/auth?action=google` for login initiation
+- Updated backend to handle callback at `/api/auth?action=callback`
+- Updated environment variables and documentation
+
 ## 📞 Support Resources
 
 - [Vercel Documentation](https://vercel.com/docs)

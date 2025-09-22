@@ -1,4 +1,6 @@
-async function handleGoogleCallback(req: any, res: any) {
+import { VercelRequest, VercelResponse } from '@vercel/node';
+
+async function handleGoogleCallback(req: VercelRequest, res: VercelResponse) {
   const { code } = req.query;
   
   if (!code) {
@@ -58,5 +60,29 @@ async function handleGoogleCallback(req: any, res: any) {
   } catch (error) {
     console.error('Authentication error:', error);
     res.redirect('https://threatfeed.whatcyber.com?error=authentication_failed');
+  }
+}
+
+async function handleGoogleLogin(req: VercelRequest, res: VercelResponse) {
+  const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+    `client_id=${process.env.GOOGLE_CLIENT_ID || ''}` +
+    `&redirect_uri=https://threatfeed.whatcyber.com/api/auth?action=callback` +
+    `&response_type=code` +
+    `&scope=openid%20email%20profile` +
+    `&access_type=offline`;
+  
+  res.redirect(googleAuthUrl);
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const { action } = req.query;
+  
+  switch (action) {
+    case 'google':
+      return handleGoogleLogin(req, res);
+    case 'callback':
+      return handleGoogleCallback(req, res);
+    default:
+      res.status(400).json({ error: 'Invalid action parameter' });
   }
 }

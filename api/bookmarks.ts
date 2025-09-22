@@ -94,7 +94,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const exportData = {
           exportedAt: new Date().toISOString(),
           totalBookmarks: bookmarksWithArticles.length,
-          bookmarks: bookmarksWithArticles.map(item => ({
+          bookmarks: bookmarksWithArticles.map((item: any) => ({
             title: item.article.title,
             summary: item.article.summary,
             url: item.article.url,
