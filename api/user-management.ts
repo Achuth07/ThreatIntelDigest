@@ -174,6 +174,11 @@ async function getUserStatistics() {
       new Date(user.createdAt) > oneWeekAgo
     ).length;
     
+    // Count active users (logged in within the last 7 days)
+    const activeUsersWeek = allUsers.filter(user => 
+      new Date(user.lastLoginAt) > oneWeekAgo
+    ).length;
+    
     // Get the 10 most recent logins
     const recentUsers = [...allUsers]
       .sort((a, b) => new Date(b.lastLoginAt).getTime() - new Date(a.lastLoginAt).getTime())
@@ -191,6 +196,7 @@ async function getUserStatistics() {
       totalUsers,
       recentLogins,
       newUserCount,
+      activeUsersWeek,
       recentUsers,
     };
   } catch (error) {
@@ -200,6 +206,7 @@ async function getUserStatistics() {
       totalUsers: 0,
       recentLogins: 0,
       newUserCount: 0,
+      activeUsersWeek: 0,
       recentUsers: [],
     };
   }

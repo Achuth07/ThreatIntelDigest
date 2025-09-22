@@ -18,6 +18,8 @@ interface UserStats {
   recentLogins: number;
   newUserCount: number;
   recentUsers: User[];
+  activeUsersToday: number; // Additional metric
+  activeUsersWeek: number;  // Additional metric
   token?: string;
 }
 
@@ -60,6 +62,7 @@ export function AdminDashboard() {
 
         if (response.ok) {
           const data = await response.json();
+          console.log('API Response:', data); // Debug log
           
           // Update token if provided in response
           if (data.token) {
@@ -70,14 +73,15 @@ export function AdminDashboard() {
           if (view === 'stats') {
             setStats(data);
           } else {
-            setUsers(data.users || data);
+            setUsers(Array.isArray(data.users) ? data.users : data);
           }
         } else if (response.status === 401) {
           // Token expired, redirect to login
           localStorage.removeItem('cyberfeed_user');
           window.location.href = '/';
         } else {
-          throw new Error('Failed to fetch data');
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to fetch data');
         }
       } catch (err) {
         console.error('Error fetching admin data:', err);
@@ -98,7 +102,10 @@ export function AdminDashboard() {
             <CardTitle>Admin Dashboard</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-red-500">{error}</div>
+            <div className="text-red-500">Error: {error}</div>
+            <Button onClick={() => window.location.reload()} className="mt-4">
+              Retry
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -128,10 +135,13 @@ export function AdminDashboard() {
           </div>
 
           {loading ? (
-            <div>Loading...</div>
+            <div className="flex justify-center items-center h-32">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-whatcyber-teal"></div>
+              <span className="ml-2">Loading...</span>
+            </div>
           ) : view === 'stats' && stats ? (
             <div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <Card>
                   <CardContent className="pt-6">
                     <div className="text-2xl font-bold">{stats.totalUsers}</div>
@@ -150,6 +160,12 @@ export function AdminDashboard() {
                     <div className="text-sm text-slate-400">New Users (7d)</div>
                   </CardContent>
                 </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-2xl font-bold">{stats.activeUsersWeek}</div>
+                    <div className="text-sm text-slate-400">Active Users (7d)</div>
+                  </CardContent>
+                </Card>
               </div>
 
               <h3 className="text-lg font-semibold mb-4">Recent Users</h3>
@@ -163,7 +179,51 @@ export function AdminDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {stats.recentUsers.map((user) => (
+                  {stats.recentUsers && stats.recentUsers.length > 0 ? (
+                    stats.recentUsers.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell>
+                          <div className="flex items-center">
+                            {user.avatar ? (
+                              <img 
+                                src={user.avatar} 
+                                alt={user.name} 
+                                className="w-8 h-8 rounded-full mr-2"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-slate-600 mr-2"></div>
+                            )}
+                            <span>{user.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
+                        <TableCell>{new Date(user.lastLoginAt).toLocaleDateString()}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center">
+                        No recent users found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          ) : view === 'users' && users ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>First Login</TableHead>
+                  <TableHead>Last Login</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users.length > 0 ? (
+                  users.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell>
                         <div className="flex items-center">
@@ -183,42 +243,14 @@ export function AdminDashboard() {
                       <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
                       <TableCell>{new Date(user.lastLoginAt).toLocaleDateString()}</TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          ) : view === 'users' && users ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>First Login</TableHead>
-                  <TableHead>Last Login</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>
-                      <div className="flex items-center">
-                        {user.avatar ? (
-                          <img 
-                            src={user.avatar} 
-                            alt={user.name} 
-                            className="w-8 h-8 rounded-full mr-2"
-                          />
-                        ) : (
-                          <div className="w-8 h-8 rounded-full bg-slate-600 mr-2"></div>
-                        )}
-                        <span>{user.name}</span>
-                      </div>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center">
+                      No users found
                     </TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
-                    <TableCell>{new Date(user.lastLoginAt).toLocaleDateString()}</TableCell>
                   </TableRow>
-                ))}
+                )}
               </TableBody>
             </Table>
           ) : null}
