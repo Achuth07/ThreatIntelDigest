@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { getAuthenticatedUser } from '@/lib/auth';
+import logoImage from '@/assets/logo/android-chrome-512x512.png';
 
 interface LoginPopupProps {
   onLogin: () => void;
@@ -51,7 +52,7 @@ export function LoginPopup({ onLogin, onContinueAsGuest }: LoginPopupProps) {
           </p>
           <div className="flex justify-center">
             <img 
-              src="@/assets/logo/android-chrome-512x512.png" 
+              src={logoImage} 
               alt="WhatCyber Logo" 
               className="w-16 h-16 rounded-lg"
             />
