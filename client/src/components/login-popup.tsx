@@ -41,22 +41,22 @@ export function LoginPopup({ onLogin, onContinueAsGuest }: LoginPopupProps) {
     <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
       <Card className="w-full max-w-md bg-whatcyber-dark border-whatcyber-light-gray">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-slate-100">Welcome to WhatCyber</CardTitle>
-          <CardDescription className="text-slate-400">
-            Sign in to access personalized features and save your preferences
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-slate-300 text-center">
-            Stay updated with the latest cybersecurity threats and vulnerabilities
-          </p>
-          <div className="flex justify-center">
+          <div className="flex justify-center mb-4">
             <img 
               src={logoImage} 
               alt="WhatCyber Logo" 
               className="w-16 h-16 rounded-lg"
             />
           </div>
+          <CardTitle className="text-2xl font-bold text-slate-100">Welcome to WhatCyber</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-slate-300 text-center">
+            Stay updated with the latest cybersecurity threats and vulnerabilities
+          </p>
+          <p className="text-slate-400 text-center text-sm">
+            Sign in to access personalized features and save your preferences
+          </p>
         </CardContent>
         <CardFooter className="flex flex-col space-y-4">
           <Button 

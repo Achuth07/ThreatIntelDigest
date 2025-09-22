@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Bookmark, Settings, Shield, Menu, X, LogOut, User, Lock } from 'lucide-react';
+import { Search, Bookmark, Settings, Menu, X, LogOut, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Link } from 'wouter';
 import { getAuthenticatedUser, updateAuthToken } from '@/lib/auth';
+import logoImage from '@/assets/logo/android-chrome-512x512.png';
 
 interface User {
   id: string;
@@ -164,9 +165,11 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
             </Button>
             
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 lg:w-10 lg:h-10 bg-whatcyber-teal rounded-lg flex items-center justify-center logo-glow">
-                <Shield className="w-5 h-5 lg:w-6 lg:h-6 text-whatcyber-dark" data-testid="logo-icon" />
-              </div>
+              <img 
+                src={logoImage} 
+                alt="WhatCyber Logo" 
+                className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg"
+              />
               <div className="flex flex-col">
                 <h1 className="text-lg lg:text-xl font-bold text-slate-100 leading-tight" data-testid="logo-text">WhatCyber</h1>
                 <span className="text-xs text-whatcyber-teal font-medium -mt-1" data-testid="logo-tagline">CyberFeed</span>
@@ -247,7 +250,10 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
                           onClick={() => setIsSettingsOpen(false)}
                         >
                           <div className="flex items-center">
-                            <Lock className="w-4 h-4 mr-2" />
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                              <path d="M9 12l2 2 4-4" />
+                            </svg>
                             Admin Dashboard
                           </div>
                         </button>
