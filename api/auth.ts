@@ -1,5 +1,105 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { getOrCreateUser } from '../server/user-tracking';
+import { drizzle } from 'drizzle-orm/neon-serverless';
+import { Pool } from '@neondatabase/serverless';
+import { sql } from 'drizzle-orm';
+import { pgTable, serial, varchar, text, timestamp } from 'drizzle-orm/pg-core';
+import { eq } from 'drizzle-orm';
+
+// Define the users table schema directly
+const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  googleId: varchar('google_id', { length: 255 }).unique().notNull(),
+  name: text('name').notNull(),
+  email: text('email').notNull(),
+  avatar: text('avatar'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  lastLoginAt: timestamp('last_login_at').defaultNow().notNull(),
+});
+
+// Simple interface for user tracking data
+interface UserLoginRecord {
+  id: number;
+  googleId: string;
+  name: string;
+  email: string;
+  avatar: string | null;
+  createdAt: Date;
+  lastLoginAt: Date;
+}
+
+/**
+ * Get database connection
+ * @returns Database connection
+ */
+function getDb() {
+  const connectionString = process.env.DATABASE_URL;
+  
+  if (!connectionString) {
+    throw new Error('DATABASE_URL environment variable is required');
+  }
+
+  const pool = new Pool({ connectionString });
+  return drizzle(pool);
+}
+
+/**
+ * Get or create a user record in the database
+ * @param googleId Google user ID
+ * @param name User's name
+ * @param email User's email
+ * @param avatar User's avatar URL
+ * @returns User record
+ */
+async function getOrCreateUser(googleId: string, name: string, email: string, avatar: string | null): Promise<UserLoginRecord> {
+  const db = getDb();
+  
+  try {
+    // Try to find existing user
+    const existingUsers = await db.select().from(users).where(eq(users.googleId, googleId)).limit(1);
+    
+    if (existingUsers.length > 0) {
+      const existingUser = existingUsers[0];
+      // Update last login time
+      const updatedUsers = await db.update(users)
+        .set({ lastLoginAt: new Date() })
+        .where(eq(users.id, existingUser.id))
+        .returning();
+      
+      const updatedUser = updatedUsers[0];
+      return {
+        id: updatedUser.id,
+        googleId: updatedUser.googleId,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        avatar: updatedUser.avatar || null,
+        createdAt: updatedUser.createdAt,
+        lastLoginAt: updatedUser.lastLoginAt,
+      };
+    } else {
+      // Create new user
+      const newUsers = await db.insert(users).values({
+        googleId,
+        name,
+        email,
+        avatar: avatar || null,
+      }).returning();
+      
+      const newUser = newUsers[0];
+      return {
+        id: newUser.id,
+        googleId: newUser.googleId,
+        name: newUser.name,
+        email: newUser.email,
+        avatar: newUser.avatar || null,
+        createdAt: newUser.createdAt,
+        lastLoginAt: newUser.lastLoginAt,
+      };
+    }
+  } catch (error) {
+    console.error('Error in getOrCreateUser:', error);
+    throw error;
+  }
+}
 
 async function handleGoogleCallback(req: VercelRequest, res: VercelResponse) {
   const { code } = req.query;
@@ -102,6 +202,21 @@ async function handleLogout(req: VercelRequest, res: VercelResponse) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Check if required environment variables are set
+  if (!process.env.DATABASE_URL) {
+    return res.status(500).json({ 
+      error: 'Database not configured',
+      message: 'DATABASE_URL environment variable is not set'
+    });
+  }
+
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    return res.status(500).json({ 
+      error: 'Google OAuth not configured',
+      message: 'GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables are required'
+    });
+  }
+
   const { action } = req.query;
   
   switch (action) {
