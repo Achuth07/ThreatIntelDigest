@@ -87,7 +87,13 @@ async function getUserStatistics() {
     };
   } catch (error) {
     console.error('Error in getUserStatistics:', error);
-    throw error;
+    // Return default values if there's an error (e.g., table doesn't exist)
+    return {
+      totalUsers: 0,
+      recentLogins: 0,
+      newUserCount: 0,
+      recentUsers: [],
+    };
   }
 }
 
@@ -112,12 +118,21 @@ async function getAllUsers(): Promise<UserLoginRecord[]> {
     }));
   } catch (error) {
     console.error('Error in getAllUsers:', error);
-    throw error;
+    // Return empty array if there's an error (e.g., table doesn't exist)
+    return [];
   }
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
+    // Check if DATABASE_URL is configured
+    if (!process.env.DATABASE_URL) {
+      return res.status(500).json({ 
+        error: 'Database not configured',
+        message: 'DATABASE_URL environment variable is not set'
+      });
+    }
+
     if (req.method === 'GET') {
       // Check if user wants statistics or all users
       const { stats } = req.query;
@@ -136,6 +151,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   } catch (error) {
     console.error('Error in user management endpoint:', error);
-    res.status(500).json({ error: 'Failed to process request' });
+    res.status(500).json({ 
+      error: 'Failed to process request',
+      message: error instanceof Error ? error.message : 'Unknown error occurred'
+    });
   }
 }
