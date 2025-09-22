@@ -8,11 +8,13 @@ import Home from "@/pages/home";
 import NotFound from "@/pages/not-found";
 import { Footer } from "@/components/footer";
 import { useEffect } from "react";
+import { AdminDashboard } from "@/components/admin-dashboard";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/admin" component={AdminDashboard} />
       <Route component={NotFound} />
     </Switch>
   );

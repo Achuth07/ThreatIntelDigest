@@ -4,6 +4,7 @@ import { Pool } from '@neondatabase/serverless';
 import { sql } from 'drizzle-orm';
 import { pgTable, serial, varchar, text, timestamp } from 'drizzle-orm/pg-core';
 import { eq } from 'drizzle-orm';
+import * as crypto from 'crypto';
 
 // Define the users table schema directly
 const users = pgTable('users', {
@@ -15,6 +16,9 @@ const users = pgTable('users', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   lastLoginAt: timestamp('last_login_at').defaultNow().notNull(),
 });
+
+// Admin email from environment variable
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'achuthchandra07@gmail.com'; // Fallback for development only
 
 // Simple interface for user tracking data
 interface UserLoginRecord {
@@ -132,6 +136,96 @@ async function getOrCreateUser(googleId: string, name: string, email: string, av
   }
 }
 
+/**
+ * Generate a secure JWT token
+ * @param payload Data to include in the token
+ * @returns Token string
+ */
+function generateToken(payload: any): string {
+  const secret = process.env.SESSION_SECRET || 'fallback_secret_key_for_development_only';
+  const header = { alg: 'HS256', typ: 'JWT' };
+  
+  // Add issued at time and ensure expiration is a number
+  const fullPayload = {
+    ...payload,
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor((Date.now() + 24 * 60 * 60 * 1000) / 1000) // 24 hours in seconds
+  };
+  
+  const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64').replace(/=/g, '');
+  const encodedPayload = Buffer.from(JSON.stringify(fullPayload)).toString('base64').replace(/=/g, '');
+  
+  // Create signature using HMAC-SHA256
+  const signature = crypto
+    .createHmac('sha256', secret)
+    .update(`${encodedHeader}.${encodedPayload}`)
+    .digest('base64')
+    .replace(/=/g, '');
+  
+  return `${encodedHeader}.${encodedPayload}.${signature}`;
+}
+
+/**
+ * Verify a token with enhanced security checks
+ * @param token Token to verify
+ * @returns Decoded payload or null if invalid
+ */
+function verifyToken(token: string): any | null {
+  try {
+    // Basic format check
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return null;
+    }
+    
+    const [encodedHeader, encodedPayload, signature] = parts;
+    const secret = process.env.SESSION_SECRET || 'fallback_secret_key_for_development_only';
+    
+    // Verify signature using timing-safe comparison
+    const expectedSignature = crypto
+      .createHmac('sha256', secret)
+      .update(`${encodedHeader}.${encodedPayload}`)
+      .digest('base64')
+      .replace(/=/g, '');
+    
+    // Use timingSafeEqual to prevent timing attacks
+    try {
+      const expectedSigBuffer = Buffer.from(expectedSignature);
+      const actualSigBuffer = Buffer.from(signature);
+      
+      // Ensure buffers are same length for timingSafeEqual
+      if (expectedSigBuffer.length !== actualSigBuffer.length) {
+        return null;
+      }
+      
+      if (!crypto.timingSafeEqual(expectedSigBuffer, actualSigBuffer)) {
+        return null;
+      }
+    } catch (e) {
+      return null;
+    }
+    
+    // Decode payload
+    const payload = JSON.parse(Buffer.from(encodedPayload, 'base64').toString());
+    
+    // Check if token has expired
+    const currentTime = Math.floor(Date.now() / 1000);
+    if (payload.exp && currentTime > payload.exp) {
+      return null;
+    }
+    
+    // Check if issued at time is in the future (prevents future tokens)
+    if (payload.iat && payload.iat > currentTime + 60) { // Allow 1 minute clock skew
+      return null;
+    }
+    
+    return payload;
+  } catch (error) {
+    console.error('Token verification error:', error);
+    return null;
+  }
+}
+
 async function handleGoogleCallback(req: VercelRequest, res: VercelResponse) {
   const { code } = req.query;
   
@@ -187,6 +281,17 @@ async function handleGoogleCallback(req: VercelRequest, res: VercelResponse) {
       profile.picture
     );
     
+    // Generate authentication token
+    const tokenPayload = {
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      isAdmin: user.email === ADMIN_EMAIL,
+      exp: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+    };
+    
+    const token = generateToken(tokenPayload);
+    
     // Prepare user data for frontend
     const userData = {
       id: user.id,
@@ -194,6 +299,8 @@ async function handleGoogleCallback(req: VercelRequest, res: VercelResponse) {
       name: user.name,
       email: user.email,
       avatar: user.avatar,
+      isAdmin: user.email === ADMIN_EMAIL,
+      token: token
     };
     
     // Redirect to frontend with user data (URL encoded)
@@ -221,7 +328,6 @@ async function handleAuthStatus(req: VercelRequest, res: VercelResponse) {
   // Since we're using localStorage for authentication data in the frontend,
   // we can't actually check a server-side session state in this simple implementation.
   // In a real implementation, we would check the session or JWT here.
-  // For now, we'll return a response indicating the frontend should check localStorage.
   res.status(200).json({ 
     isAuthenticated: false,
     message: 'Authentication status should be checked via localStorage in the frontend. This endpoint is not used in the current implementation.' 

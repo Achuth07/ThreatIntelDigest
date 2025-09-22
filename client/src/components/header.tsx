@@ -1,13 +1,17 @@
-import { useState, useEffect } from 'react';
-import { Search, Bookmark, Settings, Shield, Menu, X, LogOut, User } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Search, Bookmark, Settings, Shield, Menu, X, LogOut, User, Lock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Link } from 'wouter';
+import { getAuthenticatedUser, updateAuthToken } from '@/lib/auth';
 
 interface User {
   id: string;
   name: string;
   email: string;
   avatar: string;
+  isAdmin?: boolean;
+  token?: string;
 }
 
 interface HeaderProps {
@@ -23,6 +27,22 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false); // For dropdown menu
+  const settingsRef = useRef<HTMLDivElement>(null); // For detecting clicks outside
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (settingsRef.current && !settingsRef.current.contains(event.target as Node)) {
+        setIsSettingsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Check authentication status on component mount
   useEffect(() => {
@@ -36,7 +56,7 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
         const userData = JSON.parse(decodeURIComponent(userDataString));
         setUser(userData);
         // Store user data in localStorage for persistence
-        localStorage.setItem('cyberfeed_user', JSON.stringify(userData));
+        updateAuthToken(userData);
         // Remove the user parameter from the URL
         urlParams.delete('user');
         const newUrl = `${window.location.pathname}${urlParams.toString() ? '?' + urlParams.toString() : ''}`;
@@ -66,17 +86,10 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
 
   const checkAuthStatus = async () => {
     try {
-      // Check for existing user data in localStorage
-      const storedUser = localStorage.getItem('cyberfeed_user');
-      if (storedUser) {
-        try {
-          const userData = JSON.parse(storedUser);
-          setUser(userData);
-        } catch (e) {
-          console.error('Failed to parse stored user data:', e);
-          // Clear invalid data
-          localStorage.removeItem('cyberfeed_user');
-        }
+      // Use our authentication utility
+      const userData = getAuthenticatedUser();
+      if (userData) {
+        setUser(userData);
       }
     } catch (error) {
       console.error('Failed to check auth status:', error);
@@ -210,16 +223,49 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
               )}
             </Button>
             
-            {/* Settings - Hidden on mobile */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="hidden sm:block p-2 text-slate-400 hover:text-slate-100 transition-colors"
-              data-testid="button-settings"
-              title="Settings"
-            >
-              <Settings className="w-5 h-5" />
-            </Button>
+            {/* Settings Dropdown */}
+            <div className="relative" ref={settingsRef}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="p-2 text-slate-400 hover:text-slate-100 transition-colors"
+                onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                data-testid="button-settings"
+                title="Settings"
+              >
+                <Settings className="w-5 h-5" />
+              </Button>
+              
+              {/* Dropdown Menu */}
+              {isSettingsOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-whatcyber-dark border border-whatcyber-light-gray rounded-md shadow-lg z-50">
+                  <div className="py-1">
+                    {user && user.isAdmin && (
+                      <Link href="/admin">
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-whatcyber-gray hover:text-slate-100"
+                          onClick={() => setIsSettingsOpen(false)}
+                        >
+                          <div className="flex items-center">
+                            <Lock className="w-4 h-4 mr-2" />
+                            Admin Dashboard
+                          </div>
+                        </button>
+                      </Link>
+                    )}
+                    <button
+                      className="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-whatcyber-gray hover:text-slate-100"
+                      onClick={() => {
+                        setIsSettingsOpen(false);
+                        // Add other settings options here if needed
+                      }}
+                    >
+                      Settings
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             
             {/* User Authentication */}
             <div className="flex items-center space-x-2 ml-4">
@@ -240,19 +286,21 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
                       <User className="w-4 h-4 text-slate-300" />
                     </div>
                   )}
-                  <span className="text-sm text-slate-300 hidden md:inline" data-testid="text-user-name">
-                    {user.name}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="p-2 text-slate-400 hover:text-slate-100 flex items-center space-x-1"
-                    onClick={handleLogout}
-                    title="Logout"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    <span className="hidden md:inline text-sm">Logout</span>
-                  </Button>
+                  <div className="flex items-center space-x-1">
+                    <span className="text-sm text-slate-300 hidden md:inline" data-testid="text-user-name">
+                      {user.name}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="p-2 text-slate-400 hover:text-slate-100 flex items-center space-x-1"
+                      onClick={handleLogout}
+                      title="Logout"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span className="hidden md:inline text-sm">Logout</span>
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <Button
