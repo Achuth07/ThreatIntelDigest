@@ -93,6 +93,28 @@ app.use((req, res, next) => {
     }
   );
 
+  // Handle the new consolidated auth endpoint for local development
+  app.get('/api/auth', (req, res, next) => {
+    const { action } = req.query;
+    
+    if (action === 'callback') {
+      // Handle Google OAuth callback
+      passport.authenticate('google', { failureRedirect: '/' })(req, res, () => {
+        // Successful authentication, redirect to frontend
+        const frontendUrl = process.env.NODE_ENV === 'development' 
+          ? 'http://localhost:3001' 
+          : 'https://threatfeed.whatcyber.com';
+        res.redirect(frontendUrl);
+      });
+    } else if (action === 'google') {
+      // Handle Google OAuth initiation
+      passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
+    } else {
+      // For other actions, continue with normal routing
+      next();
+    }
+  });
+
   // Logout route
   app.get('/api/auth/logout', (req, res) => {
     req.logout((err) => {

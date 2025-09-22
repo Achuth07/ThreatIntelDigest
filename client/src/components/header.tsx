@@ -26,7 +26,32 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
 
   // Check authentication status on component mount
   useEffect(() => {
-    checkAuthStatus();
+    // Check for user data in URL parameters (from Google OAuth callback)
+    const urlParams = new URLSearchParams(window.location.search);
+    const userDataString = urlParams.get('user');
+    const error = urlParams.get('error');
+    
+    if (userDataString) {
+      try {
+        const userData = JSON.parse(decodeURIComponent(userDataString));
+        setUser(userData);
+        // Remove the user parameter from the URL
+        urlParams.delete('user');
+        const newUrl = `${window.location.pathname}${urlParams.toString() ? '?' + urlParams.toString() : ''}`;
+        window.history.replaceState({}, document.title, newUrl);
+      } catch (e) {
+        console.error('Failed to parse user data from URL:', e);
+      }
+    } else if (error) {
+      console.error('Authentication error:', error);
+      // Remove the error parameter from the URL
+      urlParams.delete('error');
+      const newUrl = `${window.location.pathname}${urlParams.toString() ? '?' + urlParams.toString() : ''}`;
+      window.history.replaceState({}, document.title, newUrl);
+    } else {
+      // Check authentication status with the API
+      checkAuthStatus();
+    }
   }, []);
 
   const checkAuthStatus = async () => {

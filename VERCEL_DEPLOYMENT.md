@@ -29,7 +29,7 @@ NODE_ENV=production
 # Google OAuth Configuration
 GOOGLE_CLIENT_ID= your google client id
 GOOGLE_CLIENT_SECRET=your google client secret
-GOOGLE_CALLBACK_URL=https://threatfeed.whatcyber.com/api/auth/callback/google
+GOOGLE_CALLBACK_URL=https://threatfeed.whatcyber.com/api/auth?action=callback
 
 # Session Security (Generate a secure random string)
 SESSION_SECRET=your-32-character-random-secret-key

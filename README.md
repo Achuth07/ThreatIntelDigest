@@ -292,10 +292,10 @@ DATABASE_URL=postgresql://username:password@host:port/database
 - `DELETE /api/bookmarks/:articleId` - Remove bookmark
 
 ### Authentication
-- `GET /api/auth/google` - Initiate Google OAuth flow
-- `GET /api/auth/callback/google` - Google OAuth callback
-- `GET /api/auth/logout` - Logout current user
-- `GET /api/auth/status` - Check authentication status
+- `GET /api/auth?action=google` - Initiate Google OAuth flow
+- `GET /api/auth?action=callback` - Google OAuth callback
+- `GET /api/auth?action=logout` - Logout current user
+- `GET /api/auth?action=status` - Check authentication status
 
 ### Feed Management
 - `POST /api/fetch-feeds` - Manually refresh all RSS feeds
