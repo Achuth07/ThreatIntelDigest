@@ -51,7 +51,7 @@ export function LoginPopup({ onLogin, onContinueAsGuest }: LoginPopupProps) {
           </p>
           <div className="flex justify-center">
             <img 
-              src="/android-chrome-512x512.png" 
+              src="@/assets/logo/android-chrome-512x512.png" 
               alt="WhatCyber Logo" 
               className="w-16 h-16 rounded-lg"
             />
