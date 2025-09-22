@@ -34,7 +34,10 @@ const users: User[] = [];
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID || '',
   clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-  callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:5001/api/auth/callback/google'
+  callbackURL: process.env.GOOGLE_CALLBACK_URL || 
+    (process.env.NODE_ENV === 'development' 
+      ? 'http://localhost:5001/api/auth/callback/google' 
+      : 'https://threatfeed.whatcyber.com/api/auth/callback/google')
 }, async (accessToken: string, refreshToken: string, profile: Profile, done: VerifyCallback) => {
   try {
     // Check if user already exists in our database
