@@ -1,9 +1,8 @@
 import { and, desc, asc, ilike, inArray, eq } from 'drizzle-orm';
 import { getDb } from './db';
-import { articles, bookmarks, rssSources, vulnerabilities, users } from '../shared/schema';
-import type { IStorage, CVE, InsertCVE } from './storage';
+import { articles, bookmarks, rssSources, vulnerabilities } from '../shared/schema';
+import type { IStorage } from './storage';
 import type { Article, InsertArticle, Bookmark, InsertBookmark, RssSource, InsertRssSource } from '../shared/schema';
-import type { User, InsertUser } from '../shared/schema';
 
 export class PostgresStorage implements IStorage {
   private db = getDb();
@@ -125,7 +124,7 @@ export class PostgresStorage implements IStorage {
 
   async createArticle(insertArticle: InsertArticle): Promise<Article> {
     try {
-      const articleData = {
+      const articleData: any = {
         title: insertArticle.title,
         summary: insertArticle.summary || null,
         url: insertArticle.url,
@@ -188,7 +187,7 @@ export class PostgresStorage implements IStorage {
 
   async createBookmark(insertBookmark: InsertBookmark): Promise<Bookmark> {
     try {
-      const result = await this.db.insert(bookmarks).values(insertBookmark).returning();
+      const result = await this.db.insert(bookmarks).values(insertBookmark as any).returning();
       return result[0];
     } catch (error) {
       console.error('Error creating bookmark:', error);
@@ -247,7 +246,7 @@ export class PostgresStorage implements IStorage {
 
   async createRssSource(insertRssSource: InsertRssSource): Promise<RssSource> {
     try {
-      const result = await this.db.insert(rssSources).values(insertRssSource).returning();
+      const result = await this.db.insert(rssSources).values(insertRssSource as any).returning();
       return result[0];
     } catch (error) {
       console.error('Error creating RSS source:', error);
@@ -257,7 +256,7 @@ export class PostgresStorage implements IStorage {
 
   async updateRssSource(id: string, updateRssSource: Partial<InsertRssSource>): Promise<RssSource> {
     try {
-      const result = await this.db.update(rssSources).set(updateRssSource).where(eq(rssSources.id, id)).returning();
+      const result = await this.db.update(rssSources).set(updateRssSource as any).where(eq(rssSources.id, id)).returning();
       return result[0];
     } catch (error) {
       console.error('Error updating RSS source:', error);
@@ -277,7 +276,7 @@ export class PostgresStorage implements IStorage {
   }
 
   // CVEs
-  async getCVEs(params?: { limit?: number; offset?: number; severity?: string }): Promise<CVE[]> {
+  async getCVEs(params?: { limit?: number; offset?: number; severity?: string }): Promise<any[]> {
     try {
       let queryBuilder = this.db.select().from(vulnerabilities);
       
@@ -299,100 +298,27 @@ export class PostgresStorage implements IStorage {
       const offset = params?.offset || 0;
       queryBuilder = queryBuilder.limit(limit).offset(offset) as typeof queryBuilder;
 
-      const results = await queryBuilder;
-      return results.map(result => ({
-        id: result.id,
-        description: result.description,
-        publishedDate: result.publishedDate,
-        lastModifiedDate: result.lastModifiedDate,
-        vulnStatus: result.vulnStatus,
-        cvssV3Score: result.cvssV3Score ? parseFloat(result.cvssV3Score as any) : null,
-        cvssV3Severity: result.cvssV3Severity,
-        cvssV2Score: result.cvssV2Score ? parseFloat(result.cvssV2Score as any) : null,
-        cvssV2Severity: result.cvssV2Severity,
-        weaknesses: result.weaknesses || [],
-        references: result.referenceUrls ? result.referenceUrls.map(url => ({
-          url: url.url,
-          source: url.source,
-          tags: url.tags
-        })) : [],
-        createdAt: result.createdAt || new Date()
-      }));
+      return await queryBuilder;
     } catch (error) {
       console.error('Error fetching CVEs:', error);
       return [];
     }
   }
 
-  async getCVE(id: string): Promise<CVE | undefined> {
+  async getCVE(id: string): Promise<any | undefined> {
     try {
       const result = await this.db.select().from(vulnerabilities).where(eq(vulnerabilities.id, id)).limit(1);
-      if (result.length === 0) return undefined;
-      
-      const vuln = result[0];
-      return {
-        id: vuln.id,
-        description: vuln.description,
-        publishedDate: vuln.publishedDate,
-        lastModifiedDate: vuln.lastModifiedDate,
-        vulnStatus: vuln.vulnStatus,
-        cvssV3Score: vuln.cvssV3Score ? parseFloat(vuln.cvssV3Score as any) : null,
-        cvssV3Severity: vuln.cvssV3Severity,
-        cvssV2Score: vuln.cvssV2Score ? parseFloat(vuln.cvssV2Score as any) : null,
-        cvssV2Severity: vuln.cvssV2Severity,
-        weaknesses: vuln.weaknesses || [],
-        references: vuln.referenceUrls ? vuln.referenceUrls.map(url => ({
-          url: url.url,
-          source: url.source,
-          tags: url.tags
-        })) : [],
-        createdAt: vuln.createdAt || new Date()
-      };
+      return result[0];
     } catch (error) {
       console.error('Error fetching CVE:', error);
       return undefined;
     }
   }
 
-  async createCVE(insertCVE: InsertCVE): Promise<CVE> {
+  async createCVE(insertCVE: any): Promise<any> {
     try {
-      // Convert references to referenceUrls format and handle decimal types
-      const vulnerabilityData: any = {
-        id: insertCVE.id,
-        description: insertCVE.description,
-        publishedDate: insertCVE.publishedDate,
-        lastModifiedDate: insertCVE.lastModifiedDate,
-        vulnStatus: insertCVE.vulnStatus,
-        cvssV3Score: insertCVE.cvssV3Score !== undefined && insertCVE.cvssV3Score !== null ? String(insertCVE.cvssV3Score) : null,
-        cvssV3Severity: insertCVE.cvssV3Severity,
-        cvssV2Score: insertCVE.cvssV2Score !== undefined && insertCVE.cvssV2Score !== null ? String(insertCVE.cvssV2Score) : null,
-        cvssV2Severity: insertCVE.cvssV2Severity,
-        weaknesses: insertCVE.weaknesses || [],
-        referenceUrls: insertCVE.references || [],
-        createdAt: new Date()
-      };
-      
-      const result = await this.db.insert(vulnerabilities).values(vulnerabilityData).returning();
-      const vuln = result[0];
-      
-      return {
-        id: vuln.id,
-        description: vuln.description,
-        publishedDate: vuln.publishedDate,
-        lastModifiedDate: vuln.lastModifiedDate,
-        vulnStatus: vuln.vulnStatus,
-        cvssV3Score: vuln.cvssV3Score ? parseFloat(vuln.cvssV3Score as any) : null,
-        cvssV3Severity: vuln.cvssV3Severity,
-        cvssV2Score: vuln.cvssV2Score ? parseFloat(vuln.cvssV2Score as any) : null,
-        cvssV2Severity: vuln.cvssV2Severity,
-        weaknesses: vuln.weaknesses || [],
-        references: vuln.referenceUrls ? vuln.referenceUrls.map(url => ({
-          url: url.url,
-          source: url.source,
-          tags: url.tags
-        })) : [],
-        createdAt: vuln.createdAt || new Date()
-      };
+      const result = await this.db.insert(vulnerabilities).values(insertCVE).returning();
+      return result[0];
     } catch (error) {
       console.error('Error creating CVE:', error);
       throw error;
@@ -406,49 +332,6 @@ export class PostgresStorage implements IStorage {
     } catch (error) {
       console.error('Error checking if CVE exists:', error);
       return false;
-    }
-  }
-
-  // Users
-  async getUserByGoogleId(googleId: string): Promise<User | undefined> {
-    try {
-      const result = await this.db.select().from(users).where(eq(users.googleId, googleId)).limit(1);
-      return result[0];
-    } catch (error) {
-      console.error('Error fetching user by Google ID:', error);
-      return undefined;
-    }
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    try {
-      const result = await this.db.insert(users).values(insertUser).returning();
-      return result[0];
-    } catch (error) {
-      console.error('Error creating user:', error);
-      throw error;
-    }
-  }
-
-  async updateUserLastLogin(googleId: string): Promise<User | undefined> {
-    try {
-      const result = await this.db.update(users)
-        .set({ lastLoginAt: new Date() })
-        .where(eq(users.googleId, googleId))
-        .returning();
-      return result[0];
-    } catch (error) {
-      console.error('Error updating user last login:', error);
-      return undefined;
-    }
-  }
-
-  async getAllUsers(): Promise<User[]> {
-    try {
-      return await this.db.select().from(users).orderBy(desc(users.lastLoginAt));
-    } catch (error) {
-      console.error('Error fetching all users:', error);
-      return [];
     }
   }
 }

@@ -1,4 +1,5 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
+import { getOrCreateUser } from '../server/user-tracking';
 
 async function handleGoogleCallback(req: VercelRequest, res: VercelResponse) {
   const { code } = req.query;
@@ -44,14 +45,21 @@ async function handleGoogleCallback(req: VercelRequest, res: VercelResponse) {
     
     const profile = await profileResponse.json();
     
-    // In a real implementation, we would create a session or JWT here
-    // For now, we'll just redirect to the frontend with the user data in the URL
-    // Note: This is not secure for production, but works for demonstration
+    // Save user to database using our tracking utility
+    const user = await getOrCreateUser(
+      profile.id,
+      profile.name,
+      profile.email,
+      profile.picture
+    );
+    
+    // Prepare user data for frontend
     const userData = {
-      id: profile.id,
-      name: profile.name,
-      email: profile.email,
-      avatar: profile.picture,
+      id: user.id,
+      googleId: user.googleId,
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar,
     };
     
     // Redirect to frontend with user data (URL encoded)
@@ -88,10 +96,8 @@ async function handleAuthStatus(req: VercelRequest, res: VercelResponse) {
 
 // Handler for logging out
 async function handleLogout(req: VercelRequest, res: VercelResponse) {
-  // In this simple implementation, logout is just clearing the user data
-  // In a real implementation, we would destroy the session or JWT here.
   res.status(200).json({ 
-    message: 'Logged out successfully. In this simple implementation, user data is cleared from URL parameters on the frontend.' 
+    message: 'Logged out successfully. User data is cleared from localStorage.' 
   });
 }
 

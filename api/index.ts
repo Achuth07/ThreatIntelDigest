@@ -28,6 +28,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { default: visitorCountHandler } = await import('./visitor-count');
     return visitorCountHandler(req, res);
   }
+  
+  if (pathname.startsWith('/api/user-management')) {
+    const { default: userManagementHandler } = await import('./user-management');
+    return userManagementHandler(req, res);
+  }
 
   res.status(404).json({ message: 'API endpoint not found' });
 }

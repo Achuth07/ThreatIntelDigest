@@ -159,6 +159,7 @@ ThreatIntelDigest/
 │   ├── fetch-cves.ts       # CVE data fetching from NVD API
 │   ├── vulnerabilities.ts  # CVE/vulnerability data endpoints
 │   ├── sources.ts          # RSS sources management
+│   ├── user-management.ts  # User management and statistics
 │   ├── database.ts         # Database management utilities
 │   └── index.ts            # API routes index
 ├── client/                 # React frontend application
@@ -290,6 +291,10 @@ DATABASE_URL=postgresql://username:password@host:port/database
 - `GET /api/bookmarks` - Get user bookmarks
 - `POST /api/bookmarks` - Create bookmark
 - `DELETE /api/bookmarks/:articleId` - Remove bookmark
+
+### User Management
+- `GET /api/user-management` - Get all users
+- `GET /api/user-management?stats=true` - Get user statistics
 
 ### Authentication
 - `GET /api/auth?action=google` - Initiate Google OAuth flow
