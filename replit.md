@@ -45,9 +45,10 @@ Preferred communication style: Simple, everyday language.
 - **Source Management**: Non-destructive operations using isActive field for source lifecycle management
 
 ### Authentication and Authorization
-- **Current State**: No authentication system implemented (planned for future)
-- **Session Management**: connect-pg-simple for PostgreSQL session storage (prepared)
-- **Architecture**: Designed to support user-based bookmarks and preferences
+- **Google OAuth 2.0**: Secure authentication with Google accounts
+- **Session Management**: express-session with secure configuration
+- **Protected Routes**: Authentication middleware for protected endpoints
+- **User Profiles**: Google profile information storage and retrieval
 
 ### UI/UX Design Patterns
 - **Component Architecture**: Atomic design with reusable UI components

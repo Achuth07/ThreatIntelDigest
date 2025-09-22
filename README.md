@@ -224,6 +224,7 @@ npm run validate-deployment
 - **Bookmarking System:** Save important articles for future reference
 - **Real-time Updates:** Manual refresh with planned automatic scheduling
 - **Source Management:** Add, deactivate, and reactivate RSS sources without data loss
+- **User Authentication:** Secure Google OAuth 2.0 authentication
 
 ### Source Management Features
 - **Non-Destructive Removal:** Deactivate sources instead of permanent deletion
@@ -290,6 +291,12 @@ DATABASE_URL=postgresql://username:password@host:port/database
 - `POST /api/bookmarks` - Create bookmark
 - `DELETE /api/bookmarks/:articleId` - Remove bookmark
 
+### Authentication
+- `GET /api/auth/google` - Initiate Google OAuth flow
+- `GET /api/auth/callback/google` - Google OAuth callback
+- `GET /api/auth/logout` - Logout current user
+- `GET /api/auth/status` - Check authentication status
+
 ### Feed Management
 - `POST /api/fetch-feeds` - Manually refresh all RSS feeds
 - `POST /api/fetch-article` - Extract full article content from URL
@@ -308,10 +315,10 @@ DATABASE_URL=postgresql://username:password@host:port/database
 - **Type Safety:** Full TypeScript coverage across frontend and backend
 - **SQL Injection Prevention:** Drizzle ORM with parameterized queries
 - **Secure Sessions:** Express-session with PostgreSQL storage (when configured)
+- **Google OAuth 2.0:** Secure authentication with Google accounts
 
 ## 🎯 Future Enhancements
 
-- **Authentication System:** User accounts and personalized bookmarks
 - **Automatic Feed Refresh:** Scheduled RSS feed updates
 - **Advanced Filtering:** Custom filters and saved searches
 - **Export Functionality:** Export bookmarks and articles

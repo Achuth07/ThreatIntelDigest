@@ -9,7 +9,8 @@
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc",
     "db:push": "drizzle-kit push",
-    "validate-deployment": "node scripts/validate-deployment.js"
+    "validate-deployment": "node scripts/validate-deployment.js",
+    "test-auth": "node scripts/test-auth.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -56,7 +57,7 @@
     "cmdk": "^1.1.1",
     "connect-pg-simple": "^10.0.0",
     "date-fns": "^3.6.0",
-    "dotenv": "^17.2.1",
+    "dotenv": "^17.2.2",
     "drizzle-orm": "^0.39.1",
     "drizzle-zod": "^0.7.0",
     "embla-carousel-react": "^8.6.0",
@@ -70,6 +71,7 @@
     "memorystore": "^1.6.7",
     "next-themes": "^0.4.6",
     "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
     "passport-local": "^1.0.0",
     "postcss": "^8.4.47",
     "react": "^18.3.1",
@@ -99,6 +101,7 @@
     "@types/jsdom": "^21.1.7",
     "@types/node": "20.16.11",
     "@types/passport": "^1.0.16",
+    "@types/passport-google-oauth20": "^2.0.16",
     "@types/passport-local": "^1.0.38",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",
