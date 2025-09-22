@@ -46,7 +46,12 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = '/api/auth/google';
+    // For production deployment, use the full URL to the Vercel API endpoint
+    const isProduction = process.env.NODE_ENV === 'production';
+    const authUrl = isProduction 
+      ? 'https://threatfeed.whatcyber.com/api/auth/google'
+      : '/api/auth/google';
+    window.location.href = authUrl;
   };
 
   const handleLogout = async () => {
