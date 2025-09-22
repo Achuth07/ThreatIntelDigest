@@ -43,6 +43,11 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
         window.history.replaceState({}, document.title, newUrl);
       } catch (e) {
         console.error('Failed to parse user data from URL:', e);
+      } finally {
+        // Add a small delay to ensure UI updates properly
+        setTimeout(() => {
+          setLoading(false);
+        }, 100);
       }
     } else if (error) {
       console.error('Authentication error:', error);
@@ -50,26 +55,37 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
       urlParams.delete('error');
       const newUrl = `${window.location.pathname}${urlParams.toString() ? '?' + urlParams.toString() : ''}`;
       window.history.replaceState({}, document.title, newUrl);
+      // Add a small delay to ensure UI updates properly
+      setTimeout(() => {
+        setLoading(false);
+      }, 100);
     } else {
       checkAuthStatus();
     }
   }, []);
 
   const checkAuthStatus = async () => {
-    // Check for existing user data in localStorage
-    const storedUser = localStorage.getItem('cyberfeed_user');
-    if (storedUser) {
-      try {
-        const userData = JSON.parse(storedUser);
-        setUser(userData);
-      } catch (e) {
-        console.error('Failed to parse stored user data:', e);
-        // Clear invalid data
-        localStorage.removeItem('cyberfeed_user');
+    try {
+      // Check for existing user data in localStorage
+      const storedUser = localStorage.getItem('cyberfeed_user');
+      if (storedUser) {
+        try {
+          const userData = JSON.parse(storedUser);
+          setUser(userData);
+        } catch (e) {
+          console.error('Failed to parse stored user data:', e);
+          // Clear invalid data
+          localStorage.removeItem('cyberfeed_user');
+        }
       }
+    } catch (error) {
+      console.error('Failed to check auth status:', error);
+    } finally {
+      // Add a small delay to ensure UI updates properly
+      setTimeout(() => {
+        setLoading(false);
+      }, 100);
     }
-    // Always set loading to false after checking
-    setLoading(false);
   };
 
   const handleGoogleLogin = () => {
