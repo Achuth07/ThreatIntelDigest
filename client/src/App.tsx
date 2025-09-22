@@ -7,8 +7,10 @@ import { ThemeProvider } from "@/components/theme-provider";
 import Home from "@/pages/home";
 import NotFound from "@/pages/not-found";
 import { Footer } from "@/components/footer";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AdminDashboard } from "@/components/admin-dashboard";
+import { LoginPopup } from "@/components/login-popup";
+import { getAuthenticatedUser, isGuestUser } from "@/lib/auth";
 
 function Router() {
   return (
@@ -21,7 +23,19 @@ function Router() {
 }
 
 function App() {
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [userChecked, setUserChecked] = useState(false);
+
   useEffect(() => {
+    // Check if user is authenticated or has chosen to continue as guest
+    const user = getAuthenticatedUser();
+    const guest = isGuestUser();
+    
+    if (!user && !guest) {
+      setShowLoginPopup(true);
+    }
+    setUserChecked(true);
+
     // Increment visitor count on app load through our backend proxy
     const incrementVisitorCount = async () => {
       try {
@@ -50,11 +64,38 @@ function App() {
     incrementVisitorCount();
   }, []);
 
+  const handleContinueAsGuest = () => {
+    setShowLoginPopup(false);
+    // Set a flag in localStorage to remember user's choice
+    localStorage.setItem('guestUser', 'true');
+  };
+
+  const handleLogin = () => {
+    setShowLoginPopup(false);
+    // Remove guest flag if user logs in
+    localStorage.removeItem('guestUser');
+  };
+
+  // Don't render the app until we've checked for authentication
+  if (!userChecked) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-whatcyber-darker">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-whatcyber-teal"></div>
+      </div>
+    );
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <TooltipProvider>
           <Toaster />
+          {showLoginPopup && (
+            <LoginPopup 
+              onLogin={handleLogin} 
+              onContinueAsGuest={handleContinueAsGuest} 
+            />
+          )}
           <div className="flex flex-col min-h-screen">
             <Router />
             <Footer />
