@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Bookmark, Settings, Shield, Menu, X, User } from 'lucide-react';
+import { Search, Bookmark, Settings, Shield, Menu, X, LogOut, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
@@ -186,11 +186,12 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="p-2 text-slate-400 hover:text-slate-100"
+                    className="p-2 text-slate-400 hover:text-slate-100 flex items-center space-x-1"
                     onClick={handleLogout}
                     title="Logout"
                   >
-                    <X className="w-4 h-4" />
+                    <LogOut className="w-4 h-4" />
+                    <span className="hidden md:inline text-sm">Logout</span>
                   </Button>
                 </div>
               ) : (
