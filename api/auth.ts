@@ -43,6 +43,37 @@ function getDb() {
 }
 
 /**
+ * Initialize the users table if it doesn't exist
+ */
+async function initializeUsersTable() {
+  const db = getDb();
+  
+  try {
+    // Check if table exists by attempting to query it
+    await db.execute(sql`SELECT 1 FROM users LIMIT 1`);
+  } catch (error) {
+    // If table doesn't exist, create it
+    if (error instanceof Error && error.message.includes('relation "users" does not exist')) {
+      console.log('Creating users table...');
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          google_id VARCHAR(255) UNIQUE NOT NULL,
+          name TEXT NOT NULL,
+          email TEXT NOT NULL,
+          avatar TEXT,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+          last_login_at TIMESTAMP DEFAULT NOW() NOT NULL
+        )
+      `);
+      console.log('Users table created successfully');
+    } else {
+      throw error;
+    }
+  }
+}
+
+/**
  * Get or create a user record in the database
  * @param googleId Google user ID
  * @param name User's name
@@ -111,6 +142,9 @@ async function handleGoogleCallback(req: VercelRequest, res: VercelResponse) {
   }
   
   try {
+    // Initialize users table if it doesn't exist
+    await initializeUsersTable();
+    
     // Exchange the code for an access token
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
