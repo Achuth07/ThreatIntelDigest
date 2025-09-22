@@ -50,11 +50,11 @@ export function LoginPopup({ onLogin, onContinueAsGuest }: LoginPopupProps) {
             Stay updated with the latest cybersecurity threats and vulnerabilities
           </p>
           <div className="flex justify-center">
-            <div className="w-16 h-16 bg-whatcyber-teal rounded-lg flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" className="text-whatcyber-dark">
-                <path fill="currentColor" d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12c5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
-              </svg>
-            </div>
+            <img 
+              src="/favicon/android-chrome-512x512.png" 
+              alt="WhatCyber Logo" 
+              className="w-16 h-16 rounded-lg"
+            />
           </div>
         </CardContent>
         <CardFooter className="flex flex-col space-y-4">
