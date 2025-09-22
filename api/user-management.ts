@@ -1,7 +1,19 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 import { Pool } from '@neondatabase/serverless';
-import * as schema from '../shared/schema';
+import { sql } from 'drizzle-orm';
+import { pgTable, serial, varchar, text, timestamp } from 'drizzle-orm/pg-core';
+
+// Define the users table schema directly
+const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  googleId: varchar('google_id', { length: 255 }).unique().notNull(),
+  name: text('name').notNull(),
+  email: text('email').notNull(),
+  avatar: text('avatar'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  lastLoginAt: timestamp('last_login_at').defaultNow().notNull(),
+});
 
 // Simple interface for user tracking data
 interface UserLoginRecord {
@@ -26,7 +38,7 @@ function getDb() {
   }
 
   const pool = new Pool({ connectionString });
-  return drizzle(pool, { schema });
+  return drizzle(pool);
 }
 
 /**
@@ -37,7 +49,7 @@ async function getUserStatistics() {
   const db = getDb();
   
   try {
-    const allUsers = await db.select().from(schema.users);
+    const allUsers = await db.select().from(users);
     
     // Calculate statistics
     const totalUsers = allUsers.length;
@@ -87,7 +99,7 @@ async function getAllUsers(): Promise<UserLoginRecord[]> {
   const db = getDb();
   
   try {
-    const allUsers = await db.select().from(schema.users);
+    const allUsers = await db.select().from(users);
     
     return allUsers.map(user => ({
       id: user.id,
