@@ -1,10 +1,41 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // This is the callback endpoint that Google will redirect to after authentication
-  // In a real implementation, we would exchange the code for an access token
-  // and then redirect the user to the frontend application
+  const { action } = req.query;
   
+  switch (action) {
+    case 'google':
+      // Handle Google OAuth initiation
+      const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+        `client_id=${process.env.GOOGLE_CLIENT_ID}&` +
+        `redirect_uri=${process.env.GOOGLE_CALLBACK_URL}&` +
+        `response_type=code&` +
+        `scope=profile email&` +
+        `access_type=offline`;
+      res.redirect(googleAuthUrl);
+      break;
+      
+    case 'callback':
+      // Handle Google OAuth callback
+      await handleGoogleCallback(req, res);
+      break;
+      
+    case 'logout':
+      // Handle logout
+      res.json({ message: 'Logged out successfully' });
+      break;
+      
+    case 'status':
+      // Check authentication status
+      res.json({ isAuthenticated: false });
+      break;
+      
+    default:
+      res.status(400).json({ error: 'Invalid action' });
+  }
+}
+
+async function handleGoogleCallback(req: VercelRequest, res: VercelResponse) {
   const { code } = req.query;
   
   if (!code) {
@@ -25,7 +56,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
         code: code as string,
         grant_type: 'authorization_code',
-        redirect_uri: process.env.GOOGLE_CALLBACK_URL || 'https://threatfeed.whatcyber.com/api/auth/callback/google',
+        redirect_uri: process.env.GOOGLE_CALLBACK_URL || 'https://threatfeed.whatcyber.com/api/auth?action=callback',
       }),
     });
     

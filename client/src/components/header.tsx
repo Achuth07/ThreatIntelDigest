@@ -31,7 +31,12 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
 
   const checkAuthStatus = async () => {
     try {
-      const response = await fetch('/api/auth/status');
+      const isProduction = process.env.NODE_ENV === 'production';
+      const statusUrl = isProduction 
+        ? '/api/auth?action=status'
+        : '/api/auth?action=status';
+        
+      const response = await fetch(statusUrl);
       if (response.ok) {
         const data = await response.json();
         if (data.isAuthenticated) {
@@ -49,16 +54,23 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
     // For production deployment, use the full URL to the Vercel API endpoint
     const isProduction = process.env.NODE_ENV === 'production';
     const authUrl = isProduction 
-      ? 'https://threatfeed.whatcyber.com/api/auth/google'
-      : '/api/auth/google';
+      ? 'https://threatfeed.whatcyber.com/api/auth?action=google'
+      : '/api/auth?action=google';
     window.location.href = authUrl;
   };
 
   const handleLogout = async () => {
     try {
-      const response = await fetch('/api/auth/logout');
+      const isProduction = process.env.NODE_ENV === 'production';
+      const logoutUrl = isProduction 
+        ? '/api/auth?action=logout'
+        : '/api/auth?action=logout';
+        
+      const response = await fetch(logoutUrl);
       if (response.ok) {
         setUser(null);
+        // Reload the page to ensure clean state
+        window.location.reload();
       }
     } catch (error) {
       console.error('Failed to logout:', error);
