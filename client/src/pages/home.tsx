@@ -78,6 +78,10 @@ export default function Home() {
     if (showBookmarks) {
       setShowBookmarks(false);
     }
+    // Exit vulnerabilities page when selecting a source
+    if (showVulnerabilities) {
+      setShowVulnerabilities(false);
+    }
     setSelectedSource(source);
     setPage(0); // Reset pagination when changing source
   };
