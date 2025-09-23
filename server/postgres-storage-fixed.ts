@@ -276,7 +276,7 @@ export class PostgresStorage implements IStorage {
   }
 
   // CVEs
-  async getCVEs(params?: { limit?: number; offset?: number; severity?: string }): Promise<any[]> {
+  async getCVEs(params?: { limit?: number; offset?: number; severity?: string; sort?: string }): Promise<any[]> {
     try {
       let queryBuilder = this.db.select().from(vulnerabilities);
       
@@ -290,8 +290,22 @@ export class PostgresStorage implements IStorage {
         queryBuilder = queryBuilder.where(and(...conditions)) as typeof queryBuilder;
       }
 
-      // Apply sorting by published date (newest first)
-      queryBuilder = queryBuilder.orderBy(desc(vulnerabilities.publishedDate)) as typeof queryBuilder;
+      // Apply sorting based on the sort parameter
+      const sort = params?.sort || 'newest';
+      switch (sort) {
+        case 'relevant':
+          // Sort by CVSS score (highest first) and then by published date
+          queryBuilder = queryBuilder.orderBy(
+            desc(sql`COALESCE(${vulnerabilities.cvssV3Score}, ${vulnerabilities.cvssV2Score})`), 
+            desc(vulnerabilities.publishedDate)
+          ) as typeof queryBuilder;
+          break;
+        case 'newest':
+        default:
+          // Sort by published date (newest first)
+          queryBuilder = queryBuilder.orderBy(desc(vulnerabilities.publishedDate)) as typeof queryBuilder;
+          break;
+      }
 
       // Apply pagination
       const limit = params?.limit || 20;

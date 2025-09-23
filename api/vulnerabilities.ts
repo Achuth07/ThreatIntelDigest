@@ -87,14 +87,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { 
       limit = '50', 
       severity, 
-      page = '1' 
+      page = '1',
+      sort = 'newest'
     } = req.query;
     
-    console.log('Query parameters:', { limit, severity, page });
+    console.log('Query parameters:', { limit, severity, page, sort });
     
     const limitNum = Math.min(parseInt(limit as string, 10) || 50, 100);
     const pageNum = Math.max(parseInt(page as string, 10) || 1, 1);
     const offset = (pageNum - 1) * limitNum;
+    
+    // Determine sort order
+    let orderByClause;
+    switch (sort) {
+      case 'relevant':
+        // For "Most Relevant", we might want to sort by CVSS score (highest first) 
+        // and then by last modified date
+        orderByClause = 'ORDER BY COALESCE(cvss_v3_score, cvss_v2_score) DESC NULLS LAST, last_modified_date DESC, published_date DESC';
+        break;
+      case 'newest':
+      default:
+        // Newest first (current behavior)
+        orderByClause = 'ORDER BY last_modified_date DESC, published_date DESC';
+        break;
+    }
     
     // Build query based on whether severity filter is applied
     let query;
@@ -117,7 +133,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             created_at
           FROM vulnerabilities
           WHERE (cvss_v3_severity = ${severityUpper} OR cvss_v2_severity = ${severityUpper})
-          ORDER BY last_modified_date DESC, published_date DESC
+          ${sql.raw(orderByClause)}
           LIMIT ${limitNum}
           OFFSET ${offset}
         `;
@@ -138,7 +154,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             reference_urls,
             created_at
           FROM vulnerabilities
-          ORDER BY last_modified_date DESC, published_date DESC
+          ${sql.raw(orderByClause)}
           LIMIT ${limitNum}
           OFFSET ${offset}
         `;
@@ -160,7 +176,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           reference_urls,
           created_at
         FROM vulnerabilities
-        ORDER BY last_modified_date DESC, published_date DESC
+        ${sql.raw(orderByClause)}
         LIMIT ${limitNum}
         OFFSET ${offset}
       `;
@@ -220,6 +236,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       meta: {
         count: vulnerabilities.length,
         lastUpdated: new Date().toISOString(),
+        sort: sort as string,
       },
     });
     

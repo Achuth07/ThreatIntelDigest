@@ -56,7 +56,7 @@ export interface IStorage {
   deleteRssSource(id: string): Promise<boolean>;
   
   // CVE/Vulnerabilities
-  getCVEs(params?: { limit?: number; offset?: number; severity?: string }): Promise<CVE[]>;
+  getCVEs(params?: { limit?: number; offset?: number; severity?: string; sort?: string }): Promise<CVE[]>;
   getCVE(id: string): Promise<CVE | undefined>;
   createCVE(cve: InsertCVE): Promise<CVE>;
   cveExists(id: string): Promise<boolean>;
@@ -341,7 +341,7 @@ export class MemStorage implements IStorage {
   }
 
   // CVE/Vulnerabilities
-  async getCVEs(params?: { limit?: number; offset?: number; severity?: string }): Promise<CVE[]> {
+  async getCVEs(params?: { limit?: number; offset?: number; severity?: string; sort?: string }): Promise<CVE[]> {
     let cves = Array.from(this.cves.values());
     
     // Filter by severity if provided
@@ -352,10 +352,38 @@ export class MemStorage implements IStorage {
       );
     }
     
-    // Sort by last modified date (newest first)
-    cves.sort((a, b) => 
-      new Date(b.lastModifiedDate).getTime() - new Date(a.lastModifiedDate).getTime()
-    );
+    // Sort based on the sort parameter
+    const sort = params?.sort || 'newest';
+    switch (sort) {
+      case 'relevant':
+        // Sort by CVSS score (highest first) and then by last modified date
+        cves.sort((a, b) => {
+          // Get the highest CVSS score for each CVE
+          const scoreA = Math.max(
+            a.cvssV3Score || 0,
+            a.cvssV2Score || 0
+          );
+          
+          const scoreB = Math.max(
+            b.cvssV3Score || 0,
+            b.cvssV2Score || 0
+          );
+          
+          // Sort by score descending, then by last modified date descending
+          if (scoreB !== scoreA) {
+            return scoreB - scoreA;
+          }
+          return new Date(b.lastModifiedDate).getTime() - new Date(a.lastModifiedDate).getTime();
+        });
+        break;
+      case 'newest':
+      default:
+        // Sort by last modified date (newest first)
+        cves.sort((a, b) => 
+          new Date(b.lastModifiedDate).getTime() - new Date(a.lastModifiedDate).getTime()
+        );
+        break;
+    }
     
     // Apply pagination
     const offset = params?.offset || 0;
