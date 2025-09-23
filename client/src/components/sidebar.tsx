@@ -98,7 +98,7 @@ export function Sidebar({
   });
 
   const deactivateSourceMutation = useMutation({
-    mutationFn: (sourceId: string) => apiRequest('PATCH', `/api/sources/${sourceId}`, { isActive: false }),
+    mutationFn: (sourceId: string) => apiRequest('PATCH', `/api/sources?id=${sourceId}`, { isActive: false }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/sources'] });
       queryClient.invalidateQueries({ queryKey: ['/api/articles'] });

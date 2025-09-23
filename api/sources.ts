@@ -164,8 +164,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         
       } else if (req.method === 'PATCH') {
         console.log('Updating RSS source in memory...');
+        
+        // Handle both path parameter and query parameter for source ID
         const { pathname } = new URL(req.url!, `https://${req.headers.host}`);
-        const sourceId = pathname.split('/').pop();
+        let sourceId = pathname.split('/').pop();
+        
+        // If no source ID in path, check query parameters
+        if (!sourceId || sourceId === 'sources') {
+          sourceId = Array.isArray(req.query?.id) ? req.query.id[0] : req.query?.id;
+        }
         
         if (!sourceId) {
           return res.status(400).json({ message: "Source ID is required" });
@@ -268,8 +275,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
     } else if (req.method === 'PATCH') {
       console.log('Updating RSS source...');
+      
+      // Handle both path parameter and query parameter for source ID
+      // This fixes the Vercel routing issue where path parameters aren't always available
       const { pathname } = new URL(req.url!, `https://${req.headers.host}`);
-      const sourceId = pathname.split('/').pop();
+      let sourceId = pathname.split('/').pop();
+      
+      // If no source ID in path, check query parameters
+      if (!sourceId || sourceId === 'sources') {
+        sourceId = Array.isArray(req.query?.id) ? req.query.id[0] : req.query?.id;
+      }
       
       if (!sourceId) {
         return res.status(400).json({ message: "Source ID is required" });
