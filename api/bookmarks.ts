@@ -175,6 +175,8 @@ class SimpleBookmarkStorage {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  console.log(`Bookmark API ${req.method} ${req.url}`);
+  
   // Get user ID from request (for authenticated endpoints)
   const userId = getUserIdFromRequest(req);
   
@@ -251,12 +253,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       
       try {
+        // Parse the article ID from the URL path
         const { pathname } = new URL(req.url!, `https://${req.headers.host}`);
-        const articleId = pathname.split('/').pop();
+        console.log('DELETE request pathname:', pathname);
         
-        if (!articleId) {
+        // Extract article ID from path like /api/bookmarks/article-id
+        const pathParts = pathname.split('/');
+        const articleId = pathParts[pathParts.length - 1];
+        
+        // Validate that we have an article ID
+        if (!articleId || articleId === 'bookmarks') {
+          console.log('Invalid article ID:', articleId);
           return res.status(400).json({ message: "Article ID is required" });
         }
+        
+        console.log('Deleting bookmark for article:', articleId, 'user:', userId);
         
         const bookmarkIndex = inMemoryBookmarks.findIndex(bookmark => bookmark.articleId === articleId && bookmark.userId === userId);
         
@@ -264,9 +275,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           inMemoryBookmarks.splice(bookmarkIndex, 1);
           return res.json({ message: "Bookmark removed successfully" });
         } else {
+          console.log('Bookmark not found for article:', articleId, 'user:', userId);
           return res.status(404).json({ message: "Bookmark not found" });
         }
       } catch (error) {
+        console.error('Error removing bookmark:', error);
         return res.status(500).json({ message: "Failed to remove bookmark" });
       }
     } else {
@@ -333,21 +346,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     
     try {
+      // Parse the article ID from the URL path
       const { pathname } = new URL(req.url!, `https://${req.headers.host}`);
-      const articleId = pathname.split('/').pop();
+      console.log('DELETE request pathname:', pathname);
       
-      if (!articleId) {
+      // Extract article ID from path like /api/bookmarks/article-id
+      const pathParts = pathname.split('/');
+      const articleId = pathParts[pathParts.length - 1];
+      
+      // Validate that we have an article ID
+      if (!articleId || articleId === 'bookmarks') {
+        console.log('Invalid article ID:', articleId);
         return res.status(400).json({ message: "Article ID is required" });
       }
+      
+      console.log('Deleting bookmark for article:', articleId, 'user:', userId);
       
       const deleted = await storage.deleteBookmark(articleId, userId);
       
       if (deleted) {
         res.json({ message: "Bookmark removed successfully" });
       } else {
+        console.log('Bookmark not found for article:', articleId, 'user:', userId);
         res.status(404).json({ message: "Bookmark not found" });
       }
     } catch (error) {
+      console.error('Error removing bookmark:', error);
       res.status(500).json({ message: "Failed to remove bookmark" });
     }
   } else {
