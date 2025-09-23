@@ -156,16 +156,16 @@ export class PostgresStorage implements IStorage {
   }
 
   // Bookmarks
-  async getBookmarks(): Promise<Bookmark[]> {
+  async getBookmarks(userId: number): Promise<Bookmark[]> {
     try {
-      return await this.db.select().from(bookmarks).orderBy(desc(bookmarks.createdAt));
+      return await this.db.select().from(bookmarks).where(eq(bookmarks.userId, userId)).orderBy(desc(bookmarks.createdAt));
     } catch (error) {
       console.error('Error fetching bookmarks:', error);
       return [];
     }
   }
 
-  async getBookmarksWithArticles(): Promise<{ bookmark: Bookmark; article: Article }[]> {
+  async getBookmarksWithArticles(userId: number): Promise<{ bookmark: Bookmark; article: Article }[]> {
     try {
       const result = await this.db
         .select({
@@ -174,6 +174,7 @@ export class PostgresStorage implements IStorage {
         })
         .from(bookmarks)
         .innerJoin(articles, eq(bookmarks.articleId, articles.id))
+        .where(eq(bookmarks.userId, userId))
         .orderBy(desc(bookmarks.createdAt));
       
       return result.map(row => ({
@@ -186,7 +187,7 @@ export class PostgresStorage implements IStorage {
     }
   }
 
-  async createBookmark(insertBookmark: InsertBookmark): Promise<Bookmark> {
+  async createBookmark(insertBookmark: InsertBookmark & { userId: number }): Promise<Bookmark> {
     try {
       const result = await this.db.insert(bookmarks).values(insertBookmark).returning();
       return result[0];
@@ -196,9 +197,9 @@ export class PostgresStorage implements IStorage {
     }
   }
 
-  async deleteBookmark(articleId: string): Promise<boolean> {
+  async deleteBookmark(articleId: string, userId: number): Promise<boolean> {
     try {
-      const result = await this.db.delete(bookmarks).where(eq(bookmarks.articleId, articleId));
+      const result = await this.db.delete(bookmarks).where(and(eq(bookmarks.articleId, articleId), eq(bookmarks.userId, userId)));
       return (result.rowCount || 0) > 0;
     } catch (error) {
       console.error('Error deleting bookmark:', error);
@@ -206,9 +207,9 @@ export class PostgresStorage implements IStorage {
     }
   }
 
-  async isBookmarked(articleId: string): Promise<boolean> {
+  async isBookmarked(articleId: string, userId: number): Promise<boolean> {
     try {
-      const result = await this.db.select({ id: bookmarks.id }).from(bookmarks).where(eq(bookmarks.articleId, articleId)).limit(1);
+      const result = await this.db.select({ id: bookmarks.id }).from(bookmarks).where(and(eq(bookmarks.articleId, articleId), eq(bookmarks.userId, userId))).limit(1);
       return result.length > 0;
     } catch (error) {
       console.error('Error checking if article is bookmarked:', error);

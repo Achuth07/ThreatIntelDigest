@@ -30,6 +30,7 @@ export const articles = pgTable("articles", {
 export const bookmarks = pgTable("bookmarks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   articleId: varchar("article_id").notNull().references(() => articles.id),
+  userId: integer("user_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
@@ -82,7 +83,9 @@ export const insertArticleSchema = createInsertSchema(articles, {
   createdAt: true,
 });
 
-export const insertBookmarkSchema = createInsertSchema(bookmarks).omit({
+export const insertBookmarkSchema = createInsertSchema(bookmarks, {
+  userId: z.number().int().positive(),
+}).omit({
   id: true,
   createdAt: true,
 });

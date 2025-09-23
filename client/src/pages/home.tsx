@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronDown, Clock } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { getAuthenticatedUser } from '@/lib/auth';
 import type { Article, Bookmark } from '@shared/schema';
 
 export default function Home() {
@@ -30,6 +31,9 @@ export default function Home() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const ARTICLES_PER_PAGE = 10;
 
+  // Get authenticated user
+  const user = getAuthenticatedUser();
+
   // Fetch articles
   const { data: articles = [], isLoading: articlesLoading, refetch: refetchArticles } = useQuery<(Article & { isBookmarked?: boolean })[]>({
     queryKey: ['/api/articles', { 
@@ -44,6 +48,7 @@ export default function Home() {
   // Fetch bookmarks
   const { data: bookmarks = [] } = useQuery<Bookmark[]>({
     queryKey: ['/api/bookmarks'],
+    enabled: !!user, // Only fetch bookmarks if user is authenticated
   });
 
   // Auto-fetch feeds on component mount
@@ -97,6 +102,14 @@ export default function Home() {
   };
 
   const handleBookmarksClick = () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to view your bookmarks",
+        variant: "destructive",
+      });
+      return;
+    }
     setShowBookmarks(!showBookmarks);
   };
 
@@ -157,7 +170,7 @@ export default function Home() {
 
   // Show bookmarked articles if bookmarks view is active
   const displayArticles = showBookmarks 
-    ? articles.filter(article => article.isBookmarked)
+    ? articles.filter(article => bookmarks.some(bookmark => bookmark.articleId === article.id))
     : filteredArticles;
 
   const lastUpdated = new Date().toLocaleTimeString('en-US', {
@@ -218,7 +231,9 @@ export default function Home() {
                   </h1>
                   <p className="text-sm lg:text-base text-slate-400" data-testid="text-page-description">
                     {showBookmarks 
-                      ? 'Your saved articles for later reading'
+                      ? user 
+                        ? 'Your saved articles for later reading'
+                        : 'Please log in to view your bookmarks'
                       : 'Stay updated with the latest cybersecurity threats and vulnerabilities'
                     }
                   </p>
@@ -277,7 +292,16 @@ export default function Home() {
               {/* Articles Grid */}
               {!articlesLoading && (
                 <>
-                  {displayArticles.length === 0 ? (
+                  {showBookmarks && !user ? (
+                    <div className="text-center py-12">
+                      <div className="text-slate-400 text-lg mb-2" data-testid="text-no-articles">
+                        Please log in to view your bookmarks
+                      </div>
+                      <p className="text-slate-500 text-sm" data-testid="text-no-articles-description">
+                        Your bookmarked articles will appear here once you log in
+                      </p>
+                    </div>
+                  ) : displayArticles.length === 0 ? (
                     <div className="text-center py-12">
                       <div className="text-slate-400 text-lg mb-2" data-testid="text-no-articles">
                         {showBookmarks 
@@ -301,7 +325,10 @@ export default function Home() {
                       {displayArticles.map((article, index) => (
                         <ArticleCard
                           key={article.id}
-                          article={article}
+                          article={{
+                            ...article,
+                            isBookmarked: bookmarks.some(bookmark => bookmark.articleId === article.id)
+                          }}
                           isFeatured={index === 0 && !showBookmarks && !searchQuery}
                           onReadHere={handleReadHere}
                         />

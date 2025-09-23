@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Bookmark, Eye, ExternalLink, Clock, BookOpen } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { getAuthenticatedUser } from '@/lib/auth';
 import type { Article } from '@shared/schema';
 
 interface ArticleCardProps {
@@ -21,6 +22,11 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
 
   const bookmarkMutation = useMutation({
     mutationFn: async () => {
+      const user = getAuthenticatedUser();
+      if (!user) {
+        throw new Error('Authentication required');
+      }
+      
       if (isBookmarked) {
         return apiRequest('DELETE', `/api/bookmarks/${article.id}`);
       } else {
@@ -37,12 +43,20 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
           "Article saved to bookmarks for later reading",
       });
     },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to update bookmark. Please try again.",
-        variant: "destructive",
-      });
+    onError: (error: any) => {
+      if (error.message === 'Authentication required') {
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to bookmark articles",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to update bookmark. Please try again.",
+          variant: "destructive",
+        });
+      }
     },
   });
 
