@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { getAuthenticatedUser } from '@/lib/auth';
+import { getAuthenticatedUser, isGuestUser } from '@/lib/auth';
 import logoImage from '@/assets/logo/android-chrome-512x512.png';
 
 interface LoginPopupProps {
@@ -13,9 +13,11 @@ export function LoginPopup({ onLogin, onContinueAsGuest }: LoginPopupProps) {
   const [showPopup, setShowPopup] = useState(false);
 
   useEffect(() => {
-    // Check if user is already authenticated
+    // Check if user is already authenticated or has chosen to continue as guest
     const user = getAuthenticatedUser();
-    if (!user) {
+    const isGuest = isGuestUser();
+    
+    if (!user && !isGuest) {
       // Show popup after a short delay to allow UI to load
       const timer = setTimeout(() => {
         setShowPopup(true);
@@ -74,7 +76,10 @@ export function LoginPopup({ onLogin, onContinueAsGuest }: LoginPopupProps) {
             </div>
           </Button>
           <Button 
-            onClick={onContinueAsGuest}
+            onClick={() => {
+              onContinueAsGuest();
+              setShowPopup(false);
+            }}
             variant="outline"
             className="w-full bg-whatcyber-gray border-whatcyber-light-gray text-slate-100 hover:bg-whatcyber-light-gray"
           >

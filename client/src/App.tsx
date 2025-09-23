@@ -28,13 +28,23 @@ function App() {
 
   useEffect(() => {
     // Check if user is authenticated or has chosen to continue as guest
-    const user = getAuthenticatedUser();
-    const guest = isGuestUser();
-    
-    if (!user && !guest) {
-      setShowLoginPopup(true);
-    }
-    setUserChecked(true);
+    const checkAuthStatus = () => {
+      const user = getAuthenticatedUser();
+      const guest = isGuestUser();
+      
+      if (!user && !guest) {
+        setShowLoginPopup(true);
+      } else {
+        setShowLoginPopup(false);
+      }
+      setUserChecked(true);
+    };
+
+    // Check auth status immediately
+    checkAuthStatus();
+
+    // Also check periodically in case of login/logout events
+    const interval = setInterval(checkAuthStatus, 1000);
 
     // Increment visitor count on app load through our backend proxy
     const incrementVisitorCount = async () => {
@@ -62,6 +72,9 @@ function App() {
     };
 
     incrementVisitorCount();
+
+    // Cleanup interval
+    return () => clearInterval(interval);
   }, []);
 
   const handleContinueAsGuest = () => {
