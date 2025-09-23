@@ -1,4 +1,4 @@
-import { and, desc, asc, ilike, inArray, eq } from 'drizzle-orm';
+import { and, desc, asc, ilike, inArray, eq, sql } from 'drizzle-orm';
 import { getDb } from './db';
 import { articles, bookmarks, rssSources, vulnerabilities } from '../shared/schema';
 import type { IStorage } from './storage';

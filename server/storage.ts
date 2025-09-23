@@ -42,11 +42,11 @@ export interface IStorage {
   deleteArticle(id: string): Promise<boolean>;
   
   // Bookmarks
-  getBookmarks(): Promise<Bookmark[]>;
-  getBookmarksWithArticles(): Promise<{ bookmark: Bookmark; article: Article }[]>;
-  createBookmark(bookmark: InsertBookmark): Promise<Bookmark>;
-  deleteBookmark(articleId: string): Promise<boolean>;
-  isBookmarked(articleId: string): Promise<boolean>;
+  getBookmarks(userId?: number): Promise<Bookmark[]>;
+  getBookmarksWithArticles(userId?: number): Promise<{ bookmark: Bookmark; article: Article }[]>;
+  createBookmark(bookmark: InsertBookmark & { userId?: number }): Promise<Bookmark>;
+  deleteBookmark(articleId: string, userId?: number): Promise<boolean>;
+  isBookmarked(articleId: string, userId?: number): Promise<boolean>;
   
   // RSS Sources
   getRssSources(): Promise<RssSource[]>;
@@ -255,11 +255,13 @@ export class MemStorage implements IStorage {
   }
 
   // Bookmarks
-  async getBookmarks(): Promise<Bookmark[]> {
+  async getBookmarks(userId?: number): Promise<Bookmark[]> {
+    // For in-memory storage, we don't have user-specific bookmarks
+    // This is just for interface compatibility
     return Array.from(this.bookmarks.values());
   }
 
-  async getBookmarksWithArticles(): Promise<{ bookmark: Bookmark; article: Article }[]> {
+  async getBookmarksWithArticles(userId?: number): Promise<{ bookmark: Bookmark; article: Article }[]> {
     const result: { bookmark: Bookmark; article: Article }[] = [];
     
     for (const bookmark of Array.from(this.bookmarks.values())) {
@@ -275,7 +277,7 @@ export class MemStorage implements IStorage {
     );
   }
 
-  async createBookmark(insertBookmark: InsertBookmark): Promise<Bookmark> {
+  async createBookmark(insertBookmark: InsertBookmark & { userId?: number }): Promise<Bookmark> {
     const id = randomUUID();
     const bookmark: Bookmark = { 
       ...insertBookmark, 
@@ -286,7 +288,9 @@ export class MemStorage implements IStorage {
     return bookmark;
   }
 
-  async deleteBookmark(articleId: string): Promise<boolean> {
+  async deleteBookmark(articleId: string, userId?: number): Promise<boolean> {
+    // For in-memory storage, we don't have user-specific bookmarks
+    // This is just for interface compatibility
     for (const [id, bookmark] of Array.from(this.bookmarks.entries())) {
       if (bookmark.articleId === articleId) {
         return this.bookmarks.delete(id);
@@ -295,7 +299,9 @@ export class MemStorage implements IStorage {
     return false;
   }
 
-  async isBookmarked(articleId: string): Promise<boolean> {
+  async isBookmarked(articleId: string, userId?: number): Promise<boolean> {
+    // For in-memory storage, we don't have user-specific bookmarks
+    // This is just for interface compatibility
     for (const bookmark of Array.from(this.bookmarks.values())) {
       if (bookmark.articleId === articleId) {
         return true;
