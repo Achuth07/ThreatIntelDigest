@@ -64,17 +64,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     console.log('Fetching latest CVEs from NVD API...');
     
-    // Calculate date range for recent CVEs (last 7 days)
+    // Calculate date range for recent CVEs (last 30 days to get more data)
     const endDate = new Date();
     const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 7);
+    startDate.setDate(startDate.getDate() - 30);
     
     const startDateStr = startDate.toISOString().split('T')[0];
     const endDateStr = endDate.toISOString().split('T')[0];
     
-    // Fetch CVEs from NVD API
+    // Fetch CVEs from NVD API by publication date (not modification date)
     const nvdResponse = await fetch(
-      `https://services.nvd.nist.gov/rest/json/cves/2.0/?lastModStartDate=${startDateStr}T00:00:00.000&lastModEndDate=${endDateStr}T23:59:59.999&resultsPerPage=50`,
+      `https://services.nvd.nist.gov/rest/json/cves/2.0/?pubStartDate=${startDateStr}T00:00:00.000&pubEndDate=${endDateStr}T23:59:59.999&resultsPerPage=100`,
       {
         headers: {
           'apiKey': process.env.NVD_API_KEY,
@@ -105,55 +105,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             SELECT id FROM vulnerabilities WHERE id = ${cveId}
           `);
           
+          // Extract description
+          const description = cve.descriptions?.find((desc: any) => desc.lang === 'en')?.value || 'No description available';
+          
+          // Extract CVSS scores
+          let cvssV3Score = null;
+          let cvssV3Severity = null;
+          let cvssV2Score = null;
+          let cvssV2Severity = null;
+          
+          const metrics = cve.metrics;
+          if (metrics?.cvssMetricV31?.[0]) {
+            cvssV3Score = metrics.cvssMetricV31[0].cvssData.baseScore;
+            cvssV3Severity = metrics.cvssMetricV31[0].cvssData.baseSeverity;
+          } else if (metrics?.cvssMetricV30?.[0]) {
+            cvssV3Score = metrics.cvssMetricV30[0].cvssData.baseScore;
+            cvssV3Severity = metrics.cvssMetricV30[0].cvssData.baseSeverity;
+          }
+          
+          if (metrics?.cvssMetricV2?.[0]) {
+            cvssV2Score = metrics.cvssMetricV2[0].cvssData.baseScore;
+            cvssV2Severity = metrics.cvssMetricV2[0].baseSeverity;
+          }
+          
+          // Extract weaknesses (CWEs)
+          const weaknesses = cve.weaknesses?.map((weakness: any) => 
+            weakness.description?.find((desc: any) => desc.lang === 'en')?.value
+          ).filter(Boolean) || [];
+          
+          // Extract references
+          const references = cve.references?.map((ref: any) => ({
+            url: ref.url,
+            source: ref.source || 'Unknown',
+            tags: ref.tags || []
+          })) || [];
+          
+          // Convert arrays to proper PostgreSQL format
+          // Ensure weaknesses is a proper string array for PostgreSQL text[]
+          const weaknessesArray = Array.isArray(weaknesses) ? weaknesses : [];
+          const referencesJson = JSON.stringify(references);
+          
+          console.log(`Processing CVE ${cveId} with weaknesses:`, weaknessesArray);
+          
+          // Construct array literal for PostgreSQL
+          const weaknessesLiteral = '{' + weaknessesArray.map(w => `"${w?.replace(/"/g, '\\"') || ''}"`).join(',') + '}';
+          
           if (existingResult.rows.length === 0) {
-            // Extract description
-            const description = cve.descriptions?.find((desc: any) => desc.lang === 'en')?.value || 'No description available';
-            
-            // Extract CVSS scores
-            let cvssV3Score = null;
-            let cvssV3Severity = null;
-            let cvssV2Score = null;
-            let cvssV2Severity = null;
-            
-            const metrics = cve.metrics;
-            if (metrics?.cvssMetricV31?.[0]) {
-              cvssV3Score = metrics.cvssMetricV31[0].cvssData.baseScore;
-              cvssV3Severity = metrics.cvssMetricV31[0].cvssData.baseSeverity;
-            } else if (metrics?.cvssMetricV30?.[0]) {
-              cvssV3Score = metrics.cvssMetricV30[0].cvssData.baseScore;
-              cvssV3Severity = metrics.cvssMetricV30[0].cvssData.baseSeverity;
-            }
-            
-            if (metrics?.cvssMetricV2?.[0]) {
-              cvssV2Score = metrics.cvssMetricV2[0].cvssData.baseScore;
-              cvssV2Severity = metrics.cvssMetricV2[0].baseSeverity;
-            }
-            
-            // Extract weaknesses (CWEs)
-            const weaknesses = cve.weaknesses?.map((weakness: any) => 
-              weakness.description?.find((desc: any) => desc.lang === 'en')?.value
-            ).filter(Boolean) || [];
-            
-            // Extract references
-            const references = cve.references?.map((ref: any) => ({
-              url: ref.url,
-              source: ref.source || 'Unknown',
-              tags: ref.tags || []
-            })) || [];
-            
-            // Extract configurations (simplified) - Skip for now since column doesn't exist
-            // const configurations = cve.configurations?.nodes || [];
-            
-            // Convert arrays to proper PostgreSQL format
-            // Ensure weaknesses is a proper string array for PostgreSQL text[]
-            const weaknessesArray = Array.isArray(weaknesses) ? weaknesses : [];
-            const referencesJson = JSON.stringify(references);
-            
-            console.log(`Processing CVE ${cveId} with weaknesses:`, weaknessesArray);
-            
-            // Construct array literal for PostgreSQL
-            const weaknessesLiteral = '{' + weaknessesArray.map(w => `"${w?.replace(/"/g, '\\"') || ''}"`).join(',') + '}';
-            
+            // Insert new CVE
             await db.execute(sql`
               INSERT INTO vulnerabilities (
                 id, description, published_date, last_modified_date, vuln_status,
@@ -162,16 +160,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               )
               VALUES (
                 ${cveId}, ${description}, ${cve.published}, ${cve.lastModified}, ${cve.vulnStatus},
-                ${cvssV3Score ? cvssV3Score.toString() : null}, ${cvssV3Severity}, 
-                ${cvssV2Score ? cvssV2Score.toString() : null}, ${cvssV2Severity},
+                ${cvssV3Score !== null ? String(cvssV3Score) : null}, ${cvssV3Severity}, 
+                ${cvssV2Score !== null ? String(cvssV2Score) : null}, ${cvssV2Severity},
                 ${weaknessesLiteral}::text[], ${referencesJson}::jsonb
               )
             `);
             
             processedCount++;
-            console.log(`Saved CVE: ${cveId}`);
+            console.log(`Saved new CVE: ${cveId}`);
           } else {
-            console.log(`CVE already exists: ${cveId}`);
+            // Update existing CVE with latest information
+            await db.execute(sql`
+              UPDATE vulnerabilities SET
+                description = ${description},
+                published_date = ${cve.published},
+                last_modified_date = ${cve.lastModified},
+                vuln_status = ${cve.vulnStatus},
+                cvss_v3_score = ${cvssV3Score !== null ? String(cvssV3Score) : null},
+                cvss_v3_severity = ${cvssV3Severity},
+                cvss_v2_score = ${cvssV2Score !== null ? String(cvssV2Score) : null},
+                cvss_v2_severity = ${cvssV2Severity},
+                weaknesses = ${weaknessesLiteral}::text[],
+                reference_urls = ${referencesJson}::jsonb
+              WHERE id = ${cveId}
+            `);
+            
+            console.log(`Updated existing CVE: ${cveId}`);
           }
         } catch (cveError) {
           console.error(`Failed to process CVE:`, cveError);
