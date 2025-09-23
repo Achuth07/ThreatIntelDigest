@@ -46,7 +46,7 @@ export default function Home() {
   });
 
   // Fetch bookmarks
-  const { data: bookmarks = [] } = useQuery<Bookmark[]>({
+  const { data: bookmarks = [], refetch: refetchBookmarks } = useQuery<Bookmark[]>({
     queryKey: ['/api/bookmarks'],
     enabled: !!user, // Only fetch bookmarks if user is authenticated
   });
@@ -67,6 +67,13 @@ export default function Home() {
   useEffect(() => {
     fetchFeedsMutation.mutate();
   }, []);
+
+  // Refetch bookmarks when showBookmarks changes
+  useEffect(() => {
+    if (showBookmarks && user) {
+      refetchBookmarks();
+    }
+  }, [showBookmarks, user, refetchBookmarks]);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -115,6 +122,10 @@ export default function Home() {
       return;
     }
     setShowBookmarks(!showBookmarks);
+    // Refetch bookmarks when toggling bookmarks view
+    if (!showBookmarks) {
+      refetchBookmarks();
+    }
   };
 
   const handleReadHere = (articleUrl: string) => {

@@ -36,7 +36,10 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
     },
     onSuccess: () => {
       setIsBookmarked(!isBookmarked);
+      // Invalidate all queries related to bookmarks to ensure UI updates
       queryClient.invalidateQueries({ queryKey: ['/api/bookmarks'] });
+      // Also invalidate articles query to update bookmark status in article list
+      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
       toast({
         title: isBookmarked ? "Bookmark Removed" : "Article Bookmarked",
         description: isBookmarked ? 
