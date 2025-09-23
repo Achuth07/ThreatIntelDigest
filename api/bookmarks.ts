@@ -109,9 +109,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       
       try {
-        const validatedData = insertBookmarkSchema.parse(req.body);
+        // For validation, we only need to check the articleId since userId comes from auth
+        const { articleId } = req.body;
+        if (!articleId) {
+          return res.status(400).json({ message: "Article ID is required" });
+        }
+        
         const newBookmark = {
-          ...validatedData,
+          articleId,
           userId,
           id: String(inMemoryBookmarks.length + 1),
           createdAt: new Date().toISOString()
@@ -198,8 +203,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     
     try {
-      const validatedData = insertBookmarkSchema.parse(req.body);
-      const bookmark = await storage.createBookmark({ ...validatedData, userId });
+      // For validation, we only need to check the articleId since userId comes from auth
+      const { articleId } = req.body;
+      if (!articleId) {
+        return res.status(400).json({ message: "Article ID is required" });
+      }
+      
+      const bookmark = await storage.createBookmark({ articleId, userId });
       res.status(201).json(bookmark);
     } catch (error) {
       res.status(400).json({ message: "Invalid bookmark data" });
