@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,11 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isBookmarked, setIsBookmarked] = useState(article.isBookmarked || false);
+
+  // Update local state when article prop changes
+  useEffect(() => {
+    setIsBookmarked(article.isBookmarked || false);
+  }, [article.isBookmarked]);
 
   const bookmarkMutation = useMutation({
     mutationFn: async () => {

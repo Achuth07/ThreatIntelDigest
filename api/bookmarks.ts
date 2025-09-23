@@ -98,7 +98,17 @@ class SimpleBookmarkStorage {
   
   async createBookmark(data: { articleId: string; userId: number }): Promise<any> {
     if (!process.env.DATABASE_URL) {
-      // Create in-memory bookmark
+      // Check if bookmark already exists
+      const existingBookmarkIndex = inMemoryBookmarks.findIndex(
+        bookmark => bookmark.articleId === data.articleId && bookmark.userId === data.userId
+      );
+      
+      // If bookmark already exists, return it instead of creating a duplicate
+      if (existingBookmarkIndex !== -1) {
+        return inMemoryBookmarks[existingBookmarkIndex];
+      }
+      
+      // Create new bookmark
       const newBookmark = {
         ...data,
         id: String(inMemoryBookmarks.length + 1),
@@ -116,6 +126,24 @@ class SimpleBookmarkStorage {
       
       const pool = new Pool({ connectionString: process.env.DATABASE_URL });
       const db = drizzle(pool);
+      
+      // Check if bookmark already exists
+      const existingResult = await db.execute(sql`
+        SELECT id FROM bookmarks 
+        WHERE article_id = ${data.articleId} AND user_id = ${data.userId}
+        LIMIT 1
+      `);
+      
+      // If bookmark already exists, return it
+      if (existingResult.rows.length > 0) {
+        const existingRow = existingResult.rows[0];
+        return {
+          id: existingRow.id,
+          articleId: data.articleId,
+          userId: data.userId,
+          createdAt: existingRow.created_at
+        };
+      }
       
       // Insert bookmark
       const result = await db.execute(sql`
@@ -235,13 +263,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           return res.status(400).json({ message: "Article ID is required" });
         }
         
-        const newBookmark = {
-          articleId,
-          userId,
-          id: String(inMemoryBookmarks.length + 1),
-          createdAt: new Date().toISOString()
-        };
-        inMemoryBookmarks.push(newBookmark);
+        const newBookmark = await storage.createBookmark({ articleId, userId });
         return res.status(201).json(newBookmark);
       } catch (error) {
         return res.status(400).json({ message: "Invalid bookmark data" });
@@ -282,10 +304,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         
         console.log('Deleting bookmark for article:', articleId, 'user:', userId);
         
-        const bookmarkIndex = inMemoryBookmarks.findIndex(bookmark => bookmark.articleId === articleId && bookmark.userId === userId);
+        const deleted = await storage.deleteBookmark(articleId, userId);
         
-        if (bookmarkIndex !== -1) {
-          inMemoryBookmarks.splice(bookmarkIndex, 1);
+        if (deleted) {
           return res.json({ message: "Bookmark removed successfully" });
         } else {
           console.log('Bookmark not found for article:', articleId, 'user:', userId);

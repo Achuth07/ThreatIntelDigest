@@ -68,12 +68,12 @@ export default function Home() {
     fetchFeedsMutation.mutate();
   }, []);
 
-  // Refetch bookmarks when showBookmarks changes
+  // Refetch bookmarks when showBookmarks changes or when user changes
   useEffect(() => {
-    if (showBookmarks && user) {
+    if (user) {
       refetchBookmarks();
     }
-  }, [showBookmarks, user, refetchBookmarks]);
+  }, [user, refetchBookmarks]);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -123,9 +123,7 @@ export default function Home() {
     }
     setShowBookmarks(!showBookmarks);
     // Refetch bookmarks when toggling bookmarks view
-    if (!showBookmarks) {
-      refetchBookmarks();
-    }
+    refetchBookmarks();
   };
 
   const handleReadHere = (articleUrl: string) => {
