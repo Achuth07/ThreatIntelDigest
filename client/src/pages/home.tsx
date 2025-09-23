@@ -320,7 +320,7 @@ export default function Home() {
                           ? "Bookmark articles to read them later"
                           : searchQuery
                             ? "Try adjusting your search terms or filters"
-                            : "Articles will appear here once feeds are loaded"
+                            : "Articles will appear here once feeds are loaded. Try adjusting your Time range filter."
                         }
                       </p>
                     </div>

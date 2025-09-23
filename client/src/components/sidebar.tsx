@@ -254,6 +254,50 @@ export function Sidebar({
           </div>
         </div>
 
+        {/* Quick Actions */}
+        <div className="mb-6">
+          <h3 className="text-md font-medium text-slate-200 mb-3 flex items-center">
+            <Zap className="w-5 h-5 text-whatcyber-teal mr-2" />
+            Quick Actions
+          </h3>
+          <div className="space-y-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start p-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-700"
+              onClick={() => refreshFeedsMutation.mutate()}
+              disabled={refreshFeedsMutation.isPending}
+              data-testid="button-refresh-feeds"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${refreshFeedsMutation.isPending ? 'animate-spin' : ''}`} />
+              {refreshFeedsMutation.isPending ? 'Refreshing...' : 'Refresh All Feeds'}
+            </Button>
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start p-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-700"
+              onClick={() => exportBookmarksMutation.mutate()}
+              disabled={exportBookmarksMutation.isPending}
+              data-testid="button-export-bookmarks"
+            >
+              <Download className={`w-4 h-4 mr-2 ${exportBookmarksMutation.isPending ? 'animate-pulse' : ''}`} />
+              {exportBookmarksMutation.isPending ? 'Exporting...' : 'Export Bookmarks'}
+            </Button>
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start p-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-700"
+              onClick={() => setShowAddSourcesDialog(true)}
+              data-testid="button-add-source"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add New Source
+            </Button>
+          </div>
+        </div>
+
         {/* Collapsible Feed Sources */}
         <Collapsible open={!isSourcesCollapsed} onOpenChange={(open) => setIsSourcesCollapsed(!open)} className="mb-6">
           <CollapsibleTrigger className="w-full">
@@ -379,51 +423,6 @@ export function Sidebar({
           </div>
         </div>
 
-
-
-        {/* Quick Actions */}
-        <div>
-          <h3 className="text-md font-medium text-slate-200 mb-3 flex items-center">
-            <Zap className="w-5 h-5 text-whatcyber-teal mr-2" />
-            Quick Actions
-          </h3>
-          <div className="space-y-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start p-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-700"
-              onClick={() => refreshFeedsMutation.mutate()}
-              disabled={refreshFeedsMutation.isPending}
-              data-testid="button-refresh-feeds"
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${refreshFeedsMutation.isPending ? 'animate-spin' : ''}`} />
-              {refreshFeedsMutation.isPending ? 'Refreshing...' : 'Refresh All Feeds'}
-            </Button>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start p-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-700"
-              onClick={() => exportBookmarksMutation.mutate()}
-              disabled={exportBookmarksMutation.isPending}
-              data-testid="button-export-bookmarks"
-            >
-              <Download className={`w-4 h-4 mr-2 ${exportBookmarksMutation.isPending ? 'animate-pulse' : ''}`} />
-              {exportBookmarksMutation.isPending ? 'Exporting...' : 'Export Bookmarks'}
-            </Button>
-            
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start p-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-700"
-              onClick={() => setShowAddSourcesDialog(true)}
-              data-testid="button-add-source"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add New Source
-            </Button>
-          </div>
-        </div>
       </div>
       
       <AddSourcesDialog 
