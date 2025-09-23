@@ -107,8 +107,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         break;
       case 'newest':
       default:
-        // Newest first (current behavior)
-        orderByClause = 'ORDER BY last_modified_date DESC, published_date DESC';
+        // Newest first by publication date (not modification date)
+        orderByClause = 'ORDER BY published_date DESC, last_modified_date DESC';
         break;
     }
     

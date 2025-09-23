@@ -378,9 +378,9 @@ export class MemStorage implements IStorage {
         break;
       case 'newest':
       default:
-        // Sort by last modified date (newest first)
+        // Sort by published date (newest first)
         cves.sort((a, b) => 
-          new Date(b.lastModifiedDate).getTime() - new Date(a.lastModifiedDate).getTime()
+          new Date(b.publishedDate).getTime() - new Date(a.publishedDate).getTime()
         );
         break;
     }
