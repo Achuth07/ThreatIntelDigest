@@ -1,5 +1,4 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { PostgresStorage } from '../server/postgres-storage';
 import { insertBookmarkSchema } from '../shared/schema';
 
 // In-memory storage for local development
@@ -59,9 +58,128 @@ function getUserIdFromRequest(req: VercelRequest): number | null {
   return payload.userId;
 }
 
+// Simplified bookmark storage implementation for Vercel
+class SimpleBookmarkStorage {
+  async getBookmarks(userId: number): Promise<any[]> {
+    if (!process.env.DATABASE_URL) {
+      // Return in-memory bookmarks filtered by userId
+      return inMemoryBookmarks.filter(b => b.userId === userId);
+    }
+    
+    // For Vercel, we'll need to import modules dynamically
+    try {
+      const { drizzle } = await import('drizzle-orm/neon-serverless');
+      const { Pool } = await import('@neondatabase/serverless');
+      const { eq, desc } = await import('drizzle-orm');
+      const { sql } = await import('drizzle-orm');
+      
+      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+      const db = drizzle(pool);
+      
+      // Query bookmarks table
+      const result = await db.execute(sql`
+        SELECT id, article_id, user_id, created_at 
+        FROM bookmarks 
+        WHERE user_id = ${userId}
+        ORDER BY created_at DESC
+      `);
+      
+      return result.rows.map((row: any) => ({
+        id: row.id,
+        articleId: row.article_id,
+        userId: row.user_id,
+        createdAt: row.created_at
+      }));
+    } catch (error) {
+      console.error('Error fetching bookmarks:', error);
+      return [];
+    }
+  }
+  
+  async createBookmark(data: { articleId: string; userId: number }): Promise<any> {
+    if (!process.env.DATABASE_URL) {
+      // Create in-memory bookmark
+      const newBookmark = {
+        ...data,
+        id: String(inMemoryBookmarks.length + 1),
+        createdAt: new Date().toISOString()
+      };
+      inMemoryBookmarks.push(newBookmark);
+      return newBookmark;
+    }
+    
+    // For Vercel, we'll need to import modules dynamically
+    try {
+      const { drizzle } = await import('drizzle-orm/neon-serverless');
+      const { Pool } = await import('@neondatabase/serverless');
+      const { sql } = await import('drizzle-orm');
+      
+      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+      const db = drizzle(pool);
+      
+      // Insert bookmark
+      const result = await db.execute(sql`
+        INSERT INTO bookmarks (article_id, user_id)
+        VALUES (${data.articleId}, ${data.userId})
+        RETURNING id, article_id, user_id, created_at
+      `);
+      
+      const row = result.rows[0];
+      return {
+        id: row.id,
+        articleId: row.article_id,
+        userId: row.user_id,
+        createdAt: row.created_at
+      };
+    } catch (error) {
+      console.error('Error creating bookmark:', error);
+      throw error;
+    }
+  }
+  
+  async deleteBookmark(articleId: string, userId: number): Promise<boolean> {
+    if (!process.env.DATABASE_URL) {
+      // Delete from in-memory storage
+      const bookmarkIndex = inMemoryBookmarks.findIndex(
+        bookmark => bookmark.articleId === articleId && bookmark.userId === userId
+      );
+      
+      if (bookmarkIndex !== -1) {
+        inMemoryBookmarks.splice(bookmarkIndex, 1);
+        return true;
+      }
+      return false;
+    }
+    
+    // For Vercel, we'll need to import modules dynamically
+    try {
+      const { drizzle } = await import('drizzle-orm/neon-serverless');
+      const { Pool } = await import('@neondatabase/serverless');
+      const { sql } = await import('drizzle-orm');
+      
+      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+      const db = drizzle(pool);
+      
+      // Delete bookmark
+      const result = await db.execute(sql`
+        DELETE FROM bookmarks 
+        WHERE article_id = ${articleId} AND user_id = ${userId}
+      `);
+      
+      return (result.rowCount || 0) > 0;
+    } catch (error) {
+      console.error('Error deleting bookmark:', error);
+      return false;
+    }
+  }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Get user ID from request (for authenticated endpoints)
   const userId = getUserIdFromRequest(req);
+  
+  // Create storage instance
+  const storage = new SimpleBookmarkStorage();
   
   // Use in-memory storage when no DATABASE_URL is provided
   if (!process.env.DATABASE_URL) {
@@ -157,8 +275,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   
   // Use database storage when DATABASE_URL is provided
-  const storage = new PostgresStorage();
-  
   if (req.method === 'GET') {
     // For GET requests, we'll allow unauthenticated requests to maintain backward compatibility
     // but will only return bookmarks for the authenticated user if provided
@@ -167,21 +283,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       if (isExport === 'true') {
         // Export bookmarks with full article details
-        const bookmarksWithArticles = userId ? await storage.getBookmarksWithArticles(userId) : [];
+        // Note: For simplicity in Vercel environment, we're not implementing full export with articles
+        const bookmarks = userId ? await storage.getBookmarks(userId) : [];
         
         // Format for export
         const exportData = {
           exportedAt: new Date().toISOString(),
-          totalBookmarks: bookmarksWithArticles.length,
-          bookmarks: bookmarksWithArticles.map((item: any) => ({
-            title: item.article.title,
-            summary: item.article.summary,
-            url: item.article.url,
-            source: item.article.source,
-            publishedAt: item.article.publishedAt,
-            threatLevel: item.article.threatLevel,
-            tags: item.article.tags,
-            bookmarkedAt: item.bookmark.createdAt
+          totalBookmarks: bookmarks.length,
+          bookmarks: bookmarks.map((bookmark: any) => ({
+            // Simplified export format for Vercel environment
+            articleId: bookmark.articleId,
+            bookmarkedAt: bookmark.createdAt
           }))
         };
         
