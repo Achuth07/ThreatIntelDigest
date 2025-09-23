@@ -253,17 +253,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
       
       try {
-        // Parse the article ID from the URL path
-        const { pathname } = new URL(req.url!, `https://${req.headers.host}`);
-        console.log('DELETE request pathname:', pathname);
+        // Parse the article ID from query parameters or URL path
+        let articleId: string | undefined;
         
-        // Extract article ID from path like /api/bookmarks/article-id
-        const pathParts = pathname.split('/');
-        const articleId = pathParts[pathParts.length - 1];
+        // First check query parameters
+        if (req.query && req.query.articleId) {
+          articleId = req.query.articleId as string;
+        } else {
+          // Fallback to URL path parsing
+          const { pathname } = new URL(req.url!, `https://${req.headers.host}`);
+          console.log('DELETE request pathname:', pathname);
+          
+          // Extract article ID from path like /api/bookmarks/article-id
+          const pathParts = pathname.split('/');
+          const lastPart = pathParts[pathParts.length - 1];
+          
+          // Validate that we have an article ID
+          if (lastPart && lastPart !== 'bookmarks') {
+            articleId = lastPart;
+          }
+        }
         
         // Validate that we have an article ID
-        if (!articleId || articleId === 'bookmarks') {
-          console.log('Invalid article ID:', articleId);
+        if (!articleId) {
+          console.log('Article ID is required');
           return res.status(400).json({ message: "Article ID is required" });
         }
         
@@ -283,6 +296,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(500).json({ message: "Failed to remove bookmark" });
       }
     } else {
+      console.log(`Method ${req.method} not allowed for in-memory storage`);
       return res.status(405).json({ message: 'Method not allowed' });
     }
   }
@@ -346,17 +360,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     
     try {
-      // Parse the article ID from the URL path
-      const { pathname } = new URL(req.url!, `https://${req.headers.host}`);
-      console.log('DELETE request pathname:', pathname);
+      // Parse the article ID from query parameters or URL path
+      let articleId: string | undefined;
       
-      // Extract article ID from path like /api/bookmarks/article-id
-      const pathParts = pathname.split('/');
-      const articleId = pathParts[pathParts.length - 1];
+      // First check query parameters
+      if (req.query && req.query.articleId) {
+        articleId = req.query.articleId as string;
+      } else {
+        // Fallback to URL path parsing
+        const { pathname } = new URL(req.url!, `https://${req.headers.host}`);
+        console.log('DELETE request pathname:', pathname);
+        
+        // Extract article ID from path like /api/bookmarks/article-id
+        const pathParts = pathname.split('/');
+        const lastPart = pathParts[pathParts.length - 1];
+        
+        // Validate that we have an article ID
+        if (lastPart && lastPart !== 'bookmarks') {
+          articleId = lastPart;
+        }
+      }
       
       // Validate that we have an article ID
-      if (!articleId || articleId === 'bookmarks') {
-        console.log('Invalid article ID:', articleId);
+      if (!articleId) {
+        console.log('Article ID is required');
         return res.status(400).json({ message: "Article ID is required" });
       }
       
@@ -375,6 +402,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       res.status(500).json({ message: "Failed to remove bookmark" });
     }
   } else {
-    res.status(405).json({ message: 'Method not allowed' });
+    console.log(`Method ${req.method} not allowed for database storage`);
+    return res.status(405).json({ message: `Method ${req.method} not allowed` });
   }
 }

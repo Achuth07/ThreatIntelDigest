@@ -28,7 +28,8 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
       }
       
       if (isBookmarked) {
-        return apiRequest('DELETE', `/api/bookmarks/${article.id}`);
+        // Use query parameter instead of path parameter for DELETE request
+        return apiRequest('DELETE', `/api/bookmarks?articleId=${article.id}`);
       } else {
         return apiRequest('POST', '/api/bookmarks', { articleId: article.id });
       }
