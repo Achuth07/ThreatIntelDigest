@@ -96,6 +96,71 @@ class SimpleBookmarkStorage {
     }
   }
   
+  async getBookmarksWithArticles(userId: number): Promise<any[]> {
+    if (!process.env.DATABASE_URL) {
+      // For in-memory storage, we don't have articles, so return bookmarks only
+      return inMemoryBookmarks.filter(b => b.userId === userId);
+    }
+    
+    // For Vercel, we'll need to import modules dynamically
+    try {
+      const { drizzle } = await import('drizzle-orm/neon-serverless');
+      const { Pool } = await import('@neondatabase/serverless');
+      const { eq, desc } = await import('drizzle-orm');
+      const { sql } = await import('drizzle-orm');
+      
+      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+      const db = drizzle(pool);
+      
+      // Query bookmarks with articles
+      const result = await db.execute(sql`
+        SELECT 
+          b.id as bookmark_id,
+          b.article_id,
+          b.user_id,
+          b.created_at as bookmark_created_at,
+          a.id as article_id,
+          a.title,
+          a.summary,
+          a.url,
+          a.source,
+          a.threat_level,
+          a.tags,
+          a.read_time,
+          a.published_at,
+          a.created_at as article_created_at
+        FROM bookmarks b
+        INNER JOIN articles a ON b.article_id = a.id
+        WHERE b.user_id = ${userId}
+        ORDER BY b.created_at DESC
+      `);
+      
+      return result.rows.map((row: any) => ({
+        bookmark: {
+          id: row.bookmark_id,
+          articleId: row.article_id,
+          userId: row.user_id,
+          createdAt: row.bookmark_created_at
+        },
+        article: {
+          id: row.article_id,
+          title: row.title,
+          summary: row.summary,
+          url: row.url,
+          source: row.source,
+          threatLevel: row.threat_level,
+          tags: row.tags || [],
+          readTime: row.read_time,
+          publishedAt: row.published_at,
+          createdAt: row.article_created_at
+        }
+      }));
+    } catch (error) {
+      console.error('Error fetching bookmarks with articles:', error);
+      return [];
+    }
+  }
+  
   async createBookmark(data: { articleId: string; userId: number }): Promise<any> {
     if (!process.env.DATABASE_URL) {
       // Check if bookmark already exists
@@ -348,6 +413,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         res.setHeader('Content-Type', 'application/json');
         res.setHeader('Content-Disposition', `attachment; filename="cyberfeed-bookmarks-${new Date().toISOString().split('T')[0]}.json"`);
         res.json(exportData);
+      } else if (req.query.withArticles === 'true') {
+        // Fetch bookmarks with associated articles
+        if (!userId) {
+          return res.status(401).json({ message: "Authentication required" });
+        }
+        
+        try {
+          const bookmarksWithArticles = await storage.getBookmarksWithArticles(userId);
+          res.json(bookmarksWithArticles);
+        } catch (error) {
+          console.error('Error fetching bookmarks with articles:', error);
+          res.status(500).json({ message: "Failed to fetch bookmarks with articles" });
+        }
       } else {
         // Regular bookmarks fetch
         const bookmarks = userId ? await storage.getBookmarks(userId) : [];

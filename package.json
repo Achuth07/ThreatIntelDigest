@@ -10,7 +10,9 @@
     "check": "tsc",
     "db:push": "drizzle-kit push",
     "validate-deployment": "node scripts/validate-deployment.js",
-    "test-auth": "node scripts/test-auth.js"
+    "test-auth": "node scripts/test-auth.js",
+    "check-orphaned-bookmarks": "tsx scripts/check-orphaned-bookmarks.ts",
+    "cleanup-orphaned-bookmarks": "tsx scripts/cleanup-orphaned-bookmarks.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

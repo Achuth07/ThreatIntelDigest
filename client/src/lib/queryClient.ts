@@ -76,6 +76,8 @@ export const getQueryFn: <T>(options: {
     if (user?.token) {
       headers["Authorization"] = `Bearer ${user.token}`;
     }
+    
+    console.log(`Making request to ${url}`, { user, headers });
 
     // Make the actual API request
     const res = await fetch(url, {
@@ -83,6 +85,8 @@ export const getQueryFn: <T>(options: {
       headers,
     });
 
+    console.log(`Response from ${url}:`, res.status, res.statusText);
+    
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
       return null;
     }

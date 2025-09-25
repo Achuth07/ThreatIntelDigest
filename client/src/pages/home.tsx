@@ -33,6 +33,7 @@ export default function Home() {
 
   // Get authenticated user
   const user = getAuthenticatedUser();
+  console.log('Home component - User:', user);
 
   // Fetch articles
   const { data: articles = [], isLoading: articlesLoading, refetch: refetchArticles } = useQuery<(Article & { isBookmarked?: boolean })[]>({
@@ -40,20 +41,38 @@ export default function Home() {
       source: selectedSource === 'all' ? undefined : selectedSource,
       search: searchQuery,
       sortBy,
-      limit: ARTICLES_PER_PAGE,
-      offset: page * ARTICLES_PER_PAGE,
+      limit: showBookmarks ? '1000' : ARTICLES_PER_PAGE, // Increase limit significantly when viewing bookmarks
+      offset: page * (showBookmarks ? 1000 : ARTICLES_PER_PAGE),
     }],
   });
 
   // Fetch bookmarks with automatic refetching
-  const { data: bookmarks = [], refetch: refetchBookmarks } = useQuery<Bookmark[]>({
+  const { data: bookmarks = [], refetch: refetchBookmarks, isLoading: bookmarksLoading, error: bookmarksError } = useQuery<Bookmark[]>({
     queryKey: ['/api/bookmarks'],
-    enabled: !!user, // Only fetch bookmarks if user is authenticated
+    enabled: !!user && !!user.token, // Only fetch bookmarks if user is authenticated and has a token
     // Refetch bookmarks every 30 seconds to ensure count is accurate
     refetchInterval: 30000,
     // Also refetch on window focus
     refetchOnWindowFocus: true,
+    // Disable caching to ensure we always get fresh data
+    staleTime: 0,
   });
+  
+  // Fetch bookmarked articles when in bookmarks view
+  const { data: bookmarkedArticles = [], isLoading: bookmarkedArticlesLoading } = useQuery<any[]>({
+    queryKey: ['/api/bookmarks', { withArticles: true }],
+    enabled: !!user && !!user.token && showBookmarks, // Only fetch when user is authenticated and viewing bookmarks
+    staleTime: 0,
+  });
+  console.log('Home component - Bookmarks:', bookmarks, 'Loading:', bookmarksLoading, 'Error:', bookmarksError, 'User:', user);
+  
+  // Refetch bookmarks when user changes
+  useEffect(() => {
+    if (user && user.token) {
+      console.log('User authenticated, refetching bookmarks');
+      refetchBookmarks();
+    }
+  }, [user, refetchBookmarks]);
 
   // Auto-fetch feeds on component mount
   const fetchFeedsMutation = useMutation({
@@ -78,7 +97,8 @@ export default function Home() {
 
   // Refetch bookmarks when user changes or when showBookmarks changes
   useEffect(() => {
-    if (user) {
+    if (user && user.token) {
+      console.log('User or bookmarks view changed, refetching bookmarks');
       refetchBookmarks();
     }
   }, [user, showBookmarks, refetchBookmarks]);
@@ -190,9 +210,38 @@ export default function Home() {
   });
 
   // Show bookmarked articles if bookmarks view is active
+  // When showing bookmarks, we should display ALL bookmarked articles regardless of current filters
   const displayArticles = showBookmarks 
-    ? articles.filter(article => bookmarks.some(bookmark => bookmark.articleId === article.id))
+    ? (bookmarkedArticles as any[]).map(item => ({
+        ...item.article,
+        isBookmarked: true
+      }))
     : filteredArticles;
+    
+  // Log a warning if we're in bookmarks view but not all bookmarks are displayed
+  if (showBookmarks) {
+    const bookmarkCount = (bookmarks as Bookmark[]).length;
+    const displayedBookmarkCount = displayArticles.length;
+    if (bookmarkCount !== displayedBookmarkCount) {
+      console.warn(`Bookmark count mismatch: ${bookmarkCount} bookmarks exist but only ${displayedBookmarkCount} are displayed`);
+    }
+  }
+  
+  console.log('Display articles count:', displayArticles.length, 'Show bookmarks:', showBookmarks);
+  console.log('Bookmarks count:', (bookmarks as Bookmark[]).length);
+  console.log('Bookmarks:', bookmarks);
+  console.log('Articles:', articles.map(a => a.id));
+  
+  // Log filtering details when in bookmarks view
+  if (showBookmarks) {
+    console.log('Filtering details:');
+    console.log('- Time filter:', timeFilter);
+    console.log('- Threat filters:', threatFilters);
+    console.log('- Selected source:', selectedSource);
+    console.log('- Total articles:', articles.length);
+    console.log('- Filtered articles:', filteredArticles.length);
+    console.log('- Bookmarked articles:', displayArticles.length);
+  }
 
   const lastUpdated = new Date().toLocaleTimeString('en-US', {
     hour: 'numeric',
@@ -204,7 +253,7 @@ export default function Home() {
     <div className="min-h-screen bg-whatcyber-darker text-slate-100 flex flex-col">
       <Header 
         onSearch={handleSearch}
-        bookmarkCount={bookmarks.length}
+        bookmarkCount={(bookmarks as Bookmark[]).length}
         onBookmarksClick={handleBookmarksClick}
         onSidebarToggle={handleSidebarToggle}
         isSidebarOpen={isSidebarOpen}
@@ -348,7 +397,7 @@ export default function Home() {
                           key={article.id}
                           article={{
                             ...article,
-                            isBookmarked: bookmarks.some(bookmark => bookmark.articleId === article.id)
+                            isBookmarked: showBookmarks ? true : bookmarks.some(bookmark => bookmark.articleId === article.id)
                           }}
                           isFeatured={index === 0 && !showBookmarks && !searchQuery}
                           onReadHere={handleReadHere}
