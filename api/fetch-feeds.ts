@@ -63,6 +63,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
     const db = drizzle(pool);
     
+    // Clean up old articles (older than 30 days)
+    console.log('Cleaning up old articles...');
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const cleanupResult = await db.execute(sql`
+      DELETE FROM articles 
+      WHERE published_at < ${thirtyDaysAgo}
+    `);
+    
+    console.log(`Cleaned up ${cleanupResult.rowCount || 0} old articles`);
+    
     // Get active RSS sources
     console.log('Fetching active RSS sources...');
     const sourcesResult = await db.execute(sql`

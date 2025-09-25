@@ -45,10 +45,14 @@ export default function Home() {
     }],
   });
 
-  // Fetch bookmarks
+  // Fetch bookmarks with automatic refetching
   const { data: bookmarks = [], refetch: refetchBookmarks } = useQuery<Bookmark[]>({
     queryKey: ['/api/bookmarks'],
     enabled: !!user, // Only fetch bookmarks if user is authenticated
+    // Refetch bookmarks every 30 seconds to ensure count is accurate
+    refetchInterval: 30000,
+    // Also refetch on window focus
+    refetchOnWindowFocus: true,
   });
 
   // Auto-fetch feeds on component mount
@@ -56,6 +60,10 @@ export default function Home() {
     mutationFn: () => apiRequest('POST', '/api/fetch-feeds'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
+      // Also refetch bookmarks to ensure count is accurate after feed fetch
+      if (user) {
+        refetchBookmarks();
+      }
     },
     onError: (error) => {
       console.error('Failed to fetch feeds:', error);
@@ -68,12 +76,12 @@ export default function Home() {
     fetchFeedsMutation.mutate();
   }, []);
 
-  // Refetch bookmarks when showBookmarks changes or when user changes
+  // Refetch bookmarks when user changes or when showBookmarks changes
   useEffect(() => {
     if (user) {
       refetchBookmarks();
     }
-  }, [user, refetchBookmarks]);
+  }, [user, showBookmarks, refetchBookmarks]);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);

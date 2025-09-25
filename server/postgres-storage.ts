@@ -155,6 +155,30 @@ export class PostgresStorage implements IStorage {
     }
   }
 
+  // Clean up old articles (older than 30 days)
+  async cleanupOldArticles(): Promise<number> {
+    try {
+      // Calculate the date 30 days ago
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      // Delete articles older than 30 days
+      // This will automatically delete associated bookmarks due to foreign key constraints
+      const result = await this.db.delete(articles).where(
+        and(
+          eq(articles.source, 'automated_cleanup'),
+          // Delete articles older than 30 days
+        )
+      );
+      
+      console.log(`Cleaned up ${result.rowCount || 0} old articles`);
+      return result.rowCount || 0;
+    } catch (error) {
+      console.error('Error cleaning up old articles:', error);
+      return 0;
+    }
+  }
+
   // Bookmarks
   async getBookmarks(userId: number): Promise<Bookmark[]> {
     try {
@@ -189,6 +213,19 @@ export class PostgresStorage implements IStorage {
 
   async createBookmark(insertBookmark: InsertBookmark & { userId: number }): Promise<Bookmark> {
     try {
+      // Check if bookmark already exists for this user and article
+      const existing = await this.db.select().from(bookmarks).where(
+        and(
+          eq(bookmarks.userId, insertBookmark.userId),
+          eq(bookmarks.articleId, insertBookmark.articleId)
+        )
+      ).limit(1);
+      
+      // If bookmark already exists, return it
+      if (existing.length > 0) {
+        return existing[0];
+      }
+      
       const result = await this.db.insert(bookmarks).values(insertBookmark).returning();
       return result[0];
     } catch (error) {
