@@ -27,6 +27,11 @@ function App() {
   const [userChecked, setUserChecked] = useState(false);
 
   useEffect(() => {
+    // Set the document title
+    document.title = "WhatCyber - ThreatFeed";
+  }, []);
+
+  useEffect(() => {
     // Check if user is authenticated or has chosen to continue as guest
     const checkAuthStatus = () => {
       const user = getAuthenticatedUser();
