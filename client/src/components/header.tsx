@@ -172,7 +172,7 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
               />
               <div className="flex flex-col">
                 <h1 className="text-lg lg:text-xl font-bold text-slate-100 leading-tight" data-testid="logo-text">WhatCyber</h1>
-                <span className="text-xs text-whatcyber-teal font-medium -mt-1" data-testid="logo-tagline">CyberFeed</span>
+                <span className="text-xs text-whatcyber-teal font-medium -mt-1" data-testid="logo-tagline">ThreatFeed</span>
               </div>
             </div>
           </div>
