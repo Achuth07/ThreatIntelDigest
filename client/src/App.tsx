@@ -10,7 +10,7 @@ import { Footer } from "@/components/footer";
 import { useEffect, useState } from "react";
 import { AdminDashboard } from "@/components/admin-dashboard";
 import { LoginPopup } from "@/components/login-popup";
-import { getAuthenticatedUser, isGuestUser } from "@/lib/auth";
+import { getAuthenticatedUser, isGuestUser, updateAuthToken } from "@/lib/auth";
 
 function Router() {
   return (
@@ -29,6 +29,30 @@ function App() {
   useEffect(() => {
     // Set the document title
     document.title = "WhatCyber - ThreatFeed";
+    
+    // Handle OAuth redirect parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const userParam = urlParams.get('user');
+    const errorParam = urlParams.get('error');
+    
+    if (userParam) {
+      try {
+        // Decode and parse user data
+        const userData = JSON.parse(decodeURIComponent(userParam));
+        // Store user data in localStorage
+        updateAuthToken(userData);
+        // Remove URL parameters
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } catch (error) {
+        console.error('Error parsing user data from URL:', error);
+      }
+    }
+    
+    if (errorParam) {
+      console.error('OAuth error:', errorParam);
+      // Remove URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
   }, []);
 
   useEffect(() => {
