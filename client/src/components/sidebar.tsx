@@ -1,11 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Globe, Rss, Filter, Zap, RefreshCw, Download, Plus, Minus, Shield, ChevronDown, ChevronUp, Trash } from 'lucide-react';
+import { Globe, Rss, Filter, Zap, RefreshCw, Download, Plus, Minus, Shield, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { AddSourcesDialog } from '@/components/add-sources-dialog';
@@ -50,12 +50,40 @@ export function Sidebar({
     sourceId: null,
     sourceName: null
   });
+  const [showTooltipGuide, setShowTooltipGuide] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+
+  // Reference for the add sources button
+  const addSourcesButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Position tooltip when it's shown
+  useEffect(() => {
+    if (showTooltipGuide && addSourcesButtonRef.current) {
+      positionTooltip(addSourcesButtonRef.current);
+    }
+  }, [showTooltipGuide]);
 
   // Get authenticated user
   const user = getAuthenticatedUser();
 
   // Filter out inactive sources from the sidebar display
   const activeUserSources = userSources.filter(source => source.isActive !== false);
+
+  // Show tooltip guide on first login
+  useEffect(() => {
+    if (user && activeUserSources.length === 0) {
+      // Check if this is the user's first time
+      const hasSeenTooltip = localStorage.getItem('hasSeenSourcesTooltip');
+      if (!hasSeenTooltip) {
+        // Delay the tooltip slightly to ensure UI is rendered
+        const timer = setTimeout(() => {
+          setShowTooltipGuide(true);
+          localStorage.setItem('hasSeenSourcesTooltip', 'true');
+        }, 1000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [user, activeUserSources.length]);
 
   // Fetch user-specific sources
   useEffect(() => {
@@ -269,6 +297,15 @@ export function Sidebar({
 
   const totalArticles = userSources.reduce((sum, source) => sum + (source.isActive ? 10 : 0), 0); // Rough estimate
 
+  // Function to position tooltip relative to the add sources button
+  const positionTooltip = (buttonElement: HTMLElement) => {
+    const rect = buttonElement.getBoundingClientRect();
+    setTooltipPosition({
+      x: rect.left + rect.width / 2,
+      y: rect.top - 10
+    });
+  };
+
   return (
     <aside className="w-80 lg:w-80 bg-whatcyber-dark border-r border-whatcyber-light-gray/30 overflow-y-auto h-full">
       <div className="p-4 lg:p-6">
@@ -366,9 +403,10 @@ export function Sidebar({
             </Button>
             
             <Button
+              ref={addSourcesButtonRef}
               variant="ghost"
               size="sm"
-              className="w-full justify-start p-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-700"
+              className="w-full justify-start p-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-700 relative"
               onClick={() => setShowAddSourcesDialog(true)}
               data-testid="button-add-source"
             >
@@ -376,7 +414,57 @@ export function Sidebar({
               Add New Source
             </Button>
           </div>
+          
+          {/* Callout box for adding new sources */}
+          {activeUserSources.length === 0 && (
+            <div className="mt-4 p-3 bg-whatcyber-teal/10 border border-whatcyber-teal/30 rounded-lg">
+              <div className="flex items-start">
+                <div className="flex-shrink-0 mt-0.5">
+                  <Plus className="w-4 h-4 text-whatcyber-teal" />
+                </div>
+                <div className="ml-2 text-sm text-slate-300">
+                  <p className="font-medium text-slate-200">Follow more threat intel sources</p>
+                  <p className="mt-1">Add new sources to customize your threat intelligence feed</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Tooltip Guide Popup */}
+        {showTooltipGuide && (
+          <div 
+            className="fixed z-50 animate-fade-in-up"
+            style={{
+              left: `${tooltipPosition.x}px`,
+              top: `${tooltipPosition.y}px`,
+              transform: 'translate(-50%, -100%)'
+            }}
+          >
+            <div className="relative bg-slate-800 border border-slate-700 rounded-lg p-4 w-64 shadow-lg">
+              <button
+                onClick={() => setShowTooltipGuide(false)}
+                className="absolute top-2 right-2 text-slate-400 hover:text-slate-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <div className="flex items-start">
+                <div className="flex-shrink-0 mt-0.5">
+                  <Plus className="w-5 h-5 text-whatcyber-teal" />
+                </div>
+                <div className="ml-2">
+                  <h4 className="text-sm font-semibold text-slate-100">Add Threat Sources</h4>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Click here to add new threat intelligence sources and customize your feed
+                  </p>
+                </div>
+              </div>
+              <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full">
+                <div className="w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-slate-700"></div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Collapsible Feed Sources */}
         <Collapsible open={!isSourcesCollapsed} onOpenChange={(open) => setIsSourcesCollapsed(!open)} className="mb-6">
@@ -453,7 +541,7 @@ export function Sidebar({
                   title={`Hide ${source.name}`}
                   disabled={updateUserSourceMutation.isPending}
                 >
-                  <Trash className="w-3 h-3" />
+                  <Minus className="w-3 h-3" />
                 </button>
               </div>
             ))}

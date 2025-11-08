@@ -296,3 +296,19 @@ html {
   outline: 2px solid var(--cyber-cyan);
   outline-offset: 2px;
 }
+
+/* Tooltip guide animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-100% + 10px));
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -100%);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.3s ease-out forwards;
+}

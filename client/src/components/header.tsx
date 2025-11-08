@@ -164,7 +164,7 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
               {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </Button>
             
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-3 cursor-pointer" onClick={() => window.location.href = 'https://whatcyber.com'}>
               <img 
                 src={logoImage} 
                 alt="WhatCyber Logo" 
