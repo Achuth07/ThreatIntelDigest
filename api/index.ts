@@ -464,8 +464,234 @@ async function handleSourcesEndpoints(req: VercelRequest, res: VercelResponse, a
   }
 }
 
+// In-memory storage for local development
+let inMemoryArticles: any[] = [
+  {
+    id: '1',
+    title: 'New Zero-Day Exploit Targets Popular Web Browsers',
+    summary: 'Security researchers have discovered a critical zero-day vulnerability affecting major web browsers that could allow remote code execution.',
+    url: 'https://example.com/article1',
+    source: 'Bleeping Computer',
+    threatLevel: 'HIGH',
+    tags: ['browser', 'zero-day', 'exploit'],
+    readTime: 5,
+    publishedAt: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
+    createdAt: new Date(Date.now() - 3600000).toISOString()
+  },
+  {
+    id: '2',
+    title: 'Ransomware Group Claims Responsibility for Healthcare Data Breach',
+    summary: 'A notorious ransomware gang has announced they breached a major healthcare provider and are demanding payment.',
+    url: 'https://example.com/article2',
+    source: 'The Hacker News',
+    threatLevel: 'CRITICAL',
+    tags: ['ransomware', 'healthcare', 'breach'],
+    readTime: 8,
+    publishedAt: new Date(Date.now() - 7200000).toISOString(), // 2 hours ago
+    createdAt: new Date(Date.now() - 7200000).toISOString()
+  },
+  {
+    id: '3',
+    title: 'New Phishing Campaign Targets Financial Institutions',
+    summary: 'Cybercriminals are using sophisticated techniques to bypass email security filters and target banking customers.',
+    url: 'https://example.com/article3',
+    source: 'Dark Reading',
+    threatLevel: 'MEDIUM',
+    tags: ['phishing', 'finance', 'email'],
+    readTime: 4,
+    publishedAt: new Date(Date.now() - 10800000).toISOString(), // 3 hours ago
+    createdAt: new Date(Date.now() - 10800000).toISOString()
+  }
+];
+
 async function handleArticlesEndpoints(req: VercelRequest, res: VercelResponse, action: string) {
-  res.status(501).json({ message: 'Articles endpoint not implemented in consolidated version' });
+  try {
+    console.log(`${req.method} /api/articles - Starting request`);
+    
+    // Use in-memory storage when no DATABASE_URL is provided
+    if (!process.env.DATABASE_URL) {
+      console.log('Using in-memory storage for articles');
+      
+      if (req.method === 'GET') {
+        console.log('Fetching articles from memory...');
+        const { source, limit = '10', offset = '0', search, sortBy = 'newest' } = req.query;
+        
+        // Filter by source if provided
+        let filteredArticles = [...inMemoryArticles];
+        if (source && source !== 'all') {
+          filteredArticles = filteredArticles.filter(article => article.source === source);
+        }
+        
+        // Filter by search term if provided
+        if (search) {
+          const searchTerm = (search as string).toLowerCase();
+          filteredArticles = filteredArticles.filter(article => 
+            article.title.toLowerCase().includes(searchTerm) || 
+            article.summary.toLowerCase().includes(searchTerm)
+          );
+        }
+        
+        // Sort articles
+        if (sortBy === 'newest') {
+          filteredArticles.sort((a, b) => 
+            new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+          );
+        } else if (sortBy === 'oldest') {
+          filteredArticles.sort((a, b) => 
+            new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime()
+          );
+        }
+        
+        // Apply pagination
+        const limitNum = parseInt(limit as string);
+        const offsetNum = parseInt(offset as string);
+        const paginatedArticles = filteredArticles.slice(offsetNum, offsetNum + limitNum);
+        
+        console.log(`Successfully fetched ${paginatedArticles.length} articles`);
+        return res.json(paginatedArticles);
+        
+      } else if (req.method === 'POST') {
+        console.log('Creating new article in memory...');
+        const { title, summary, url, source, threatLevel = 'LOW', tags = [], readTime = 1 } = req.body;
+        
+        if (!title || !url || !source) {
+          return res.status(400).json({ message: "Title, URL, and source are required" });
+        }
+        
+        const newArticle = {
+          id: String(inMemoryArticles.length + 1),
+          title,
+          summary,
+          url,
+          source,
+          threatLevel,
+          tags,
+          readTime,
+          publishedAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
+          isBookmarked: false
+        };
+        
+        inMemoryArticles.push(newArticle);
+        console.log('Successfully created article:', newArticle.id);
+        return res.status(201).json(newArticle);
+        
+      } else {
+        return res.status(405).json({ message: 'Method not allowed' });
+      }
+    }
+    
+    // Import modules dynamically
+    const { drizzle } = await import('drizzle-orm/neon-serverless');
+    const { Pool } = await import('@neondatabase/serverless');
+    const { sql } = await import('drizzle-orm');
+    
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const db = drizzle(pool);
+    
+    if (req.method === 'GET') {
+      console.log('Fetching articles...');
+      const { source, limit = '10', offset = '0', search, sortBy = 'newest' } = req.query;
+      
+      // Build base query
+      let baseQuery = sql`SELECT id, title, summary, url, source, threat_level, tags, read_time, published_at, created_at FROM articles`;
+      
+      // Add WHERE conditions
+      const conditions: any[] = [];
+      
+      if (source && source !== 'all') {
+        conditions.push(sql`source = ${source}`);
+      }
+      
+      if (search) {
+        const searchTerm = `%${search}%`;
+        conditions.push(sql`(title ILIKE ${searchTerm} OR summary ILIKE ${searchTerm})`);
+      }
+      
+      // Combine conditions
+      let query = baseQuery;
+      if (conditions.length > 0) {
+        query = sql`${baseQuery} WHERE ${sql.join(conditions, sql` AND `)}`;
+      }
+      
+      // Add sorting
+      if (sortBy === 'newest') {
+        query = sql`${query} ORDER BY published_at DESC`;
+      } else if (sortBy === 'oldest') {
+        query = sql`${query} ORDER BY published_at ASC`;
+      } else {
+        query = sql`${query} ORDER BY created_at DESC`;
+      }
+      
+      // Add pagination
+      const limitNum = parseInt(limit as string);
+      const offsetNum = parseInt(offset as string);
+      query = sql`${query} LIMIT ${limitNum} OFFSET ${offsetNum}`;
+      
+      const result = await db.execute(query);
+      
+      const articles = result.rows.map((row: any) => ({
+        id: row.id,
+        title: row.title,
+        summary: row.summary,
+        url: row.url,
+        source: row.source,
+        threatLevel: row.threat_level,
+        tags: row.tags || [],
+        readTime: row.read_time,
+        publishedAt: row.published_at,
+        createdAt: row.created_at,
+        isBookmarked: false // Simplified for now
+      }));
+      
+      console.log(`Successfully fetched ${articles.length} articles`);
+      res.json(articles);
+      
+    } else if (req.method === 'POST') {
+      console.log('Creating new article...');
+      const { title, summary, url, source, threatLevel = 'LOW', tags = [], readTime = 1 } = req.body;
+      
+      if (!title || !url || !source) {
+        return res.status(400).json({ message: "Title, URL, and source are required" });
+      }
+      
+      const publishedAt = new Date();
+      
+      const result = await db.execute(sql`
+        INSERT INTO articles (title, summary, url, source, threat_level, tags, read_time, published_at)
+        VALUES (${title}, ${summary}, ${url}, ${source}, ${threatLevel}, ${tags}, ${readTime}, ${publishedAt})
+        RETURNING id, title, summary, url, source, threat_level, tags, read_time, published_at, created_at
+      `);
+      
+      const article = result.rows[0];
+      console.log('Successfully created article:', article.id);
+      res.status(201).json({
+        id: article.id,
+        title: article.title,
+        summary: article.summary,
+        url: article.url,
+        source: article.source,
+        threatLevel: article.threat_level,
+        tags: article.tags || [],
+        readTime: article.read_time,
+        publishedAt: article.published_at,
+        createdAt: article.created_at,
+        isBookmarked: false
+      });
+      
+    } else {
+      res.status(405).json({ message: 'Method not allowed' });
+    }
+    
+  } catch (error) {
+    console.error('Fatal error in articles API:', error);
+    res.status(500).json({ 
+      message: "Internal server error",
+      error: error instanceof Error ? error.message : 'Unknown error',
+      hasDbUrl: !!process.env.DATABASE_URL,
+      stack: error instanceof Error ? error.stack?.split('\n').slice(0, 5) : undefined
+    });
+  }
 }
 
 async function handleBookmarksEndpoints(req: VercelRequest, res: VercelResponse, action: string) {
@@ -754,8 +980,197 @@ async function handleFetchCvesEndpoints(req: VercelRequest, res: VercelResponse,
   res.status(501).json({ message: 'Fetch CVEs endpoint not implemented in consolidated version' });
 }
 
+// Helper functions for fetch-feeds
+function determineThreatLevel(title: string, content: string): string {
+  const text = (title + " " + content).toLowerCase();
+  
+  if (text.includes("critical") || text.includes("zero-day") || text.includes("ransomware")) {
+    return "CRITICAL";
+  } else if (text.includes("high") || text.includes("vulnerability") || text.includes("exploit")) {
+    return "HIGH";
+  } else {
+    return "MEDIUM";
+  }
+}
+
+function extractTags(title: string, content: string): string[] {
+  const text = (title + " " + content).toLowerCase();
+  const tags: string[] = [];
+  
+  const commonTags = [
+    "malware", "ransomware", "phishing", "zero-day", "vulnerability", 
+    "exploit", "apt", "microsoft", "google", "apple", "android", "ios",
+    "windows", "linux", "cloud", "aws", "azure", "kubernetes", "docker"
+  ];
+  
+  commonTags.forEach(tag => {
+    if (text.includes(tag)) {
+      tags.push(tag.charAt(0).toUpperCase() + tag.slice(1));
+    }
+  });
+  
+  return tags.slice(0, 3); // Limit to 3 tags
+}
+
+function estimateReadTime(content: string): number {
+  const wordsPerMinute = 200;
+  const wordCount = content.split(/\s+/).length;
+  return Math.max(1, Math.ceil(wordCount / wordsPerMinute));
+}
+
 async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse, action: string) {
-  res.status(501).json({ message: 'Fetch feeds endpoint not implemented in consolidated version' });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
+
+  try {
+    console.log('Starting RSS feed fetch process...');
+    
+    if (!process.env.DATABASE_URL) {
+      return res.status(500).json({ 
+        error: 'DATABASE_URL environment variable is required'
+      });
+    }
+    
+    // Import modules dynamically
+    const { drizzle } = await import('drizzle-orm/neon-serverless');
+    const { Pool } = await import('@neondatabase/serverless');
+    const { sql } = await import('drizzle-orm');
+    const Parser = (await import('rss-parser')).default;
+    
+    const parser = new Parser();
+    
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const db = drizzle(pool);
+    
+    // Clean up old articles (older than 30 days)
+    console.log('Cleaning up old articles...');
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const cleanupResult = await db.execute(sql`
+      DELETE FROM articles 
+      WHERE published_at < ${thirtyDaysAgo}
+    `);
+    
+    console.log(`Cleaned up ${cleanupResult.rowCount || 0} old articles`);
+    
+    // Get active RSS sources
+    console.log('Fetching active RSS sources...');
+    const sourcesResult = await db.execute(sql`
+      SELECT id, name, url, icon, color, is_active 
+      FROM rss_sources 
+      WHERE is_active = true
+    `);
+    
+    const activeSources = sourcesResult.rows;
+    console.log(`Found ${activeSources.length} active RSS sources`);
+    
+    let totalFetched = 0;
+    let feedResults: any[] = [];
+    
+    for (const source of activeSources) {
+      let sourceResult: any = {
+        name: source.name,
+        url: source.url,
+        itemsFound: 0,
+        itemsProcessed: 0,
+        errors: [] as string[]
+      };
+      try {
+        console.log(`Fetching feed from ${source.name} (${source.url})...`);
+        const feed = await parser.parseURL(source.url as string);
+        console.log(`Feed parsed successfully. Found ${feed.items.length} items`);
+        
+        sourceResult.itemsFound = feed.items.length;
+        
+        let processedCount = 0;
+        for (const item of feed.items.slice(0, 10)) { // Limit to 10 latest items per source
+          if (!item.title || !item.link) {
+            console.log('Skipping item: missing title or link');
+            continue;
+          }
+
+          // Check if article already exists
+          const existingResult = await db.execute(sql`
+            SELECT id FROM articles WHERE url = ${item.link}
+          `);
+          
+          if (existingResult.rows.length === 0) {
+            const threatLevel = determineThreatLevel(item.title || "", item.contentSnippet || "");
+            const tags = extractTags(item.title || "", item.contentSnippet || "");
+            const readTime = estimateReadTime(item.contentSnippet || item.content || "");
+            const summary = (item.contentSnippet || item.content?.substring(0, 300) || "") + ((item.content && item.content.length > 300) ? "..." : "");
+            
+            // Handle published date - use current time if parsing fails
+            let publishedAt: Date;
+            try {
+              publishedAt = item.pubDate ? new Date(item.pubDate) : new Date();
+              // Validate the date
+              if (isNaN(publishedAt.getTime())) {
+                publishedAt = new Date();
+              }
+            } catch {
+              publishedAt = new Date();
+            }
+            
+            try {
+              console.log(`Inserting article: ${item.title}`);
+              console.log(`Published At:`, publishedAt);
+              
+              // Temporarily skip tags field to get basic insertion working
+              await db.execute(sql`
+                INSERT INTO articles (title, summary, url, source, threat_level, read_time, published_at)
+                VALUES (${item.title}, ${summary}, ${item.link}, ${source.name}, ${threatLevel}, ${readTime}, ${publishedAt})
+              `);
+              
+              totalFetched++;
+              processedCount++;
+              sourceResult.itemsProcessed++;
+              console.log(`Saved article: ${item.title}`);
+            } catch (insertError) {
+              console.error(`Failed to insert article "${item.title}":`, insertError);
+              sourceResult.errors.push(`Insert failed: ${insertError instanceof Error ? insertError.message : 'Unknown error'}`);
+            }
+          } else {
+            console.log(`Article already exists: ${item.title}`);
+          }
+        }
+
+        // Update last fetched timestamp for the source
+        await db.execute(sql`
+          UPDATE rss_sources 
+          SET last_fetched = NOW() 
+          WHERE id = ${source.id}
+        `);
+        
+        console.log(`Processed ${processedCount} new articles from ${source.name}`);
+        
+      } catch (feedError) {
+        console.error(`Error fetching feed for ${source.name}:`, feedError);
+        console.error('Feed URL:', source.url);
+        console.error('Error details:', feedError instanceof Error ? feedError.message : feedError);
+        sourceResult.errors.push(feedError instanceof Error ? feedError.message : 'Unknown error');
+      }
+      
+      feedResults.push(sourceResult);
+    }
+
+    console.log(`Feed fetch complete. Fetched ${totalFetched} new articles.`);
+    res.json({ 
+      message: `Successfully fetched ${totalFetched} new articles`,
+      totalFetched,
+      sourceResults: feedResults,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error("Error fetching feeds:", error);
+    res.status(500).json({ 
+      message: "Failed to fetch RSS feeds",
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 }
 
 async function handleFetchArticleEndpoints(req: VercelRequest, res: VercelResponse, action: string) {
