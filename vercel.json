@@ -8,10 +8,15 @@
   "env": {
     "NPM_CONFIG_INCLUDE_STAGE_ALL": "true"
   },
+  "functions": {
+    "api/index.ts": {
+      "maxDuration": 10
+    }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api/$1"
+      "destination": "/api/index.ts"
     },
     {
       "source": "/(.*)",
