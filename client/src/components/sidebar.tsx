@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Globe, Rss, Filter, Zap, RefreshCw, Download, Plus, Minus, Shield, ChevronDown, ChevronUp } from 'lucide-react';
+import { Globe, Rss, Filter, Zap, RefreshCw, Download, Plus, Minus, Shield, ChevronDown, ChevronUp, Trash } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { AddSourcesDialog } from '@/components/add-sources-dialog';
@@ -41,9 +41,21 @@ export function Sidebar({
   const [isSourcesCollapsed, setIsSourcesCollapsed] = useState(false);
   const [userSources, setUserSources] = useState<RssSource[]>([]);
   const [isLoadingSources, setIsLoadingSources] = useState(true);
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    open: boolean;
+    sourceId: string | null;
+    sourceName: string | null;
+  }>({
+    open: false,
+    sourceId: null,
+    sourceName: null
+  });
 
   // Get authenticated user
   const user = getAuthenticatedUser();
+
+  // Filter out inactive sources from the sidebar display
+  const activeUserSources = userSources.filter(source => source.isActive !== false);
 
   // Fetch user-specific sources
   useEffect(() => {
@@ -177,22 +189,52 @@ export function Sidebar({
     });
   };
 
-  const getSourceIcon = (iconClass: string | null | undefined) => {
-    if (!iconClass) return <Rss className="w-5 h-5" />;
+  const handleDeleteSource = (sourceId: string, sourceName: string) => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to customize your sources.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Show confirmation dialog before disabling
+    setDeleteConfirmation({ open: true, sourceId, sourceName });
+  };
+
+  const confirmDeleteSource = () => {
+    if (deleteConfirmation.sourceId) {
+      // Instead of deleting, we toggle the source to inactive
+      updateUserSourceMutation.mutate({ 
+        sourceId: deleteConfirmation.sourceId, 
+        isActive: false 
+      });
+      setDeleteConfirmation({ open: false, sourceId: null, sourceName: null });
+    }
+  };
+
+  const cancelDeleteSource = () => {
+    setDeleteConfirmation({ open: false, sourceId: null, sourceName: null });
+  };
+
+  // Update the getSourceIcon function to show different icons for active/inactive sources
+  const getSourceIcon = (iconClass: string | null | undefined, isActive: boolean = true) => {
+    if (!iconClass) return <Rss className={`w-5 h-5 ${isActive ? '' : 'opacity-50'}`} />;
     
     // Map Font Awesome classes to Lucide icons
     const iconMap: Record<string, JSX.Element> = {
-      'fas fa-exclamation': <div className="w-5 h-5 bg-red-500 rounded-sm flex items-center justify-center text-white text-xs">!</div>,
-      'fas fa-user-secret': <div className="w-5 h-5 bg-orange-500 rounded-sm flex items-center justify-center text-white text-xs">H</div>,
-      'fas fa-eye': <div className="w-5 h-5 bg-purple-500 rounded-sm flex items-center justify-center text-white text-xs">👁</div>,
-      'fas fa-crow': <div className="w-5 h-5 bg-red-600 rounded-sm flex items-center justify-center text-white text-xs">🐦</div>,
-      'fas fa-shield-virus': <div className="w-5 h-5 bg-blue-600 rounded-sm flex items-center justify-center text-white text-xs">🛡</div>,
-      'fas fa-search': <div className="w-5 h-5 bg-green-600 rounded-sm flex items-center justify-center text-white text-xs">🔍</div>,
-      'fas fa-flash': <div className="w-5 h-5 bg-yellow-500 rounded-sm flex items-center justify-center text-white text-xs">⚡</div>,
-      'fas fa-microsoft': <div className="w-5 h-5 bg-blue-500 rounded-sm flex items-center justify-center text-white text-xs">M</div>,
+      'fas fa-exclamation': <div className={`w-5 h-5 rounded-sm flex items-center justify-center text-white text-xs ${isActive ? 'bg-red-500' : 'bg-red-500/50'}`}>!</div>,
+      'fas fa-user-secret': <div className={`w-5 h-5 rounded-sm flex items-center justify-center text-white text-xs ${isActive ? 'bg-orange-500' : 'bg-orange-500/50'}`}>H</div>,
+      'fas fa-eye': <div className={`w-5 h-5 rounded-sm flex items-center justify-center text-white text-xs ${isActive ? 'bg-purple-500' : 'bg-purple-500/50'}`}>👁</div>,
+      'fas fa-crow': <div className={`w-5 h-5 rounded-sm flex items-center justify-center text-white text-xs ${isActive ? 'bg-red-600' : 'bg-red-600/50'}`}>🐦</div>,
+      'fas fa-shield-virus': <div className={`w-5 h-5 rounded-sm flex items-center justify-center text-white text-xs ${isActive ? 'bg-blue-600' : 'bg-blue-600/50'}`}>🛡</div>,
+      'fas fa-search': <div className={`w-5 h-5 rounded-sm flex items-center justify-center text-white text-xs ${isActive ? 'bg-green-600' : 'bg-green-600/50'}`}>🔍</div>,
+      'fas fa-flash': <div className={`w-5 h-5 rounded-sm flex items-center justify-center text-white text-xs ${isActive ? 'bg-yellow-500' : 'bg-yellow-500/50'}`}>⚡</div>,
+      'fas fa-microsoft': <div className={`w-5 h-5 rounded-sm flex items-center justify-center text-white text-xs ${isActive ? 'bg-blue-500' : 'bg-blue-500/50'}`}>M</div>,
     };
-
-    return iconMap[iconClass] || <Rss className="w-5 h-5" />;
+    
+    return iconMap[iconClass] || <Rss className={`w-5 h-5 ${isActive ? '' : 'opacity-50'}`} />;
   };
 
   if (isLoadingSources) {
@@ -383,7 +425,7 @@ export function Sidebar({
             </button>
 
             {/* Individual Sources */}
-            {userSources.map((source) => (
+            {activeUserSources.map((source) => (
               <div
                 key={source.id}
                 className={`relative w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors group ${
@@ -395,28 +437,23 @@ export function Sidebar({
                   className="flex-1 flex items-center space-x-3 text-left"
                   onClick={() => onSourceSelect(source.name)}
                 >
-                  {getSourceIcon(source.icon)}
+                  {getSourceIcon(source.icon, source.isActive !== false)}
                   <span className="text-slate-300 group-hover:text-slate-100 transition-colors">
                     {source.name}
                   </span>
                 </button>
                 
-                {/* Article count badge */}
-                <span className="bg-slate-600 text-slate-300 text-xs px-2 py-1 rounded-full mr-2">
-                  {source.isActive ? '10' : '0'}
-                </span>
-                
-                {/* Toggle button - shown on hover */}
+                {/* Delete/Hide button - shown on hover */}
                 <button
-                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-blue-600 rounded text-blue-400 hover:text-white"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-600 rounded text-red-400 hover:text-white"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleToggleSource(source.id, source.isActive ?? true);
+                    handleDeleteSource(source.id, source.name);
                   }}
-                  title={source.isActive ? `Hide ${source.name}` : `Show ${source.name}`}
+                  title={`Hide ${source.name}`}
                   disabled={updateUserSourceMutation.isPending}
                 >
-                  {source.isActive ? <Minus className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
+                  <Trash className="w-3 h-3" />
                 </button>
               </div>
             ))}
@@ -467,7 +504,17 @@ export function Sidebar({
         open={showAddSourcesDialog}
         onOpenChange={setShowAddSourcesDialog}
       />
-      
+
+      <ConfirmationDialog
+        open={deleteConfirmation.open}
+        onOpenChange={(open) => setDeleteConfirmation(prev => ({ ...prev, open }))}
+        title="Disable Source"
+        description={`Are you sure you want to disable the source "${deleteConfirmation.sourceName || ''}"?`}
+        confirmText="Disable"
+        cancelText="Cancel"
+        onConfirm={confirmDeleteSource}
+        onCancel={cancelDeleteSource}
+      />
 
     </aside>
   );
