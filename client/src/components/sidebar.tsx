@@ -59,7 +59,11 @@ export function Sidebar({
   // Position tooltip when it's shown
   useEffect(() => {
     if (showTooltipGuide && addSourcesButtonRef.current) {
-      positionTooltip(addSourcesButtonRef.current);
+      // Add a small delay to ensure the button is fully rendered
+      const timer = setTimeout(() => {
+        positionTooltip(addSourcesButtonRef.current!);
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [showTooltipGuide]);
 
