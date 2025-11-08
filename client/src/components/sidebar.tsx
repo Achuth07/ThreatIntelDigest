@@ -69,19 +69,15 @@ export function Sidebar({
   // Filter out inactive sources from the sidebar display
   const activeUserSources = userSources.filter(source => source.isActive !== false);
 
-  // Show tooltip guide on first login for all users
+  // Show tooltip guide on every login for all users
   useEffect(() => {
     if (user) {
-      // Check if this is the user's first time
-      const hasSeenTooltip = localStorage.getItem('hasSeenSourcesTooltip');
-      if (!hasSeenTooltip) {
-        // Delay the tooltip slightly to ensure UI is rendered
-        const timer = setTimeout(() => {
-          setShowTooltipGuide(true);
-          localStorage.setItem('hasSeenSourcesTooltip', 'true');
-        }, 1000);
-        return () => clearTimeout(timer);
-      }
+      // Delay the tooltip slightly to ensure UI is rendered
+      const timer = setTimeout(() => {
+        setShowTooltipGuide(true);
+        // Note: We're not setting localStorage item anymore so it shows every time
+      }, 1000);
+      return () => clearTimeout(timer);
     }
   }, [user]);
 
