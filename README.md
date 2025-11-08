@@ -14,6 +14,9 @@ CyberFeed is a threat intelligence aggregation platform that enables security an
 - **Browse** CVE data with CVSS scoring and severity filtering
 - **Search** through security news and threat intelligence
 - **Stay updated** with the latest cybersecurity threats and developments
+- **Authenticate** with Google OAuth for personalized experience
+- **Customize** feed sources with user-specific preferences
+- **Receive guidance** with interactive tooltips and onboarding assistance
 
 ## 🏗️ Architecture
 
@@ -122,9 +125,17 @@ The application comes pre-configured with 25+ categorized cybersecurity news sou
    # Required: NVD API Key for CVE data fetching
    NVD_API_KEY=your-nvd-api-key-here
    
+   # Google OAuth Configuration
+   GOOGLE_CLIENT_ID=your-google-client-id
+   GOOGLE_CLIENT_SECRET=your-google-client-secret
+   
    # Server Configuration
    PORT=5000
    NODE_ENV=development
+   
+   # Production URLs (for OAuth callbacks)
+   BACKEND_URL=https://your-domain.com
+   FRONTEND_URL=https://your-domain.com
    ```
 
 4. **Initialize the database (if using PostgreSQL):**
@@ -142,11 +153,12 @@ The application comes pre-configured with 25+ categorized cybersecurity news sou
 
 ### First Run
 
-1. **Add RSS Sources:** Use the "Add RSS Source" dialog to select from categorized built-in cybersecurity RSS feeds
-2. **Manage Sources:** Remove sources from sidebar by hovering and clicking minus icon - they can be re-added later
-3. **Fetch Articles:** Click "Refresh All Feeds" to populate the application with latest articles
-4. **Get CVE Data:** Navigate to the Vulnerabilities section and click refresh to fetch latest CVE data from NVD
-5. **Explore:** Browse articles, filter by threat level, explore CVE data, and bookmark important intelligence
+1. **Authenticate:** Click "Sign In" to authenticate with Google OAuth
+2. **Add RSS Sources:** Use the "Add RSS Source" dialog to select from categorized built-in cybersecurity RSS feeds
+3. **Manage Sources:** Remove sources from sidebar by hovering and clicking minus icon - they can be re-added later
+4. **Fetch Articles:** Click "Refresh All Feeds" to populate the application with latest articles
+5. **Get CVE Data:** Navigate to the Vulnerabilities section and click refresh to fetch latest CVE data from NVD
+6. **Explore:** Browse articles, filter by threat level, explore CVE data, and bookmark important intelligence
 
 ## 📁 Project Structure
 
@@ -154,12 +166,14 @@ The application comes pre-configured with 25+ categorized cybersecurity news sou
 ThreatIntelDigest/
 ├── api/                    # API route handlers
 │   ├── articles.ts         # Articles API endpoints
+│   ├── auth.ts             # Google OAuth authentication
 │   ├── bookmarks.ts        # Bookmarks management
 │   ├── fetch-feeds.ts      # RSS feed fetching logic
 │   ├── fetch-cves.ts       # CVE data fetching from NVD API
 │   ├── vulnerabilities.ts  # CVE/vulnerability data endpoints
 │   ├── sources.ts          # RSS sources management
 │   ├── user-management.ts  # User management and statistics
+│   ├── user-source-preferences.ts # User-specific source preferences
 │   ├── database.ts         # Database management utilities
 │   └── index.ts            # API routes index
 ├── client/                 # React frontend application
@@ -167,6 +181,7 @@ ThreatIntelDigest/
 │   │   ├── components/     # React components
 │   │   │   ├── ui/         # shadcn/ui components
 │   │   │   ├── sidebar.tsx # Main navigation sidebar with source management
+│   │   │   ├── header.tsx  # Application header with authentication
 │   │   │   ├── article-card.tsx # Article display component
 │   │   │   ├── cve-list.tsx # CVE/vulnerability display component
 │   │   │   ├── add-sources-dialog.tsx # Categorized RSS sources selector
@@ -177,6 +192,7 @@ ThreatIntelDigest/
 │   │   └── App.tsx         # Main application component
 │   └── index.html          # HTML entry point
 ├── server/                 # Express.js backend
+│   ├── auth/              # Google OAuth implementation
 │   ├── db.ts              # Database connection setup
 │   ├── index.ts           # Server entry point
 │   ├── routes.ts          # API route definitions
@@ -226,6 +242,14 @@ npm run validate-deployment
 - **Real-time Updates:** Manual refresh with planned automatic scheduling
 - **Source Management:** Add, deactivate, and reactivate RSS sources without data loss
 - **User Authentication:** Secure Google OAuth 2.0 authentication
+- **User Preferences:** Personalized source selection and management
+- **Onboarding Assistance:** Interactive tooltips and guidance for new users
+
+### Authentication & User Management
+- **Google OAuth 2.0:** Secure authentication with Google accounts
+- **User-Specific Preferences:** Personalized feed sources and settings
+- **Session Management:** Secure session handling with token refresh
+- **Admin Dashboard:** User statistics and management interface
 
 ### Source Management Features
 - **Non-Destructive Removal:** Deactivate sources instead of permanent deletion
@@ -233,12 +257,15 @@ npm run validate-deployment
 - **Hover Controls:** Minus icon appears on hover for quick source removal
 - **Categorized Sources:** Organized by vendor, government, malware focus, and general news
 - **Smart Duplicate Prevention:** Prevents adding the same source multiple times
+- **User-Specific Sources:** Each user can customize their own feed sources
 
 ### User Interface
 - **Dark Theme:** Optimized for security professionals
 - **Responsive Design:** Mobile-first approach with breakpoint-based layouts
 - **Accessibility:** Full keyboard navigation and screen reader support
 - **Modern Components:** Built with Radix UI primitives for accessibility
+- **Interactive Guidance:** Onboarding tooltips and callout boxes
+- **Animated Transitions:** Smooth animations for enhanced user experience
 
 ### RSS Source Management
 - **Categorized Selection:** Choose from organized categories of cybersecurity sources
@@ -246,6 +273,7 @@ npm run validate-deployment
 - **Non-Destructive Removal:** Deactivate sources with hover minus icon
 - **Smart Reactivation:** Previously added sources can be reactivated without data loss
 - **Duplicate Prevention:** Only shows sources not currently active
+- **User Preferences:** Each user can manage their own source preferences
 
 ## 🔧 Configuration
 
@@ -268,6 +296,10 @@ DATABASE_URL=postgresql://username:password@host:port/database
 |----------|-------------|---------|----------|
 | `DATABASE_URL` | PostgreSQL connection string | - | Yes |
 | `NVD_API_KEY` | National Vulnerability Database API key | - | Yes |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID | - | Yes |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret | - | Yes |
+| `BACKEND_URL` | Backend production URL | - | Yes (Production) |
+| `FRONTEND_URL` | Frontend production URL | - | Yes (Production) |
 | `PORT` | Server port | `5000` | No |
 | `NODE_ENV` | Environment mode | `development` | No |
 
@@ -296,6 +328,10 @@ DATABASE_URL=postgresql://username:password@host:port/database
 - `GET /api/user-management` - Get all users
 - `GET /api/user-management?stats=true` - Get user statistics
 
+### User Source Preferences
+- `GET /api/user-source-preferences` - Get user's source preferences
+- `POST /api/user-source-preferences` - Update user's source preferences
+
 ### Authentication
 - `GET /api/auth?action=google` - Initiate Google OAuth flow
 - `GET /api/auth?action=callback` - Google OAuth callback
@@ -321,14 +357,34 @@ DATABASE_URL=postgresql://username:password@host:port/database
 - **SQL Injection Prevention:** Drizzle ORM with parameterized queries
 - **Secure Sessions:** Express-session with PostgreSQL storage (when configured)
 - **Google OAuth 2.0:** Secure authentication with Google accounts
+- **JWT Tokens:** Secure token-based authentication with refresh mechanism
+- **HTTPS Enforcement:** Automatic redirect to HTTPS in production
 
-## 🎯 Future Enhancements
+## 🎯 Recent Enhancements
 
-- **Automatic Feed Refresh:** Scheduled RSS feed updates
-- **Advanced Filtering:** Custom filters and saved searches
-- **Export Functionality:** Export bookmarks and articles
-- **API Documentation:** OpenAPI/Swagger integration
-- **Testing Suite:** Comprehensive test coverage
+### Authentication System
+- **Google OAuth 2.0 Integration:** Secure authentication with Google accounts
+- **User Session Management:** Automatic token refresh and session handling
+- **User-Specific Data:** Personalized bookmarks and source preferences
+- **Admin Dashboard:** User statistics and management interface
+
+### User Experience Improvements
+- **Interactive Onboarding:** Tooltips and guidance for new users
+- **Animated Transitions:** Smooth animations for enhanced user experience
+- **Responsive Design:** Optimized for all device sizes
+- **Accessibility Features:** Full keyboard navigation and screen reader support
+
+### Source Management
+- **User-Specific Preferences:** Each user can customize their own feed sources
+- **Non-Destructive Removal:** Sources can be deactivated and reactivated
+- **Enhanced UI:** Improved source management interface with hover controls
+- **Duplicate Prevention:** Smart logic to prevent adding duplicate sources
+
+### Performance Optimizations
+- **Consolidated API:** Reduced number of serverless functions for Vercel deployment
+- **Database Optimization:** Efficient queries and indexing
+- **Caching Strategy:** React Query for frontend data caching
+- **Bundle Optimization:** ESBuild for efficient backend bundling
 
 ## 📈 Visitor Analytics
 
@@ -387,6 +443,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Manually fetch CVE data: `POST /api/fetch-cves`
 - Check database connectivity: `GET /api/database?action=check`
 - Run detailed database tests: `GET /api/database?action=test-steps`
+
+**Authentication issues:**
+- Verify GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are set correctly
+- Check BACKEND_URL and FRONTEND_URL for production environments
+- Ensure OAuth callback URLs are registered in Google Cloud Console
+- Check browser console for authentication errors
 
 **macOS-specific issues:**
 - The application is configured to use `localhost` instead of `0.0.0.0` for macOS compatibility
