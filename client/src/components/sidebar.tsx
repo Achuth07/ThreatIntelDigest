@@ -69,9 +69,9 @@ export function Sidebar({
   // Filter out inactive sources from the sidebar display
   const activeUserSources = userSources.filter(source => source.isActive !== false);
 
-  // Show tooltip guide on first login
+  // Show tooltip guide on first login for all users
   useEffect(() => {
-    if (user && activeUserSources.length === 0) {
+    if (user) {
       // Check if this is the user's first time
       const hasSeenTooltip = localStorage.getItem('hasSeenSourcesTooltip');
       if (!hasSeenTooltip) {
@@ -83,7 +83,7 @@ export function Sidebar({
         return () => clearTimeout(timer);
       }
     }
-  }, [user, activeUserSources.length]);
+  }, [user]);
 
   // Fetch user-specific sources
   useEffect(() => {
