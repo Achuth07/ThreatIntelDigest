@@ -108,8 +108,10 @@ async function handleUserSourcePreferencesEndpoints(req: VercelRequest, res: Ver
 }
 
 async function handleVisitorCountEndpoints(req: VercelRequest, res: VercelResponse, action: string) {
-  // Set CORS headers
+  // Get the origin from the request
   const origin = req.headers.origin || '*';
+  
+  // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -162,7 +164,7 @@ async function handleVisitorCountEndpoints(req: VercelRequest, res: VercelRespon
     }
   } catch (error) {
     console.error('Visitor count API error:', error);
-    res.status(500).json({ error: 'Failed to process visitor count request', details: error.message });
+    res.status(500).json({ error: 'Failed to process visitor count request', details: error instanceof Error ? error.message : 'Unknown error' });
   }
 }
 

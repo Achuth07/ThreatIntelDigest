@@ -84,46 +84,229 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Articles API
   app.get('/api/articles', async (req, res) => {
-    const { mockReq, mockRes } = createMockHandlers(req, res, '/api/articles');
-    await consolidatedApiHandler(mockReq as any, mockRes as any);
+    const { default: articlesHandler } = await import('../api/articles');
+    // Create mock VercelRequest and VercelResponse objects
+    const mockReq = {
+      method: 'GET',
+      url: '/api/articles',
+      headers: req.headers,
+      query: req.query,
+    };
+    
+    const mockRes = {
+      status: (code: number) => {
+        res.status(code);
+        return mockRes;
+      },
+      json: (data: any) => {
+        res.json(data);
+        return mockRes;
+      },
+      send: (data: any) => {
+        res.send(data);
+        return mockRes;
+      }
+    };
+    
+    await articlesHandler(mockReq as any, mockRes as any);
   });
   
   // Bookmarks API
   app.get('/api/bookmarks', async (req, res) => {
-    const { mockReq, mockRes } = createMockHandlers(req, res, '/api/bookmarks');
-    await consolidatedApiHandler(mockReq as any, mockRes as any);
+    const { default: bookmarksHandler } = await import('../api/bookmarks');
+    // Create mock VercelRequest and VercelResponse objects
+    const mockReq = {
+      method: 'GET',
+      url: '/api/bookmarks',
+      headers: req.headers,
+      query: req.query,
+    };
+    
+    const mockRes = {
+      status: (code: number) => {
+        res.status(code);
+        return mockRes;
+      },
+      json: (data: any) => {
+        res.json(data);
+        return mockRes;
+      },
+      send: (data: any) => {
+        res.send(data);
+        return mockRes;
+      }
+    };
+    
+    await bookmarksHandler(mockReq as any, mockRes as any);
   });
   
   app.post('/api/bookmarks', async (req, res) => {
-    const { mockReq, mockRes } = createMockHandlers(req, res, '/api/bookmarks');
-    await consolidatedApiHandler(mockReq as any, mockRes as any);
-  });
-  
-  app.delete('/api/bookmarks/:articleId', async (req, res) => {
-    const { mockReq, mockRes } = createMockHandlers(req, res, `/api/bookmarks/${req.params.articleId}`);
-    await consolidatedApiHandler(mockReq as any, mockRes as any);
+    const { default: bookmarksHandler } = await import('../api/bookmarks');
+    // Create mock VercelRequest and VercelResponse objects
+    const mockReq = {
+      method: 'POST',
+      url: '/api/bookmarks',
+      headers: req.headers,
+      body: req.body,
+    };
+    
+    const mockRes = {
+      status: (code: number) => {
+        res.status(code);
+        return mockRes;
+      },
+      json: (data: any) => {
+        res.json(data);
+        return mockRes;
+      },
+      send: (data: any) => {
+        res.send(data);
+        return mockRes;
+      }
+    };
+    
+    await bookmarksHandler(mockReq as any, mockRes as any);
   });
   
   // User Source Preferences API
   app.get('/api/user-source-preferences', async (req, res) => {
-    const { mockReq, mockRes } = createMockHandlers(req, res, '/api/user-source-preferences');
-    await consolidatedApiHandler(mockReq as any, mockRes as any);
+    const { default: userSourcePreferencesHandler } = await import('../api/user-source-preferences');
+    // Create mock VercelRequest and VercelResponse objects
+    const mockReq = {
+      method: 'GET',
+      url: '/api/user-source-preferences',
+      headers: req.headers,
+      query: req.query,
+    };
+    
+    const mockRes = {
+      status: (code: number) => {
+        res.status(code);
+        return mockRes;
+      },
+      json: (data: any) => {
+        res.json(data);
+        return mockRes;
+      },
+      send: (data: any) => {
+        res.send(data);
+        return mockRes;
+      }
+    };
+    
+    await userSourcePreferencesHandler(mockReq as any, mockRes as any);
   });
   
   app.post('/api/user-source-preferences', async (req, res) => {
-    const { mockReq, mockRes } = createMockHandlers(req, res, '/api/user-source-preferences');
-    await consolidatedApiHandler(mockReq as any, mockRes as any);
+    const { default: userSourcePreferencesHandler } = await import('../api/user-source-preferences');
+    // Create mock VercelRequest and VercelResponse objects
+    const mockReq = {
+      method: 'POST',
+      url: '/api/user-source-preferences',
+      headers: req.headers,
+      body: req.body,
+    };
+    
+    const mockRes = {
+      status: (code: number) => {
+        res.status(code);
+        return mockRes;
+      },
+      json: (data: any) => {
+        res.json(data);
+        return mockRes;
+      },
+      send: (data: any) => {
+        res.send(data);
+        return mockRes;
+      }
+    };
+    
+    await userSourcePreferencesHandler(mockReq as any, mockRes as any);
   });
   
   app.delete('/api/user-source-preferences/:sourceId', async (req, res) => {
-    const { mockReq, mockRes } = createMockHandlers(req, res, `/api/user-source-preferences/${req.params.sourceId}`);
-    await consolidatedApiHandler(mockReq as any, mockRes as any);
+    const { default: userSourcePreferencesHandler } = await import('../api/user-source-preferences');
+    // Create mock VercelRequest and VercelResponse objects
+    const mockReq = {
+      method: 'DELETE',
+      url: `/api/user-source-preferences/${req.params.sourceId}`,
+      headers: req.headers,
+      query: req.query,
+    };
+    
+    const mockRes = {
+      status: (code: number) => {
+        res.status(code);
+        return mockRes;
+      },
+      json: (data: any) => {
+        res.json(data);
+        return mockRes;
+      },
+      send: (data: any) => {
+        res.send(data);
+        return mockRes;
+      }
+    };
+    
+    await userSourcePreferencesHandler(mockReq as any, mockRes as any);
+  });
+  
+  app.delete('/api/bookmarks/:articleId', async (req, res) => {
+    const { default: bookmarksHandler } = await import('../api/bookmarks');
+    // Create mock VercelRequest and VercelResponse objects
+    const mockReq = {
+      method: 'DELETE',
+      url: `/api/bookmarks/${req.params.articleId}`,
+      headers: req.headers,
+    };
+    
+    const mockRes = {
+      status: (code: number) => {
+        res.status(code);
+        return mockRes;
+      },
+      json: (data: any) => {
+        res.json(data);
+        return mockRes;
+      },
+      send: (data: any) => {
+        res.send(data);
+        return mockRes;
+      }
+    };
+    
+    await bookmarksHandler(mockReq as any, mockRes as any);
   });
   
   // Fetch feeds API
   app.post('/api/fetch-feeds', async (req, res) => {
-    const { mockReq, mockRes } = createMockHandlers(req, res, '/api/fetch-feeds');
-    await consolidatedApiHandler(mockReq as any, mockRes as any);
+    const { default: fetchFeedsHandler } = await import('../api/fetch-feeds');
+    // Create mock VercelRequest and VercelResponse objects
+    const mockReq = {
+      method: 'POST',
+      url: '/api/fetch-feeds',
+      headers: req.headers,
+      body: req.body,
+    };
+    
+    const mockRes = {
+      status: (code: number) => {
+        res.status(code);
+        return mockRes;
+      },
+      json: (data: any) => {
+        res.json(data);
+        return mockRes;
+      },
+      send: (data: any) => {
+        res.send(data);
+        return mockRes;
+      }
+    };
+    
+    await fetchFeedsHandler(mockReq as any, mockRes as any);
   });
   
   // Fetch Article Content
