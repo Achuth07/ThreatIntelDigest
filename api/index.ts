@@ -3024,6 +3024,20 @@ async function handleInitDb(req: VercelRequest, res: VercelResponse) {
     `);
     console.log('Vulnerabilities table created/verified');
     
+    // Create user_source_preferences table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS user_source_preferences (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        source_id UUID NOT NULL REFERENCES rss_sources(id) ON DELETE CASCADE,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        UNIQUE(user_id, source_id)
+      )
+    `);
+    console.log('User source preferences table created/verified');
+    
     // Create indexes for better performance
     console.log('Creating indexes...');
     
@@ -3051,18 +3065,32 @@ async function handleInitDb(req: VercelRequest, res: VercelResponse) {
       CREATE INDEX IF NOT EXISTS idx_vulnerabilities_modified ON vulnerabilities(last_modified_date DESC)
     `);
     
+    // Create indexes for user_source_preferences
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS idx_user_source_preferences_user_id ON user_source_preferences(user_id)
+    `);
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS idx_user_source_preferences_source_id ON user_source_preferences(source_id)
+    `);
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS idx_user_source_preferences_active ON user_source_preferences(is_active)
+    `);
+    
     console.log('Database initialization completed successfully');
     
     res.json({
       message: 'Database initialized successfully',
-      tables: ['articles', 'bookmarks', 'rss_sources', 'vulnerabilities'],
+      tables: ['articles', 'bookmarks', 'rss_sources', 'vulnerabilities', 'user_source_preferences'],
       indexes: [
         'idx_articles_source',
         'idx_articles_published_at', 
         'idx_articles_threat_level',
         'idx_bookmarks_article_id',
         'idx_vulnerabilities_severity',
-        'idx_vulnerabilities_modified'
+        'idx_vulnerabilities_modified',
+        'idx_user_source_preferences_user_id',
+        'idx_user_source_preferences_source_id',
+        'idx_user_source_preferences_active'
       ],
       timestamp: new Date().toISOString()
     });
