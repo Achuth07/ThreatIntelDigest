@@ -28,10 +28,15 @@ export function LoginPopup({ onLogin, onContinueAsGuest }: LoginPopupProps) {
 
   const handleGoogleLogin = () => {
     // For production deployment, use the full URL to the Vercel API endpoint
-    const isProduction = process.env.NODE_ENV === 'production';
+    // Check if we're in production by looking at the hostname
+    const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
     const authUrl = isProduction 
       ? 'https://threatfeed.whatcyber.com/api/auth?action=google'
       : '/api/auth?action=google';
+    console.log('Login - Environment Detection:');
+    console.log('  Hostname:', window.location.hostname);
+    console.log('  Is Production:', isProduction);
+    console.log('  Auth URL:', authUrl);
     window.location.href = authUrl;
   };
 

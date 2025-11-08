@@ -185,7 +185,7 @@ interface UserLoginRecord {
  * Get database connection
  * @returns Database connection
  */
-function getDb() {
+async function getDb() {
   const connectionString = process.env.DATABASE_URL;
   
   if (!connectionString) {
@@ -193,8 +193,8 @@ function getDb() {
   }
 
   // Import modules dynamically to avoid module loading issues
-  const { drizzle } = require('drizzle-orm/neon-serverless');
-  const { Pool } = require('@neondatabase/serverless');
+  const { drizzle } = await import('drizzle-orm/neon-serverless');
+  const { Pool } = await import('@neondatabase/serverless');
   
   const pool = new Pool({ connectionString });
   return drizzle(pool);
@@ -204,7 +204,7 @@ function getDb() {
  * Initialize the users table if it doesn't exist
  */
 async function initializeUsersTable() {
-  const db = getDb();
+  const db = await getDb();
   
   try {
     // Check if table exists by attempting to query it
@@ -240,7 +240,7 @@ async function initializeUsersTable() {
  * @returns User record
  */
 async function getOrCreateUser(googleId: string, name: string, email: string, avatar: string | null): Promise<UserLoginRecord> {
-  const db = getDb();
+  const db = await getDb();
   
   try {
     // Try to find existing user
@@ -384,13 +384,27 @@ async function handleGoogleCallback(req: VercelRequest, res: VercelResponse) {
   const { code } = req.query;
   
   // Determine the redirect URI based on environment
-  const isProduction = process.env.NODE_ENV === 'production';
+  // Use VERCAL_ENV for Vercel deployments, fallback to NODE_ENV
+  const isProduction = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
   const backendUrl = isProduction ? 'https://threatfeed.whatcyber.com' : 'http://localhost:5001';
   const frontendUrl = isProduction ? 'https://threatfeed.whatcyber.com' : 'http://localhost:5173';
   const redirectUri = `${backendUrl}/api/auth?action=callback`;
   
+  console.log('Environment Detection:');
+  console.log('  VERCEL_ENV:', process.env.VERCEL_ENV);
+  console.log('  NODE_ENV:', process.env.NODE_ENV);
+  console.log('  Is Production:', isProduction);
+  
+  console.log('Google Callback - Environment:', process.env.NODE_ENV);
+  console.log('Google Callback - Is Production:', isProduction);
+  console.log('Google Callback - Backend URL:', backendUrl);
+  console.log('Google Callback - Frontend URL:', frontendUrl);
+  console.log('Google Callback - Redirect URI:', redirectUri);
+  console.log('Google Callback - Received Code:', !!code);
+  
   if (!code) {
     // If there's no code, redirect to the frontend with an error
+    console.log('Google Callback - No code received, redirecting with error');
     res.redirect(`${frontendUrl}?error=authentication_failed`);
     return;
   }
@@ -465,18 +479,28 @@ async function handleGoogleCallback(req: VercelRequest, res: VercelResponse) {
     
     // Redirect to frontend with user data (URL encoded)
     const userDataString = encodeURIComponent(JSON.stringify(userData));
+    console.log('Google Callback - Redirecting with user data');
     res.redirect(`${frontendUrl}?user=${userDataString}`);
   } catch (error) {
     console.error('Authentication error:', error);
+    console.log('Google Callback - Redirecting with error');
     res.redirect(`${frontendUrl}?error=authentication_failed`);
   }
 }
 
 async function handleGoogleLogin(req: VercelRequest, res: VercelResponse) {
   // Determine the redirect URI based on environment
-  const isProduction = process.env.NODE_ENV === 'production';
+  // Use VERCAL_ENV for Vercel deployments, fallback to NODE_ENV
+  const isProduction = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
   const backendUrl = isProduction ? 'https://threatfeed.whatcyber.com' : 'http://localhost:5001';
   const redirectUri = `${backendUrl}/api/auth?action=callback`;
+  
+  console.log('Google Login - Environment Detection:');
+  console.log('  VERCEL_ENV:', process.env.VERCEL_ENV);
+  console.log('  NODE_ENV:', process.env.NODE_ENV);
+  console.log('  Is Production:', isProduction);
+  console.log('  Backend URL:', backendUrl);
+  console.log('  Redirect URI:', redirectUri);
   
   const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
     `client_id=${process.env.GOOGLE_CLIENT_ID || ''}` +
@@ -485,6 +509,7 @@ async function handleGoogleLogin(req: VercelRequest, res: VercelResponse) {
     `&scope=openid%20email%20profile` +
     `&access_type=offline`;
   
+  console.log('Google Login - Final Auth URL:', googleAuthUrl);
   res.redirect(googleAuthUrl);
 }
 
@@ -2530,7 +2555,66 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
       };
       try {
         console.log(`Fetching feed from ${source.name} (${source.url})...`);
-        const feed = await parser.parseURL(source.url as string);
+        
+        // Add timeout and handle SSL certificate issues by using fetch with custom options
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        let fetchErrorHandled = false;
+        let response;
+        try {
+          response = await fetch(source.url as string, {
+            signal: controller.signal,
+            headers: {
+              'User-Agent': process.env.RSS_USER_AGENT || 'ThreatIntelDigest/1.0 (+https://threatfeed.whatcyber.com)'
+            }
+          });
+          clearTimeout(timeoutId);
+        } catch (fetchError) {
+          clearTimeout(timeoutId);
+          // Handle SSL certificate errors specifically
+          if (fetchError instanceof Error && (fetchError.message.includes('unable to verify') || fetchError.message.includes('certificate'))) {
+            console.error(`SSL Certificate error for ${source.name}:`, fetchError.message);
+            sourceResult.errors.push(`SSL Certificate error: ${fetchError.message}`);
+            // Skip to next source instead of failing completely
+            feedResults.push(sourceResult);
+            fetchErrorHandled = true;
+          } 
+          // Handle timeout errors
+          else if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+            console.error(`Timeout error for ${source.name}: Request timed out`);
+            sourceResult.errors.push(`Timeout error: Request timed out`);
+            feedResults.push(sourceResult);
+            fetchErrorHandled = true;
+          } else {
+            throw fetchError;
+          }
+        }
+        
+        // If we handled an error, skip to the next source
+        if (fetchErrorHandled) {
+          continue;
+        }
+        
+        // At this point, response should be defined
+        if (response && !response.ok) {
+          const errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+          console.error(`HTTP error for ${source.name}:`, errorMessage);
+          // Handle 404 errors specifically
+          if (response.status === 404) {
+            sourceResult.errors.push(`Feed URL not found (404): The feed URL may be invalid or the source may have moved`);
+            feedResults.push(sourceResult);
+            continue;
+          }
+          throw new Error(errorMessage);
+        }
+        
+        if (!response) {
+          throw new Error('Response is undefined');
+        }
+        
+        const xmlText = await response.text();
+        const feed = await parser.parseString(xmlText);
         console.log(`Feed parsed successfully. Found ${feed.items.length} items`);
         
         sourceResult.itemsFound = feed.items.length;
@@ -2748,10 +2832,12 @@ async function handleDatabaseEndpoints(req: VercelRequest, res: VercelResponse, 
       return handleTestDbSteps(req, res);
     case 'initialize-sources':
       return handleInitializeSources(req, res);
+    case 'remove-test-source':
+      return handleRemoveTestSource(req, res);
     default:
       return res.status(400).json({ 
         error: 'Invalid action', 
-        availableActions: ['ping', 'check', 'init', 'test', 'test-steps', 'initialize-sources']
+        availableActions: ['ping', 'check', 'init', 'test', 'test-steps', 'initialize-sources', 'remove-test-source']
       });
   }
 }
@@ -2990,6 +3076,46 @@ async function handleInitDb(req: VercelRequest, res: VercelResponse) {
   }
 }
 
+async function handleRemoveTestSource(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
+
+  try {
+    if (!process.env.DATABASE_URL) {
+      return res.status(500).json({ 
+        error: 'DATABASE_URL environment variable is required'
+      });
+    }
+    
+    // Import modules dynamically
+    const { drizzle } = await import('drizzle-orm/neon-serverless');
+    const { Pool } = await import('@neondatabase/serverless');
+    const { sql } = await import('drizzle-orm');
+    
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const db = drizzle(pool);
+    
+    // Remove any source with "Test" in the name
+    const result = await db.execute(sql`
+      DELETE FROM rss_sources 
+      WHERE name ILIKE '%test%' OR url ILIKE '%test%'
+    `);
+    
+    res.json({
+      message: `Successfully removed ${result.rowCount || 0} test sources`,
+      removedCount: result.rowCount || 0
+    });
+    
+  } catch (error) {
+    console.error("Error removing test sources:", error);
+    res.status(500).json({ 
+      message: "Failed to remove test sources",
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
+
 // Test database functionality
 async function handleTestDb(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
@@ -3213,3 +3339,4 @@ async function handleInitializeSources(req: VercelRequest, res: VercelResponse) 
     });
   }
 }
+
