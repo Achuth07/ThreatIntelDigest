@@ -383,9 +383,15 @@ function verifyToken(token: string): any | null {
 async function handleGoogleCallback(req: VercelRequest, res: VercelResponse) {
   const { code } = req.query;
   
+  // Determine the redirect URI based on environment
+  const isProduction = process.env.NODE_ENV === 'production';
+  const backendUrl = isProduction ? 'https://threatfeed.whatcyber.com' : 'http://localhost:5001';
+  const frontendUrl = isProduction ? 'https://threatfeed.whatcyber.com' : 'http://localhost:5173';
+  const redirectUri = `${backendUrl}/api/auth?action=callback`;
+  
   if (!code) {
     // If there's no code, redirect to the frontend with an error
-    res.redirect('http://localhost:5173?error=authentication_failed');
+    res.redirect(`${frontendUrl}?error=authentication_failed`);
     return;
   }
   
@@ -404,7 +410,7 @@ async function handleGoogleCallback(req: VercelRequest, res: VercelResponse) {
         client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
         code: code as string,
         grant_type: 'authorization_code',
-        redirect_uri: 'http://localhost:5001/api/auth?action=callback',
+        redirect_uri: redirectUri,
       }),
     });
     
@@ -459,17 +465,22 @@ async function handleGoogleCallback(req: VercelRequest, res: VercelResponse) {
     
     // Redirect to frontend with user data (URL encoded)
     const userDataString = encodeURIComponent(JSON.stringify(userData));
-    res.redirect(`http://localhost:5173?user=${userDataString}`);
+    res.redirect(`${frontendUrl}?user=${userDataString}`);
   } catch (error) {
     console.error('Authentication error:', error);
-    res.redirect('http://localhost:5173?error=authentication_failed');
+    res.redirect(`${frontendUrl}?error=authentication_failed`);
   }
 }
 
 async function handleGoogleLogin(req: VercelRequest, res: VercelResponse) {
+  // Determine the redirect URI based on environment
+  const isProduction = process.env.NODE_ENV === 'production';
+  const backendUrl = isProduction ? 'https://threatfeed.whatcyber.com' : 'http://localhost:5001';
+  const redirectUri = `${backendUrl}/api/auth?action=callback`;
+  
   const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
     `client_id=${process.env.GOOGLE_CLIENT_ID || ''}` +
-    `&redirect_uri=http://localhost:5001/api/auth?action=callback` +
+    `&redirect_uri=${redirectUri}` +
     `&response_type=code` +
     `&scope=openid%20email%20profile` +
     `&access_type=offline`;
