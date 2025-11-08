@@ -33,6 +33,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { default: userManagementHandler } = await import('./user-management');
     return userManagementHandler(req, res);
   }
+  
+  if (pathname.startsWith('/api/user-source-preferences')) {
+    const { default: userSourcePreferencesHandler } = await import('./user-source-preferences');
+    return userSourcePreferencesHandler(req, res);
+  }
+  
+  if (pathname.startsWith('/api/vulnerabilities')) {
+    const { default: vulnerabilitiesHandler } = await import('./vulnerabilities');
+    return vulnerabilitiesHandler(req, res);
+  }
+  
+  if (pathname.startsWith('/api/fetch-cves')) {
+    const { default: fetchCvesHandler } = await import('./fetch-cves');
+    return fetchCvesHandler(req, res);
+  }
+  
+  if (pathname.startsWith('/api/database')) {
+    const { default: databaseHandler } = await import('./database');
+    return databaseHandler(req, res);
+  }
+  
+  if (pathname.startsWith('/api/auth')) {
+    const { default: authHandler } = await import('./auth');
+    return authHandler(req, res);
+  }
+  
+  if (pathname.startsWith('/api/fetch-article')) {
+    const { default: fetchArticleHandler } = await import('./fetch-article');
+    return fetchArticleHandler(req, res);
+  }
 
   res.status(404).json({ message: 'API endpoint not found' });
 }
