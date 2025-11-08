@@ -1,5 +1,50 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
+// Helper function to verify token
+function verifyToken(token: string): any | null {
+  try {
+    // Basic format check
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return null;
+    }
+    
+    const [encodedHeader, encodedPayload, signature] = parts;
+    const secret = process.env.SESSION_SECRET || 'fallback_secret_key_for_development_only';
+    
+    // Decode payload
+    const payload = JSON.parse(Buffer.from(encodedPayload, 'base64').toString());
+    
+    // Check if token has expired
+    const currentTime = Math.floor(Date.now() / 1000);
+    if (payload.exp && currentTime > payload.exp) {
+      return null;
+    }
+    
+    return payload;
+  } catch (error) {
+    console.error('Token verification error:', error);
+    return null;
+  }
+}
+
+// Helper function to get user ID from request
+function getUserIdFromRequest(req: VercelRequest): number | null {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+  
+  const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+  const payload = verifyToken(token);
+  
+  if (!payload || !payload.userId) {
+    return null;
+  }
+  
+  return payload.userId;
+}
+
 // In-memory storage for local development
 let inMemorySources: any[] = [
   {
@@ -126,6 +171,9 @@ let inMemorySources: any[] = [
   },
 ];
 
+// In-memory storage for user source preferences (local development)
+let inMemoryUserPreferences: any[] = [];
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     console.log(`${req.method} /api/sources - Starting request`);
@@ -136,9 +184,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       
       if (req.method === 'GET') {
         console.log('Fetching RSS sources from memory...');
-        const sources = inMemorySources.filter(source => source.isActive);
-        console.log(`Successfully fetched ${sources.length} sources`);
-        return res.json(sources);
+            
+        // Get user ID from request for user-specific sources
+        const userId = getUserIdFromRequest(req);
+            
+        if (userId) {
+          // For in-memory storage, we'll need to implement user preferences
+          // This is a simplified implementation for development only
+          const userPreferences = inMemoryUserPreferences.filter(p => p.userId === userId);
+              
+          const sources = inMemorySources.filter(source => source.isActive).map(source => {
+            const userPref = userPreferences.find(p => p.sourceId === source.id);
+            return {
+              ...source,
+              isActive: userPref ? userPref.isActive : true // Default to active if no preference
+            };
+          });
+              
+          console.log(`Successfully fetched ${sources.length} user-specific sources`);
+          return res.json(sources);
+        } else {
+          // Fetch all active sources for unauthenticated users
+          const sources = inMemorySources.filter(source => source.isActive);
+          console.log(`Successfully fetched ${sources.length} sources`);
+          return res.json(sources);
+        }
         
       } else if (req.method === 'POST') {
         console.log('Creating new RSS source in memory...');
@@ -228,24 +298,55 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     if (req.method === 'GET') {
       console.log('Fetching RSS sources...');
-      const result = await db.execute(sql`
-        SELECT id, name, url, icon, color, is_active, last_fetched
-        FROM rss_sources 
-        ORDER BY name ASC
-      `);
       
-      const sources = result.rows.map((row: any) => ({
-        id: row.id,
-        name: row.name,
-        url: row.url,
-        icon: row.icon,
-        color: row.color,
-        isActive: row.is_active,
-        lastFetched: row.last_fetched
-      }));
+      // Get user ID from request for user-specific sources
+      const userId = getUserIdFromRequest(req);
       
-      console.log(`Successfully fetched ${sources.length} sources`);
-      res.json(sources);
+      if (userId) {
+        // Fetch user-specific sources
+        const result = await db.execute(sql`
+          SELECT s.id, s.name, s.url, s.icon, s.color, s.is_active, s.last_fetched,
+                 p.is_active as user_active
+          FROM rss_sources s
+          LEFT JOIN user_source_preferences p ON s.id = p.source_id AND p.user_id = ${userId}
+          WHERE s.is_active = true
+          ORDER BY s.name ASC
+        `);
+        
+        const sources = result.rows.map((row: any) => ({
+          id: row.id,
+          name: row.name,
+          url: row.url,
+          icon: row.icon,
+          color: row.color,
+          isActive: row.user_active !== null ? row.user_active : true, // Default to active if no preference
+          lastFetched: row.last_fetched
+        }));
+        
+        console.log(`Successfully fetched ${sources.length} user-specific sources`);
+        res.json(sources);
+      } else {
+        // Fetch all active sources for unauthenticated users
+        const result = await db.execute(sql`
+          SELECT id, name, url, icon, color, is_active, last_fetched
+          FROM rss_sources 
+          WHERE is_active = true
+          ORDER BY name ASC
+        `);
+        
+        const sources = result.rows.map((row: any) => ({
+          id: row.id,
+          name: row.name,
+          url: row.url,
+          icon: row.icon,
+          color: row.color,
+          isActive: row.is_active,
+          lastFetched: row.last_fetched
+        }));
+        
+        console.log(`Successfully fetched ${sources.length} sources`);
+        res.json(sources);
+      }
       
     } else if (req.method === 'POST') {
       console.log('Creating new RSS source...');

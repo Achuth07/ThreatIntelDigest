@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AddSourcesDialog } from '@/components/add-sources-dialog';
 import { ConfirmationDialog } from '@/components/confirmation-dialog';
 import { exportBookmarks } from '@/lib/export-utils';
+import { getAuthenticatedUser } from '@/lib/auth';
 import type { RssSource } from '@shared/schema';
 
 interface SidebarProps {
@@ -37,13 +38,52 @@ export function Sidebar({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showAddSourcesDialog, setShowAddSourcesDialog] = useState(false);
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [sourceToDeactivate, setSourceToDeactivate] = useState<{ id: string; name: string } | null>(null);
   const [isSourcesCollapsed, setIsSourcesCollapsed] = useState(false);
+  const [userSources, setUserSources] = useState<RssSource[]>([]);
+  const [isLoadingSources, setIsLoadingSources] = useState(true);
 
-  const { data: sources = [], isLoading } = useQuery<RssSource[]>({
-    queryKey: ['/api/sources'],
-  });
+  // Get authenticated user
+  const user = getAuthenticatedUser();
+
+  // Fetch user-specific sources
+  useEffect(() => {
+    const fetchUserSources = async () => {
+      if (!user) {
+        // For unauthenticated users, fetch all active sources
+        try {
+          const response = await apiRequest('GET', '/api/sources');
+          const sources = await response.json();
+          setUserSources(sources);
+        } catch (error) {
+          console.error('Error fetching sources:', error);
+        } finally {
+          setIsLoadingSources(false);
+        }
+        return;
+      }
+
+      // For authenticated users, fetch user-specific sources
+      try {
+        const response = await apiRequest('GET', '/api/sources');
+        const sources = await response.json();
+        setUserSources(sources);
+      } catch (error) {
+        console.error('Error fetching user sources:', error);
+        // Fallback to all active sources
+        try {
+          const response = await apiRequest('GET', '/api/sources');
+          const sources = await response.json();
+          setUserSources(sources);
+        } catch (fallbackError) {
+          console.error('Error fetching fallback sources:', fallbackError);
+        }
+      } finally {
+        setIsLoadingSources(false);
+      }
+    };
+
+    fetchUserSources();
+  }, [user]);
 
   const refreshFeedsMutation = useMutation({
     mutationFn: () => apiRequest('POST', '/api/fetch-feeds'),
@@ -97,20 +137,17 @@ export function Sidebar({
     },
   });
 
-  const deactivateSourceMutation = useMutation({
-    mutationFn: (sourceId: string) => apiRequest('PATCH', `/api/sources?id=${sourceId}`, { isActive: false }),
+  const updateUserSourceMutation = useMutation({
+    mutationFn: ({ sourceId, isActive }: { sourceId: string; isActive: boolean }) => 
+      apiRequest('POST', '/api/user-source-preferences', { sourceId, isActive }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/sources'] });
       queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
-      toast({
-        title: "Source Deactivated",
-        description: "RSS source has been removed from sidebar and can be re-added from built-in sources",
-      });
     },
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to deactivate RSS source. Please try again.",
+        description: "Failed to update source preference. Please try again.",
         variant: "destructive",
       });
     },
@@ -124,20 +161,20 @@ export function Sidebar({
     }
   };
 
-  const handleDeactivateSource = (sourceId: string, sourceName: string) => {
-    setSourceToDeactivate({ id: sourceId, name: sourceName });
-    setShowConfirmDialog(true);
-  };
-
-  const confirmDeactivateSource = () => {
-    if (sourceToDeactivate) {
-      deactivateSourceMutation.mutate(sourceToDeactivate.id);
-      setSourceToDeactivate(null);
+  const handleToggleSource = (sourceId: string, currentActiveState: boolean) => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to customize your sources.",
+        variant: "destructive",
+      });
+      return;
     }
-  };
-
-  const cancelDeactivateSource = () => {
-    setSourceToDeactivate(null);
+    
+    updateUserSourceMutation.mutate({ 
+      sourceId, 
+      isActive: !currentActiveState 
+    });
   };
 
   const getSourceIcon = (iconClass: string | null | undefined) => {
@@ -152,12 +189,13 @@ export function Sidebar({
       'fas fa-shield-virus': <div className="w-5 h-5 bg-blue-600 rounded-sm flex items-center justify-center text-white text-xs">🛡</div>,
       'fas fa-search': <div className="w-5 h-5 bg-green-600 rounded-sm flex items-center justify-center text-white text-xs">🔍</div>,
       'fas fa-flash': <div className="w-5 h-5 bg-yellow-500 rounded-sm flex items-center justify-center text-white text-xs">⚡</div>,
+      'fas fa-microsoft': <div className="w-5 h-5 bg-blue-500 rounded-sm flex items-center justify-center text-white text-xs">M</div>,
     };
 
     return iconMap[iconClass] || <Rss className="w-5 h-5" />;
   };
 
-  if (isLoading) {
+  if (isLoadingSources) {
     return (
       <aside className="w-80 lg:w-80 bg-whatcyber-dark border-r border-whatcyber-light-gray/30 overflow-y-auto h-full">
         <div className="p-4 lg:p-6">
@@ -187,7 +225,7 @@ export function Sidebar({
     );
   }
 
-  const totalArticles = sources.reduce((sum, source) => sum + (source.isActive ? 10 : 0), 0); // Rough estimate
+  const totalArticles = userSources.reduce((sum, source) => sum + (source.isActive ? 10 : 0), 0); // Rough estimate
 
   return (
     <aside className="w-80 lg:w-80 bg-whatcyber-dark border-r border-whatcyber-light-gray/30 overflow-y-auto h-full">
@@ -345,7 +383,7 @@ export function Sidebar({
             </button>
 
             {/* Individual Sources */}
-            {sources.filter(source => source.isActive).map((source) => (
+            {userSources.map((source) => (
               <div
                 key={source.id}
                 className={`relative w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors group ${
@@ -368,17 +406,17 @@ export function Sidebar({
                   {source.isActive ? '10' : '0'}
                 </span>
                 
-                {/* Remove button - shown on hover */}
+                {/* Toggle button - shown on hover */}
                 <button
-                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-600 rounded text-red-400 hover:text-white"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-blue-600 rounded text-blue-400 hover:text-white"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleDeactivateSource(source.id, source.name);
+                    handleToggleSource(source.id, source.isActive ?? true);
                   }}
-                  title={`Remove ${source.name} from sidebar`}
-                  disabled={deactivateSourceMutation.isPending}
+                  title={source.isActive ? `Hide ${source.name}` : `Show ${source.name}`}
+                  disabled={updateUserSourceMutation.isPending}
                 >
-                  <Minus className="w-3 h-3" />
+                  {source.isActive ? <Minus className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
                 </button>
               </div>
             ))}
@@ -430,18 +468,7 @@ export function Sidebar({
         onOpenChange={setShowAddSourcesDialog}
       />
       
-      <ConfirmationDialog
-        open={showConfirmDialog}
-        onOpenChange={setShowConfirmDialog}
-        title="Remove RSS Source"
-        description={sourceToDeactivate ? `Remove "${sourceToDeactivate.name}" from your sidebar? You can re-add it later from the built-in sources list.` : ''}
-        confirmText="Remove Source"
-        cancelText="Keep Source"
-        variant="destructive"
-        onConfirm={confirmDeactivateSource}
-        onCancel={cancelDeactivateSource}
-        loading={deactivateSourceMutation.isPending}
-      />
+
     </aside>
   );
 }

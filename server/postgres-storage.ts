@@ -1,9 +1,9 @@
 import { and, desc, asc, ilike, inArray, eq } from 'drizzle-orm';
 import { getDb } from './db';
-import { articles, bookmarks, rssSources, vulnerabilities, users } from '../shared/schema';
+import { articles, bookmarks, rssSources, vulnerabilities, users, userSourcePreferences } from '../shared/schema';
 import type { IStorage, CVE, InsertCVE } from './storage';
 import type { Article, InsertArticle, Bookmark, InsertBookmark, RssSource, InsertRssSource } from '../shared/schema';
-import type { User, InsertUser } from '../shared/schema';
+import type { User, InsertUser, UserSourcePreference, InsertUserSourcePreference } from '../shared/schema';
 
 export class PostgresStorage implements IStorage {
   private db = getDb();
@@ -250,6 +250,86 @@ export class PostgresStorage implements IStorage {
       return result.length > 0;
     } catch (error) {
       console.error('Error checking if article is bookmarked:', error);
+      return false;
+    }
+  }
+
+  // User Source Preferences
+  async getUserSourcePreferences(userId: number): Promise<UserSourcePreference[]> {
+    try {
+      return await this.db.select().from(userSourcePreferences).where(eq(userSourcePreferences.userId, userId));
+    } catch (error) {
+      console.error('Error fetching user source preferences:', error);
+      return [];
+    }
+  }
+
+  async createUserSourcePreference(insertPreference: InsertUserSourcePreference): Promise<UserSourcePreference> {
+    try {
+      // Check if preference already exists
+      const existing = await this.db.select().from(userSourcePreferences).where(
+        and(
+          eq(userSourcePreferences.userId, insertPreference.userId),
+          eq(userSourcePreferences.sourceId, insertPreference.sourceId)
+        )
+      ).limit(1);
+      
+      // If preference already exists, update it
+      if (existing.length > 0) {
+        const result = await this.db.update(userSourcePreferences)
+          .set({ 
+            isActive: insertPreference.isActive ?? true,
+            updatedAt: new Date()
+          })
+          .where(
+            and(
+              eq(userSourcePreferences.userId, insertPreference.userId),
+              eq(userSourcePreferences.sourceId, insertPreference.sourceId)
+            )
+          )
+          .returning();
+        return result[0];
+      }
+      
+      // Create new preference
+      const result = await this.db.insert(userSourcePreferences).values(insertPreference).returning();
+      return result[0];
+    } catch (error) {
+      console.error('Error creating user source preference:', error);
+      throw error;
+    }
+  }
+
+  async updateUserSourcePreference(userId: number, sourceId: string, updatePreference: Partial<InsertUserSourcePreference>): Promise<UserSourcePreference> {
+    try {
+      const result = await this.db.update(userSourcePreferences)
+        .set(updatePreference)
+        .where(
+          and(
+            eq(userSourcePreferences.userId, userId),
+            eq(userSourcePreferences.sourceId, sourceId)
+          )
+        )
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error('Error updating user source preference:', error);
+      throw error;
+    }
+  }
+
+  async deleteUserSourcePreference(userId: number, sourceId: string): Promise<boolean> {
+    try {
+      const result = await this.db.delete(userSourcePreferences)
+        .where(
+          and(
+            eq(userSourcePreferences.userId, userId),
+            eq(userSourcePreferences.sourceId, sourceId)
+          )
+        );
+      return (result.rowCount || 0) > 0;
+    } catch (error) {
+      console.error('Error deleting user source preference:', error);
       return false;
     }
   }

@@ -220,6 +220,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     await bookmarksHandler(mockReq as any, mockRes as any);
   });
   
+  // User Source Preferences API
+  app.get('/api/user-source-preferences', async (req, res) => {
+    const { default: userSourcePreferencesHandler } = await import('../api/user-source-preferences');
+    // Create mock VercelRequest and VercelResponse objects
+    const mockReq = {
+      method: 'GET',
+      url: '/api/user-source-preferences',
+      headers: req.headers,
+      query: req.query,
+    };
+    
+    const mockRes = {
+      status: (code: number) => {
+        res.status(code);
+        return mockRes;
+      },
+      json: (data: any) => {
+        res.json(data);
+        return mockRes;
+      },
+      send: (data: any) => {
+        res.send(data);
+        return mockRes;
+      }
+    };
+    
+    await userSourcePreferencesHandler(mockReq as any, mockRes as any);
+  });
+  
+  app.post('/api/user-source-preferences', async (req, res) => {
+    const { default: userSourcePreferencesHandler } = await import('../api/user-source-preferences');
+    // Create mock VercelRequest and VercelResponse objects
+    const mockReq = {
+      method: 'POST',
+      url: '/api/user-source-preferences',
+      headers: req.headers,
+      body: req.body,
+    };
+    
+    const mockRes = {
+      status: (code: number) => {
+        res.status(code);
+        return mockRes;
+      },
+      json: (data: any) => {
+        res.json(data);
+        return mockRes;
+      },
+      send: (data: any) => {
+        res.send(data);
+        return mockRes;
+      }
+    };
+    
+    await userSourcePreferencesHandler(mockReq as any, mockRes as any);
+  });
+  
+  app.delete('/api/user-source-preferences/:sourceId', async (req, res) => {
+    const { default: userSourcePreferencesHandler } = await import('../api/user-source-preferences');
+    // Create mock VercelRequest and VercelResponse objects
+    const mockReq = {
+      method: 'DELETE',
+      url: `/api/user-source-preferences/${req.params.sourceId}`,
+      headers: req.headers,
+      query: req.query,
+    };
+    
+    const mockRes = {
+      status: (code: number) => {
+        res.status(code);
+        return mockRes;
+      },
+      json: (data: any) => {
+        res.json(data);
+        return mockRes;
+      },
+      send: (data: any) => {
+        res.send(data);
+        return mockRes;
+      }
+    };
+    
+    await userSourcePreferencesHandler(mockReq as any, mockRes as any);
+  });
+  
   app.delete('/api/bookmarks/:articleId', async (req, res) => {
     const { default: bookmarksHandler } = await import('../api/bookmarks');
     // Create mock VercelRequest and VercelResponse objects

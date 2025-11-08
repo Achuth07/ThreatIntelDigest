@@ -70,6 +70,15 @@ export const users = pgTable('users', {
   lastLoginAt: timestamp('last_login_at').defaultNow().notNull(),
 });
 
+export const userSourcePreferences = pgTable('user_source_preferences', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  sourceId: varchar('source_id').notNull().references(() => rssSources.id, { onDelete: 'cascade' }),
+  isActive: pgBoolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
 export const insertArticleSchema = createInsertSchema(articles, {
   title: z.string().min(1),
   url: z.string().url(),
@@ -128,6 +137,16 @@ export const insertUserSchema = createInsertSchema(users, {
   lastLoginAt: true,
 });
 
+export const insertUserSourcePreferenceSchema = createInsertSchema(userSourcePreferences, {
+  userId: z.number().int().positive(),
+  sourceId: z.string().min(1),
+  isActive: z.boolean().default(true),
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export type InsertArticle = z.infer<typeof insertArticleSchema>;
 export type Article = typeof articles.$inferSelect;
 export type InsertBookmark = z.infer<typeof insertBookmarkSchema>;
@@ -138,3 +157,5 @@ export type InsertVulnerability = z.infer<typeof insertVulnerabilitySchema>;
 export type Vulnerability = typeof vulnerabilities.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+export type InsertUserSourcePreference = z.infer<typeof insertUserSourcePreferenceSchema>;
+export type UserSourcePreference = typeof userSourcePreferences.$inferSelect;

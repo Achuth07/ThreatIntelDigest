@@ -109,3 +109,26 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+/**
+ * User source preferences API functions
+ */
+export const userSourcePreferencesApi = {
+  // Get user's source preferences
+  getUserSourcePreferences: async () => {
+    const response = await apiRequest('GET', '/api/user-source-preferences');
+    return response.json();
+  },
+  
+  // Add/update a source preference
+  updateUserSourcePreference: async (sourceId: string, isActive: boolean) => {
+    const response = await apiRequest('POST', '/api/user-source-preferences', { sourceId, isActive });
+    return response.json();
+  },
+  
+  // Remove a source preference
+  removeUserSourcePreference: async (sourceId: string) => {
+    const response = await apiRequest('DELETE', `/api/user-source-preferences?sourceId=${encodeURIComponent(sourceId)}`);
+    return response;
+  }
+};

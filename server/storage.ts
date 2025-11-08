@@ -1,4 +1,4 @@
-import { type Article, type InsertArticle, type Bookmark, type InsertBookmark, type RssSource, type InsertRssSource } from "@shared/schema";
+import { type Article, type InsertArticle, type Bookmark, type InsertBookmark, type RssSource, type InsertRssSource, type UserSourcePreference, type InsertUserSourcePreference } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 // Define CVE types for in-memory storage
@@ -32,7 +32,7 @@ interface InsertCVE {
 }
 
 // Re-export types for use in other files
-export { type Article, type InsertArticle, type Bookmark, type InsertBookmark, type RssSource, type InsertRssSource, type CVE, type InsertCVE };
+export { type Article, type InsertArticle, type Bookmark, type InsertBookmark, type RssSource, type InsertRssSource, type UserSourcePreference, type InsertUserSourcePreference, type CVE, type InsertCVE };
 
 export interface IStorage {
   // Articles
@@ -55,6 +55,12 @@ export interface IStorage {
   updateRssSource(id: string, source: Partial<InsertRssSource>): Promise<RssSource | undefined>;
   deleteRssSource(id: string): Promise<boolean>;
   
+  // User Source Preferences
+  getUserSourcePreferences(userId: number): Promise<UserSourcePreference[]>;
+  createUserSourcePreference(preference: InsertUserSourcePreference): Promise<UserSourcePreference>;
+  updateUserSourcePreference(userId: number, sourceId: string, preference: Partial<InsertUserSourcePreference>): Promise<UserSourcePreference | undefined>;
+  deleteUserSourcePreference(userId: number, sourceId: string): Promise<boolean>;
+  
   // CVE/Vulnerabilities
   getCVEs(params?: { limit?: number; offset?: number; severity?: string; sort?: string }): Promise<CVE[]>;
   getCVE(id: string): Promise<CVE | undefined>;
@@ -67,12 +73,14 @@ export class MemStorage implements IStorage {
   private bookmarks: Map<string, Bookmark>;
   private rssSources: Map<string, RssSource>;
   private cves: Map<string, CVE>;
+  private userSourcePreferences: Map<string, UserSourcePreference>;
 
   constructor() {
     this.articles = new Map();
     this.bookmarks = new Map();
     this.rssSources = new Map();
     this.cves = new Map();
+    this.userSourcePreferences = new Map();
     this.initializeDefaultSources();
   }
 
@@ -344,6 +352,71 @@ export class MemStorage implements IStorage {
 
   async deleteRssSource(id: string): Promise<boolean> {
     return this.rssSources.delete(id);
+  }
+
+  // User Source Preferences
+  async getUserSourcePreferences(userId: number): Promise<UserSourcePreference[]> {
+    const preferences: UserSourcePreference[] = [];
+    for (const preference of Array.from(this.userSourcePreferences.values())) {
+      if (preference.userId === userId) {
+        preferences.push(preference);
+      }
+    }
+    return preferences;
+  }
+
+  async createUserSourcePreference(insertPreference: InsertUserSourcePreference): Promise<UserSourcePreference> {
+    // Generate a numeric ID for in-memory storage
+    const id = Math.max(0, ...Array.from(this.userSourcePreferences.keys()).map(k => parseInt(k)), 0) + 1;
+    const preference: UserSourcePreference = { 
+      id,
+      userId: insertPreference.userId,
+      sourceId: insertPreference.sourceId,
+      isActive: insertPreference.isActive ?? true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.userSourcePreferences.set(id.toString(), preference);
+    return preference;
+  }
+
+  async updateUserSourcePreference(userId: number, sourceId: string, updatePreference: Partial<InsertUserSourcePreference>): Promise<UserSourcePreference | undefined> {
+    // Find existing preference
+    let existing: UserSourcePreference | undefined;
+    let existingId: string | undefined;
+    
+    for (const [id, preference] of Array.from(this.userSourcePreferences.entries())) {
+      if (preference.userId === userId && preference.sourceId === sourceId) {
+        existing = preference;
+        existingId = id;
+        break;
+      }
+    }
+    
+    if (!existing || !existingId) return undefined;
+
+    const updated: UserSourcePreference = { 
+      ...existing, 
+      ...updatePreference,
+      updatedAt: new Date(),
+    };
+    this.userSourcePreferences.set(existingId, updated);
+    return updated;
+  }
+
+  async deleteUserSourcePreference(userId: number, sourceId: string): Promise<boolean> {
+    // Find existing preference
+    let existingId: string | undefined;
+    
+    for (const [id, preference] of Array.from(this.userSourcePreferences.entries())) {
+      if (preference.userId === userId && preference.sourceId === sourceId) {
+        existingId = id;
+        break;
+      }
+    }
+    
+    if (!existingId) return false;
+    return this.userSourcePreferences.delete(existingId);
   }
 
   // CVE/Vulnerabilities
