@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { sql } from 'drizzle-orm';
 
 // Consolidated API handler that handles all endpoints through action-based routing
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -132,33 +133,7 @@ let inMemorySources: any[] = [
 // In-memory storage for user source preferences (local development)
 let inMemoryUserPreferences: any[] = [];
 
-// Helper function to verify token
-function verifyToken(token: string): any | null {
-  try {
-    // Basic format check
-    const parts = token.split('.');
-    if (parts.length !== 3) {
-      return null;
-    }
-    
-    const [encodedHeader, encodedPayload, signature] = parts;
-    const secret = process.env.SESSION_SECRET || 'fallback_secret_key_for_development_only';
-    
-    // Decode payload
-    const payload = JSON.parse(Buffer.from(encodedPayload, 'base64').toString());
-    
-    // Check if token has expired
-    const currentTime = Math.floor(Date.now() / 1000);
-    if (payload.exp && currentTime > payload.exp) {
-      return null;
-    }
-    
-    return payload;
-  } catch (error) {
-    console.error('Token verification error:', error);
-    return null;
-  }
-}
+
 
 // Helper function to get user ID from request
 function getUserIdFromRequest(req: any): number | null {
@@ -177,8 +152,377 @@ function getUserIdFromRequest(req: any): number | null {
   return payload.userId;
 }
 
+import { pgTable, serial, varchar, text, timestamp } from 'drizzle-orm/pg-core';
+import { eq } from 'drizzle-orm';
+import * as crypto from 'crypto';
+
+// Define the users table schema directly
+const users = pgTable('users', {
+  id: serial('id').primaryKey(),
+  googleId: varchar('google_id', { length: 255 }).unique().notNull(),
+  name: text('name').notNull(),
+  email: text('email').notNull(),
+  avatar: text('avatar'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  lastLoginAt: timestamp('last_login_at').defaultNow().notNull(),
+});
+
+// Admin email from environment variable
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'achuthchandra07@gmail.com'; // Fallback for development only
+
+// Simple interface for user tracking data
+interface UserLoginRecord {
+  id: number;
+  googleId: string;
+  name: string;
+  email: string;
+  avatar: string | null;
+  createdAt: Date;
+  lastLoginAt: Date;
+}
+
+/**
+ * Get database connection
+ * @returns Database connection
+ */
+function getDb() {
+  const connectionString = process.env.DATABASE_URL;
+  
+  if (!connectionString) {
+    throw new Error('DATABASE_URL environment variable is required');
+  }
+
+  // Import modules dynamically to avoid module loading issues
+  const { drizzle } = require('drizzle-orm/neon-serverless');
+  const { Pool } = require('@neondatabase/serverless');
+  
+  const pool = new Pool({ connectionString });
+  return drizzle(pool);
+}
+
+/**
+ * Initialize the users table if it doesn't exist
+ */
+async function initializeUsersTable() {
+  const db = getDb();
+  
+  try {
+    // Check if table exists by attempting to query it
+    await db.execute(sql`SELECT 1 FROM users LIMIT 1`);
+  } catch (error) {
+    // If table doesn't exist, create it
+    if (error instanceof Error && error.message.includes('relation "users" does not exist')) {
+      console.log('Creating users table...');
+      await db.execute(sql`
+        CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          google_id VARCHAR(255) UNIQUE NOT NULL,
+          name TEXT NOT NULL,
+          email TEXT NOT NULL,
+          avatar TEXT,
+          created_at TIMESTAMP DEFAULT NOW() NOT NULL,
+          last_login_at TIMESTAMP DEFAULT NOW() NOT NULL
+        )
+      `);
+      console.log('Users table created successfully');
+    } else {
+      throw error;
+    }
+  }
+}
+
+/**
+ * Get or create a user record in the database
+ * @param googleId Google user ID
+ * @param name User's name
+ * @param email User's email
+ * @param avatar User's avatar URL
+ * @returns User record
+ */
+async function getOrCreateUser(googleId: string, name: string, email: string, avatar: string | null): Promise<UserLoginRecord> {
+  const db = getDb();
+  
+  try {
+    // Try to find existing user
+    const existingUsers = await db.select().from(users).where(eq(users.googleId, googleId)).limit(1);
+    
+    if (existingUsers.length > 0) {
+      const existingUser = existingUsers[0];
+      // Update last login time
+      const updatedUsers = await db.update(users)
+        .set({ lastLoginAt: new Date() })
+        .where(eq(users.id, existingUser.id))
+        .returning();
+      
+      const updatedUser = updatedUsers[0];
+      return {
+        id: updatedUser.id,
+        googleId: updatedUser.googleId,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        avatar: updatedUser.avatar || null,
+        createdAt: updatedUser.createdAt,
+        lastLoginAt: updatedUser.lastLoginAt,
+      };
+    } else {
+      // Create new user
+      const newUsers = await db.insert(users).values({
+        googleId,
+        name,
+        email,
+        avatar: avatar || null,
+      }).returning();
+      
+      const newUser = newUsers[0];
+      return {
+        id: newUser.id,
+        googleId: newUser.googleId,
+        name: newUser.name,
+        email: newUser.email,
+        avatar: newUser.avatar || null,
+        createdAt: newUser.createdAt,
+        lastLoginAt: newUser.lastLoginAt,
+      };
+    }
+  } catch (error) {
+    console.error('Error in getOrCreateUser:', error);
+    throw error;
+  }
+}
+
+/**
+ * Generate a secure JWT token
+ * @param payload Data to include in the token
+ * @returns Token string
+ */
+function generateToken(payload: any): string {
+  const secret = process.env.SESSION_SECRET || 'fallback_secret_key_for_development_only';
+  const header = { alg: 'HS256', typ: 'JWT' };
+  
+  // Add issued at time and ensure expiration is a number
+  const fullPayload = {
+    ...payload,
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor((Date.now() + 24 * 60 * 60 * 1000) / 1000) // 24 hours in seconds
+  };
+  
+  const encodedHeader = Buffer.from(JSON.stringify(header)).toString('base64').replace(/=/g, '');
+  const encodedPayload = Buffer.from(JSON.stringify(fullPayload)).toString('base64').replace(/=/g, '');
+  
+  // Create signature using HMAC-SHA256
+  const signature = crypto
+    .createHmac('sha256', secret)
+    .update(`${encodedHeader}.${encodedPayload}`)
+    .digest('base64')
+    .replace(/=/g, '');
+  
+  return `${encodedHeader}.${encodedPayload}.${signature}`;
+}
+
+/**
+ * Verify a token with enhanced security checks
+ * @param token Token to verify
+ * @returns Decoded payload or null if invalid
+ */
+function verifyToken(token: string): any | null {
+  try {
+    // Basic format check
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return null;
+    }
+    
+    const [encodedHeader, encodedPayload, signature] = parts;
+    const secret = process.env.SESSION_SECRET || 'fallback_secret_key_for_development_only';
+    
+    // Verify signature using timing-safe comparison
+    const expectedSignature = crypto
+      .createHmac('sha256', secret)
+      .update(`${encodedHeader}.${encodedPayload}`)
+      .digest('base64')
+      .replace(/=/g, '');
+    
+    // Use timingSafeEqual to prevent timing attacks
+    try {
+      const expectedSigBuffer = Buffer.from(expectedSignature);
+      const actualSigBuffer = Buffer.from(signature);
+      
+      // Ensure buffers are same length for timingSafeEqual
+      if (expectedSigBuffer.length !== actualSigBuffer.length) {
+        return null;
+      }
+      
+      if (!crypto.timingSafeEqual(expectedSigBuffer, actualSigBuffer)) {
+        return null;
+      }
+    } catch (e) {
+      return null;
+    }
+    
+    // Decode payload
+    const payload = JSON.parse(Buffer.from(encodedPayload, 'base64').toString());
+    
+    // Check if token has expired
+    const currentTime = Math.floor(Date.now() / 1000);
+    if (payload.exp && currentTime > payload.exp) {
+      return null;
+    }
+    
+    // Check if issued at time is in the future (prevents future tokens)
+    if (payload.iat && payload.iat > currentTime + 60) { // Allow 1 minute clock skew
+      return null;
+    }
+    
+    return payload;
+  } catch (error) {
+    console.error('Token verification error:', error);
+    return null;
+  }
+}
+
+async function handleGoogleCallback(req: VercelRequest, res: VercelResponse) {
+  const { code } = req.query;
+  
+  if (!code) {
+    // If there's no code, redirect to the frontend with an error
+    res.redirect('http://localhost:5173?error=authentication_failed');
+    return;
+  }
+  
+  try {
+    // Initialize users table if it doesn't exist
+    await initializeUsersTable();
+    
+    // Exchange the code for an access token
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID || '',
+        client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
+        code: code as string,
+        grant_type: 'authorization_code',
+        redirect_uri: 'http://localhost:5001/api/auth?action=callback',
+      }),
+    });
+    
+    if (!tokenResponse.ok) {
+      throw new Error(`Token exchange failed: ${tokenResponse.status}`);
+    }
+    
+    const tokenData = await tokenResponse.json();
+    
+    // Get user profile information
+    const profileResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: {
+        'Authorization': `Bearer ${tokenData.access_token}`,
+      },
+    });
+    
+    if (!profileResponse.ok) {
+      throw new Error(`Profile fetch failed: ${profileResponse.status}`);
+    }
+    
+    const profile = await profileResponse.json();
+    
+    // Save user to database using our tracking utility
+    const user = await getOrCreateUser(
+      profile.id,
+      profile.name,
+      profile.email,
+      profile.picture
+    );
+    
+    // Generate authentication token
+    const tokenPayload = {
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      isAdmin: user.email === ADMIN_EMAIL,
+      exp: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+    };
+    
+    const token = generateToken(tokenPayload);
+    
+    // Prepare user data for frontend
+    const userData = {
+      id: user.id,
+      googleId: user.googleId,
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar,
+      isAdmin: user.email === ADMIN_EMAIL,
+      token: token
+    };
+    
+    // Redirect to frontend with user data (URL encoded)
+    const userDataString = encodeURIComponent(JSON.stringify(userData));
+    res.redirect(`http://localhost:5173?user=${userDataString}`);
+  } catch (error) {
+    console.error('Authentication error:', error);
+    res.redirect('http://localhost:5173?error=authentication_failed');
+  }
+}
+
+async function handleGoogleLogin(req: VercelRequest, res: VercelResponse) {
+  const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+    `client_id=${process.env.GOOGLE_CLIENT_ID || ''}` +
+    `&redirect_uri=http://localhost:5001/api/auth?action=callback` +
+    `&response_type=code` +
+    `&scope=openid%20email%20profile` +
+    `&access_type=offline`;
+  
+  res.redirect(googleAuthUrl);
+}
+
+// Handler for checking authentication status
+async function handleAuthStatus(req: VercelRequest, res: VercelResponse) {
+  // Since we're using localStorage for authentication data in the frontend,
+  // we can't actually check a server-side session state in this simple implementation.
+  // In a real implementation, we would check the session or JWT here.
+  res.status(200).json({ 
+    isAuthenticated: false,
+    message: 'Authentication status should be checked via localStorage in the frontend. This endpoint is not used in the current implementation.' 
+  });
+}
+
+// Handler for logging out
+async function handleLogout(req: VercelRequest, res: VercelResponse) {
+  res.status(200).json({ 
+    message: 'Logged out successfully. User data is cleared from localStorage.' 
+  });
+}
+
 async function handleAuthEndpoints(req: VercelRequest, res: VercelResponse, action: string) {
-  res.status(501).json({ message: 'Auth endpoint not implemented in consolidated version' });
+  // Check if required environment variables are set
+  if (!process.env.DATABASE_URL) {
+    return res.status(500).json({ 
+      error: 'Database not configured',
+      message: 'DATABASE_URL environment variable is not set'
+    });
+  }
+
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    return res.status(500).json({ 
+      error: 'Google OAuth not configured',
+      message: 'GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables are required'
+    });
+  }
+
+  switch (action) {
+    case 'google':
+      return handleGoogleLogin(req, res);
+    case 'callback':
+      return handleGoogleCallback(req, res);
+    case 'status':
+      return handleAuthStatus(req, res);
+    case 'logout':
+      return handleLogout(req, res);
+    default:
+      res.status(400).json({ error: 'Invalid action parameter' });
+  }
 }
 
 async function handleSourcesEndpoints(req: VercelRequest, res: VercelResponse, action: string) {
@@ -694,12 +1038,644 @@ async function handleArticlesEndpoints(req: VercelRequest, res: VercelResponse, 
   }
 }
 
+// In-memory storage for local development
+let inMemoryBookmarks: any[] = [];
+
+// Simplified bookmark storage implementation for Vercel
+class SimpleBookmarkStorage {
+  async getBookmarks(userId: number): Promise<any[]> {
+    if (!process.env.DATABASE_URL) {
+      // Return in-memory bookmarks filtered by userId
+      return inMemoryBookmarks.filter(b => b.userId === userId);
+    }
+    
+    // For Vercel, we'll need to import modules dynamically
+    try {
+      const { drizzle } = await import('drizzle-orm/neon-serverless');
+      const { Pool } = await import('@neondatabase/serverless');
+      const { sql } = await import('drizzle-orm');
+      
+      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+      const db = drizzle(pool);
+      
+      // Query bookmarks table
+      const result = await db.execute(sql`
+        SELECT id, article_id, user_id, created_at 
+        FROM bookmarks 
+        WHERE user_id = ${userId}
+        ORDER BY created_at DESC
+      `);
+      
+      return result.rows.map((row: any) => ({
+        id: row.id,
+        articleId: row.article_id,
+        userId: row.user_id,
+        createdAt: row.created_at
+      }));
+    } catch (error) {
+      console.error('Error fetching bookmarks:', error);
+      return [];
+    }
+  }
+  
+  async getBookmarksWithArticles(userId: number): Promise<any[]> {
+    if (!process.env.DATABASE_URL) {
+      // For in-memory storage, we don't have articles, so return bookmarks only
+      return inMemoryBookmarks.filter(b => b.userId === userId);
+    }
+    
+    // For Vercel, we'll need to import modules dynamically
+    try {
+      const { drizzle } = await import('drizzle-orm/neon-serverless');
+      const { Pool } = await import('@neondatabase/serverless');
+      const { sql } = await import('drizzle-orm');
+      
+      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+      const db = drizzle(pool);
+      
+      // Query bookmarks with articles
+      const result = await db.execute(sql`
+        SELECT 
+          b.id as bookmark_id,
+          b.article_id,
+          b.user_id,
+          b.created_at as bookmark_created_at,
+          a.id as article_id,
+          a.title,
+          a.summary,
+          a.url,
+          a.source,
+          a.threat_level,
+          a.tags,
+          a.read_time,
+          a.published_at,
+          a.created_at as article_created_at
+        FROM bookmarks b
+        INNER JOIN articles a ON b.article_id = a.id
+        WHERE b.user_id = ${userId}
+        ORDER BY b.created_at DESC
+      `);
+      
+      return result.rows.map((row: any) => ({
+        bookmark: {
+          id: row.bookmark_id,
+          articleId: row.article_id,
+          userId: row.user_id,
+          createdAt: row.bookmark_created_at
+        },
+        article: {
+          id: row.article_id,
+          title: row.title,
+          summary: row.summary,
+          url: row.url,
+          source: row.source,
+          threatLevel: row.threat_level,
+          tags: row.tags || [],
+          readTime: row.read_time,
+          publishedAt: row.published_at,
+          createdAt: row.article_created_at
+        }
+      }));
+    } catch (error) {
+      console.error('Error fetching bookmarks with articles:', error);
+      return [];
+    }
+  }
+  
+  async createBookmark(data: { articleId: string; userId: number }): Promise<any> {
+    if (!process.env.DATABASE_URL) {
+      // Check if bookmark already exists
+      const existingBookmarkIndex = inMemoryBookmarks.findIndex(
+        bookmark => bookmark.articleId === data.articleId && bookmark.userId === data.userId
+      );
+      
+      // If bookmark already exists, return it instead of creating a duplicate
+      if (existingBookmarkIndex !== -1) {
+        return inMemoryBookmarks[existingBookmarkIndex];
+      }
+      
+      // Create new bookmark
+      const newBookmark = {
+        ...data,
+        id: String(inMemoryBookmarks.length + 1),
+        createdAt: new Date().toISOString()
+      };
+      inMemoryBookmarks.push(newBookmark);
+      return newBookmark;
+    }
+    
+    // For Vercel, we'll need to import modules dynamically
+    try {
+      const { drizzle } = await import('drizzle-orm/neon-serverless');
+      const { Pool } = await import('@neondatabase/serverless');
+      const { sql } = await import('drizzle-orm');
+      
+      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+      const db = drizzle(pool);
+      
+      // Check if bookmark already exists
+      const existingResult = await db.execute(sql`
+        SELECT id FROM bookmarks 
+        WHERE article_id = ${data.articleId} AND user_id = ${data.userId}
+        LIMIT 1
+      `);
+      
+      // If bookmark already exists, return it
+      if (existingResult.rows.length > 0) {
+        const existingRow = existingResult.rows[0];
+        return {
+          id: existingRow.id,
+          articleId: data.articleId,
+          userId: data.userId,
+          createdAt: existingRow.created_at
+        };
+      }
+      
+      // Insert bookmark
+      const result = await db.execute(sql`
+        INSERT INTO bookmarks (article_id, user_id)
+        VALUES (${data.articleId}, ${data.userId})
+        RETURNING id, article_id, user_id, created_at
+      `);
+      
+      const row = result.rows[0];
+      return {
+        id: row.id,
+        articleId: row.article_id,
+        userId: row.user_id,
+        createdAt: row.created_at
+      };
+    } catch (error) {
+      console.error('Error creating bookmark:', error);
+      throw error;
+    }
+  }
+  
+  async deleteBookmark(articleId: string, userId: number): Promise<boolean> {
+    if (!process.env.DATABASE_URL) {
+      // Delete from in-memory storage
+      const bookmarkIndex = inMemoryBookmarks.findIndex(
+        bookmark => bookmark.articleId === articleId && bookmark.userId === userId
+      );
+      
+      if (bookmarkIndex !== -1) {
+        inMemoryBookmarks.splice(bookmarkIndex, 1);
+        return true;
+      }
+      return false;
+    }
+    
+    // For Vercel, we'll need to import modules dynamically
+    try {
+      const { drizzle } = await import('drizzle-orm/neon-serverless');
+      const { Pool } = await import('@neondatabase/serverless');
+      const { sql } = await import('drizzle-orm');
+      
+      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+      const db = drizzle(pool);
+      
+      // Delete bookmark
+      const result = await db.execute(sql`
+        DELETE FROM bookmarks 
+        WHERE article_id = ${articleId} AND user_id = ${userId}
+      `);
+      
+      return (result.rowCount || 0) > 0;
+    } catch (error) {
+      console.error('Error deleting bookmark:', error);
+      return false;
+    }
+  }
+}
+
 async function handleBookmarksEndpoints(req: VercelRequest, res: VercelResponse, action: string) {
-  res.status(501).json({ message: 'Bookmarks endpoint not implemented in consolidated version' });
+  console.log(`Bookmark API ${req.method} ${req.url}`);
+  
+  // Get user ID from request (for authenticated endpoints)
+  const userId = getUserIdFromRequest(req);
+  
+  // Create storage instance
+  const storage = new SimpleBookmarkStorage();
+  
+  // Use in-memory storage when no DATABASE_URL is provided
+  if (!process.env.DATABASE_URL) {
+    console.log('Using in-memory storage for bookmarks');
+    
+    if (req.method === 'GET') {
+      try {
+        // For in-memory storage, we'll need to modify the structure to support user-specific bookmarks
+        // This is a simplified implementation for development only
+        const userBookmarks = userId ? inMemoryBookmarks.filter(b => b.userId === userId) : inMemoryBookmarks;
+        
+        const { export: isExport } = req.query;
+        
+        if (isExport === 'true') {
+          // Export bookmarks with full article details
+          const exportData = {
+            exportedAt: new Date().toISOString(),
+            totalBookmarks: userBookmarks.length,
+            bookmarks: userBookmarks.map(bookmark => ({
+              title: bookmark.title,
+              summary: bookmark.summary,
+              url: bookmark.url,
+              source: bookmark.source,
+              publishedAt: bookmark.publishedAt,
+              threatLevel: bookmark.threatLevel,
+              tags: bookmark.tags,
+              bookmarkedAt: bookmark.createdAt
+            }))
+          };
+          
+          res.setHeader('Content-Type', 'application/json');
+          res.setHeader('Content-Disposition', `attachment; filename="cyberfeed-bookmarks-${new Date().toISOString().split('T')[0]}.json"`);
+          return res.json(exportData);
+        } else {
+          // Regular bookmarks fetch
+          return res.json(userBookmarks);
+        }
+      } catch (error) {
+        return res.status(500).json({ message: "Failed to fetch bookmarks" });
+      }
+    } else if (req.method === 'POST') {
+      // Require authentication for creating bookmarks
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      try {
+        // For validation, we only need to check the articleId since userId comes from auth
+        const { articleId } = req.body;
+        if (!articleId) {
+          return res.status(400).json({ message: "Article ID is required" });
+        }
+        
+        const newBookmark = await storage.createBookmark({ articleId, userId });
+        return res.status(201).json(newBookmark);
+      } catch (error) {
+        return res.status(400).json({ message: "Invalid bookmark data" });
+      }
+    } else if (req.method === 'DELETE') {
+      // Require authentication for deleting bookmarks
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      try {
+        // Parse the article ID from query parameters or URL path
+        let articleId: string | undefined;
+        
+        // First check query parameters
+        if (req.query && req.query.articleId) {
+          articleId = req.query.articleId as string;
+        } else {
+          // Fallback to URL path parsing
+          const { pathname } = new URL(req.url!, `https://${req.headers.host}`);
+          console.log('DELETE request pathname:', pathname);
+          
+          // Extract article ID from path like /api/bookmarks/article-id
+          const pathParts = pathname.split('/');
+          const lastPart = pathParts[pathParts.length - 1];
+          
+          // Validate that we have an article ID
+          if (lastPart && lastPart !== 'bookmarks') {
+            articleId = lastPart;
+          }
+        }
+        
+        // Validate that we have an article ID
+        if (!articleId) {
+          console.log('Article ID is required');
+          return res.status(400).json({ message: "Article ID is required" });
+        }
+        
+        console.log('Deleting bookmark for article:', articleId, 'user:', userId);
+        
+        const deleted = await storage.deleteBookmark(articleId, userId);
+        
+        if (deleted) {
+          return res.json({ message: "Bookmark removed successfully" });
+        } else {
+          console.log('Bookmark not found for article:', articleId, 'user:', userId);
+          return res.status(404).json({ message: "Bookmark not found" });
+        }
+      } catch (error) {
+        console.error('Error removing bookmark:', error);
+        return res.status(500).json({ message: "Failed to remove bookmark" });
+      }
+    } else {
+      console.log(`Method ${req.method} not allowed for in-memory storage`);
+      return res.status(405).json({ message: 'Method not allowed' });
+    }
+  }
+  
+  // Use database storage when DATABASE_URL is provided
+  if (req.method === 'GET') {
+    // For GET requests, we'll allow unauthenticated requests to maintain backward compatibility
+    // but will only return bookmarks for the authenticated user if provided
+    try {
+      const { export: isExport } = req.query;
+      
+      if (isExport === 'true') {
+        // Export bookmarks with full article details
+        // Note: For simplicity in Vercel environment, we're not implementing full export with articles
+        const bookmarks = userId ? await storage.getBookmarks(userId) : [];
+        
+        // Format for export
+        const exportData = {
+          exportedAt: new Date().toISOString(),
+          totalBookmarks: bookmarks.length,
+          bookmarks: bookmarks.map((bookmark: any) => ({
+            // Simplified export format for Vercel environment
+            articleId: bookmark.articleId,
+            bookmarkedAt: bookmark.createdAt
+          }))
+        };
+        
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', `attachment; filename="cyberfeed-bookmarks-${new Date().toISOString().split('T')[0]}.json"`);
+        res.json(exportData);
+      } else if (req.query.withArticles === 'true') {
+        // Fetch bookmarks with associated articles
+        if (!userId) {
+          return res.status(401).json({ message: "Authentication required" });
+        }
+        
+        try {
+          const bookmarksWithArticles = await storage.getBookmarksWithArticles(userId);
+          res.json(bookmarksWithArticles);
+        } catch (error) {
+          console.error('Error fetching bookmarks with articles:', error);
+          res.status(500).json({ message: "Failed to fetch bookmarks with articles" });
+        }
+      } else {
+        // Regular bookmarks fetch
+        const bookmarks = userId ? await storage.getBookmarks(userId) : [];
+        res.json(bookmarks);
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch bookmarks" });
+    }
+  } else if (req.method === 'POST') {
+    // Require authentication for creating bookmarks
+    if (!userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    try {
+      // For validation, we only need to check the articleId since userId comes from auth
+      const { articleId } = req.body;
+      if (!articleId) {
+        return res.status(400).json({ message: "Article ID is required" });
+      }
+      
+      const bookmark = await storage.createBookmark({ articleId, userId });
+      res.status(201).json(bookmark);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid bookmark data" });
+    }
+  } else if (req.method === 'DELETE') {
+    // Require authentication for deleting bookmarks
+    if (!userId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    
+    try {
+      // Parse the article ID from query parameters or URL path
+      let articleId: string | undefined;
+      
+      // First check query parameters
+      if (req.query && req.query.articleId) {
+        articleId = req.query.articleId as string;
+      } else {
+        // Fallback to URL path parsing
+        const { pathname } = new URL(req.url!, `https://${req.headers.host}`);
+        console.log('DELETE request pathname:', pathname);
+        
+        // Extract article ID from path like /api/bookmarks/article-id
+        const pathParts = pathname.split('/');
+        const lastPart = pathParts[pathParts.length - 1];
+        
+        // Validate that we have an article ID
+        if (lastPart && lastPart !== 'bookmarks') {
+          articleId = lastPart;
+        }
+      }
+      
+      // Validate that we have an article ID
+      if (!articleId) {
+        console.log('Article ID is required');
+        return res.status(400).json({ message: "Article ID is required" });
+      }
+      
+      console.log('Deleting bookmark for article:', articleId, 'user:', userId);
+      
+      const deleted = await storage.deleteBookmark(articleId, userId);
+      
+      if (deleted) {
+        res.json({ message: "Bookmark removed successfully" });
+      } else {
+        console.log('Bookmark not found for article:', articleId, 'user:', userId);
+        res.status(404).json({ message: "Bookmark not found" });
+      }
+    } catch (error) {
+      console.error('Error removing bookmark:', error);
+      res.status(500).json({ message: "Failed to remove bookmark" });
+    }
+  } else {
+    console.log(`Method ${req.method} not allowed for database storage`);
+    return res.status(405).json({ message: `Method ${req.method} not allowed` });
+  }
+}
+
+// Add a function to refresh tokens
+function refreshToken(payload: any): string {
+  // Remove old timestamp fields if they exist
+  const { iat, exp, ...cleanPayload } = payload;
+  
+  // Generate new token with updated timestamps
+  const newPayload = {
+    ...cleanPayload,
+    exp: Math.floor((Date.now() + 24 * 60 * 60 * 1000) / 1000) // 24 hours in seconds
+  };
+  
+  return generateToken(newPayload);
+}
+
+/**
+ * Get user statistics
+ * @returns User statistics including total users, recent logins, etc.
+ */
+async function getUserStatistics() {
+  // Import modules dynamically
+  const { drizzle } = await import('drizzle-orm/neon-serverless');
+  const { Pool } = await import('@neondatabase/serverless');
+  const { sql } = await import('drizzle-orm');
+  
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error('DATABASE_URL environment variable is required');
+  }
+
+  const pool = new Pool({ connectionString });
+  const db = drizzle(pool);
+  
+  try {
+    const allUsers = await db.select().from(users);
+    
+    // Calculate statistics
+    const totalUsers = allUsers.length;
+    
+    // Count users who logged in within the last 24 hours
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const recentLogins = allUsers.filter(user => 
+      new Date(user.lastLoginAt) > oneDayAgo
+    ).length;
+    
+    // Count users created within the last 7 days
+    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const newUserCount = allUsers.filter(user => 
+      new Date(user.createdAt) > oneWeekAgo
+    ).length;
+    
+    // Count active users (logged in within the last 7 days)
+    const activeUsersWeek = allUsers.filter(user => 
+      new Date(user.lastLoginAt) > oneWeekAgo
+    ).length;
+    
+    // Get the 10 most recent logins
+    const recentUsers = [...allUsers]
+      .sort((a, b) => new Date(b.lastLoginAt).getTime() - new Date(a.lastLoginAt).getTime())
+      .slice(0, 10)
+      .map(user => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar || null,
+        createdAt: user.createdAt,
+        lastLoginAt: user.lastLoginAt,
+      }));
+    
+    return {
+      totalUsers,
+      recentLogins,
+      newUserCount,
+      activeUsersWeek,
+      recentUsers,
+    };
+  } catch (error) {
+    console.error('Error in getUserStatistics:', error);
+    // Return default values if there's an error (e.g., table doesn't exist)
+    return {
+      totalUsers: 0,
+      recentLogins: 0,
+      newUserCount: 0,
+      activeUsersWeek: 0,
+      recentUsers: [],
+    };
+  }
+}
+
+/**
+ * Get all users (for admin purposes)
+ * @returns All users in the system
+ */
+async function getAllUsers(): Promise<UserLoginRecord[]> {
+  // Import modules dynamically
+  const { drizzle } = await import('drizzle-orm/neon-serverless');
+  const { Pool } = await import('@neondatabase/serverless');
+  const { sql } = await import('drizzle-orm');
+  
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error('DATABASE_URL environment variable is required');
+  }
+
+  const pool = new Pool({ connectionString });
+  const db = drizzle(pool);
+  
+  try {
+    const allUsers = await db.select().from(users);
+    
+    return allUsers.map(user => ({
+      id: user.id,
+      googleId: user.googleId,
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar || null,
+      createdAt: user.createdAt,
+      lastLoginAt: user.lastLoginAt,
+    }));
+  } catch (error) {
+    console.error('Error in getAllUsers:', error);
+    // Return empty array if there's an error (e.g., table doesn't exist)
+    return [];
+  }
 }
 
 async function handleUserManagementEndpoints(req: VercelRequest, res: VercelResponse, action: string) {
-  res.status(501).json({ message: 'User management endpoint not implemented in consolidated version' });
+  try {
+    // Check if DATABASE_URL is configured
+    if (!process.env.DATABASE_URL) {
+      return res.status(500).json({ 
+        error: 'Database not configured',
+        message: 'DATABASE_URL environment variable is not set'
+      });
+    }
+
+    // For GET requests, we need to check authorization
+    if (req.method === 'GET') {
+      // Get authorization header
+      const authHeader = req.headers.authorization;
+      
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ 
+          error: 'Unauthorized',
+          message: 'Missing or invalid authorization header'
+        });
+      }
+      
+      const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+      const decoded = verifyToken(token);
+      
+      if (!decoded) {
+        return res.status(401).json({ 
+          error: 'Unauthorized',
+          message: 'Invalid or expired token'
+        });
+      }
+      
+      // Check if user is admin
+      if (!decoded.isAdmin) {
+        return res.status(403).json({ 
+          error: 'Forbidden',
+          message: 'Access denied. Admin access required.'
+        });
+      }
+
+      // Refresh the token for continued sessions
+      const newToken = refreshToken(decoded);
+      
+      const { stats } = req.query;
+      
+      if (stats === 'true') {
+        // Get user statistics
+        const statsData = await getUserStatistics();
+        res.status(200).json({ ...statsData, token: newToken });
+      } else {
+        // Get all users
+        const users = await getAllUsers();
+        res.status(200).json({ users, token: newToken });
+      }
+    } else {
+      res.status(405).json({ error: 'Method not allowed' });
+    }
+  } catch (error) {
+    console.error('Error in user management endpoint:', error);
+    res.status(500).json({ 
+      error: 'Failed to process request',
+      message: error instanceof Error ? error.message : 'Unknown error occurred'
+    });
+  }
 }
 
 // Simplified user source preferences storage implementation
@@ -973,11 +1949,475 @@ async function handleVisitorCountEndpoints(req: VercelRequest, res: VercelRespon
 }
 
 async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelResponse, action: string) {
-  res.status(501).json({ message: 'Vulnerabilities endpoint not implemented in consolidated version' });
+  if (req.method !== 'GET') {
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
+
+  try {
+    console.log('Fetching vulnerabilities from database...');
+    
+    if (!process.env.DATABASE_URL) {
+      console.error('DATABASE_URL environment variable is missing');
+      return res.status(500).json({ 
+        error: 'DATABASE_URL environment variable is required',
+        debug: 'Check Vercel environment variables configuration'
+      });
+    }
+    
+    console.log('DATABASE_URL is configured');
+    
+    // Import modules dynamically
+    const { drizzle } = await import('drizzle-orm/neon-serverless');
+    const { Pool } = await import('@neondatabase/serverless');
+    const { sql, desc } = await import('drizzle-orm');
+    
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const db = drizzle(pool);
+    
+    console.log('Database connection established');
+    
+    // Test database connectivity and table existence
+    try {
+      const tableCheck = await db.execute(sql`
+        SELECT COUNT(*) as count 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'vulnerabilities'
+      `);
+      
+      const tableExists = parseInt(tableCheck.rows[0]?.count as string || '0') > 0;
+      
+      if (!tableExists) {
+        console.error('vulnerabilities table does not exist');
+        return res.status(500).json({
+          error: 'vulnerabilities table does not exist',
+          debug: 'Run database initialization first: POST /api/database?action=init',
+          tableExists: false
+        });
+      }
+      
+      console.log('vulnerabilities table exists');
+      
+      // Check if table has any data
+      const countCheck = await db.execute(sql`SELECT COUNT(*) as total FROM vulnerabilities`);
+      const totalRecords = parseInt(countCheck.rows[0]?.total as string || '0');
+      console.log(`Total vulnerabilities in database: ${totalRecords}`);
+      
+      if (totalRecords === 0) {
+        console.warn('vulnerabilities table is empty');
+        return res.json({
+          vulnerabilities: [],
+          pagination: {
+            page: 1,
+            limit: 50,
+            total: 0,
+            totalPages: 0,
+            hasNext: false,
+            hasPrev: false,
+          },
+          meta: {
+            count: 0,
+            lastUpdated: new Date().toISOString(),
+            message: 'No vulnerabilities found. Run CVE fetch process to populate data.',
+            debug: 'POST /api/fetch-cves to fetch data from NVD'
+          },
+        });
+      }
+      
+    } catch (dbError) {
+      console.error('Database connectivity or table check failed:', dbError);
+      return res.status(500).json({
+        error: 'Database connectivity failed',
+        debug: dbError instanceof Error ? dbError.message : 'Unknown database error'
+      });
+    }
+    
+    // Parse query parameters
+    const { 
+      limit = '50', 
+      severity, 
+      page = '1',
+      sort = 'newest'
+    } = req.query;
+    
+    console.log('Query parameters:', { limit, severity, page, sort });
+    
+    const limitNum = Math.min(parseInt(limit as string, 10) || 50, 100);
+    const pageNum = Math.max(parseInt(page as string, 10) || 1, 1);
+    const offset = (pageNum - 1) * limitNum;
+    
+    // Determine sort order
+    let orderByClause;
+    switch (sort) {
+      case 'relevant':
+        // For "Most Relevant", we might want to sort by CVSS score (highest first) 
+        // and then by last modified date
+        orderByClause = 'ORDER BY COALESCE(cvss_v3_score, cvss_v2_score) DESC NULLS LAST, last_modified_date DESC, published_date DESC';
+        break;
+      case 'newest':
+      default:
+        // Newest first by publication date (not modification date)
+        orderByClause = 'ORDER BY published_date DESC, last_modified_date DESC';
+        break;
+    }
+    
+    // Build query based on whether severity filter is applied
+    let query;
+    if (severity && typeof severity === 'string') {
+      const severityUpper = severity.toUpperCase();
+      if (['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].includes(severityUpper)) {
+        query = sql`
+          SELECT 
+            id,
+            description,
+            published_date,
+            last_modified_date,
+            vuln_status,
+            cvss_v3_score,
+            cvss_v3_severity,
+            cvss_v2_score,
+            cvss_v2_severity,
+            weaknesses,
+            reference_urls,
+            created_at
+          FROM vulnerabilities
+          WHERE (cvss_v3_severity = ${severityUpper} OR cvss_v2_severity = ${severityUpper})
+          ${sql.raw(orderByClause)}
+          LIMIT ${limitNum}
+          OFFSET ${offset}
+        `;
+      } else {
+        // Invalid severity filter, return all
+        query = sql`
+          SELECT 
+            id,
+            description,
+            published_date,
+            last_modified_date,
+            vuln_status,
+            cvss_v3_score,
+            cvss_v3_severity,
+            cvss_v2_score,
+            cvss_v2_severity,
+            weaknesses,
+            reference_urls,
+            created_at
+          FROM vulnerabilities
+          ${sql.raw(orderByClause)}
+          LIMIT ${limitNum}
+          OFFSET ${offset}
+        `;
+      }
+    } else {
+      // No severity filter, return all
+      query = sql`
+        SELECT 
+          id,
+          description,
+          published_date,
+          last_modified_date,
+          vuln_status,
+          cvss_v3_score,
+          cvss_v3_severity,
+          cvss_v2_score,
+          cvss_v2_severity,
+          weaknesses,
+          reference_urls,
+          created_at
+        FROM vulnerabilities
+        ${sql.raw(orderByClause)}
+        LIMIT ${limitNum}
+        OFFSET ${offset}
+      `;
+    }
+    
+    const result = await db.execute(query);
+    
+    // Get total count for pagination
+    let countQuery;
+    if (severity && typeof severity === 'string') {
+      const severityUpper = severity.toUpperCase();
+      if (['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].includes(severityUpper)) {
+        countQuery = sql`
+          SELECT COUNT(*) as total FROM vulnerabilities
+          WHERE (cvss_v3_severity = ${severityUpper} OR cvss_v2_severity = ${severityUpper})
+        `;
+      } else {
+        // Invalid severity filter, count all
+        countQuery = sql`SELECT COUNT(*) as total FROM vulnerabilities`;
+      }
+    } else {
+      // No severity filter, count all
+      countQuery = sql`SELECT COUNT(*) as total FROM vulnerabilities`;
+    }
+    
+    const countResult = await db.execute(countQuery);
+    const totalCount = Number(countResult.rows[0]?.total || 0);
+    
+    // Format vulnerabilities data
+    const vulnerabilities = result.rows.map((row: any) => ({
+      id: row.id,
+      description: row.description,
+      publishedDate: row.published_date,
+      lastModifiedDate: row.last_modified_date,
+      vulnStatus: row.vuln_status,
+      cvssV3Score: row.cvss_v3_score ? parseFloat(row.cvss_v3_score) : null,
+      cvssV3Severity: row.cvss_v3_severity,
+      cvssV2Score: row.cvss_v2_score ? parseFloat(row.cvss_v2_score) : null,
+      cvssV2Severity: row.cvss_v2_severity,
+      weaknesses: row.weaknesses || [],
+      references: row.reference_urls || [],
+      createdAt: row.created_at,
+    }));
+    
+    console.log(`Found ${vulnerabilities.length} vulnerabilities`);
+    
+    res.json({
+      vulnerabilities,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / limitNum),
+        hasNext: pageNum * limitNum < totalCount,
+        hasPrev: pageNum > 1,
+      },
+      meta: {
+        count: vulnerabilities.length,
+        lastUpdated: new Date().toISOString(),
+        sort: sort as string,
+      },
+    });
+    
+  } catch (error) {
+    console.error("Error fetching vulnerabilities:", error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack trace',
+      databaseUrl: !!process.env.DATABASE_URL
+    });
+    
+    res.status(500).json({ 
+      message: "Failed to fetch vulnerabilities",
+      error: error instanceof Error ? error.message : 'Unknown error',
+      debug: {
+        timestamp: new Date().toISOString(),
+        databaseConfigured: !!process.env.DATABASE_URL,
+        errorType: error instanceof Error ? error.constructor.name : 'Unknown'
+      }
+    });
+  }
 }
 
 async function handleFetchCvesEndpoints(req: VercelRequest, res: VercelResponse, action: string) {
-  res.status(501).json({ message: 'Fetch CVEs endpoint not implemented in consolidated version' });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
+
+  try {
+    console.log('Starting CVE fetch process...');
+    
+    // Enhanced environment variable checking
+    if (!process.env.DATABASE_URL) {
+      console.error('DATABASE_URL environment variable is missing');
+      return res.status(500).json({ 
+        error: 'DATABASE_URL environment variable is required',
+        debug: 'Check Vercel environment variables configuration'
+      });
+    }
+
+    if (!process.env.NVD_API_KEY) {
+      console.error('NVD_API_KEY environment variable is missing');
+      return res.status(500).json({ 
+        error: 'NVD_API_KEY environment variable is required',
+        debug: 'Check Vercel environment variables configuration'
+      });
+    }
+    
+    console.log('Environment variables are set correctly');
+    
+    // Import modules dynamically
+    const { drizzle } = await import('drizzle-orm/neon-serverless');
+    const { Pool } = await import('@neondatabase/serverless');
+    const { sql } = await import('drizzle-orm');
+    
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const db = drizzle(pool);
+    
+    console.log('Database connection established');
+    
+    // Test database connectivity and table existence
+    try {
+      const tableCheck = await db.execute(sql`
+        SELECT COUNT(*) as count 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public' AND table_name = 'vulnerabilities'
+      `);
+      
+      if (parseInt(tableCheck.rows[0]?.count as string || '0') === 0) {
+        console.error('vulnerabilities table does not exist');
+        return res.status(500).json({
+          error: 'vulnerabilities table does not exist',
+          debug: 'Run database initialization first: POST /api/database?action=init'
+        });
+      }
+      
+      console.log('vulnerabilities table exists');
+    } catch (dbError) {
+      console.error('Database connectivity test failed:', dbError);
+      return res.status(500).json({
+        error: 'Database connectivity failed',
+        debug: dbError instanceof Error ? dbError.message : 'Unknown database error'
+      });
+    }
+    
+    console.log('Fetching latest CVEs from NVD API...');
+    
+    // Calculate date range for recent CVEs (last 30 days to get more data)
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 30);
+    
+    const startDateStr = startDate.toISOString().split('T')[0];
+    const endDateStr = endDate.toISOString().split('T')[0];
+    
+    // Fetch CVEs from NVD API by publication date (not modification date)
+    const nvdResponse = await fetch(
+      `https://services.nvd.nist.gov/rest/json/cves/2.0/?pubStartDate=${startDateStr}T00:00:00.000&pubEndDate=${endDateStr}T23:59:59.999&resultsPerPage=100`,
+      {
+        headers: {
+          'apiKey': process.env.NVD_API_KEY,
+          'User-Agent': 'ThreatIntelDigest/1.0',
+          'Accept': 'application/json'
+        }
+      }
+    );
+    
+    if (!nvdResponse.ok) {
+      throw new Error(`NVD API error: ${nvdResponse.status} ${nvdResponse.statusText}`);
+    }
+    
+    const nvdData = await nvdResponse.json();
+    console.log(`Found ${nvdData.vulnerabilities?.length || 0} CVEs from NVD`);
+    
+    let processedCount = 0;
+    let errors: string[] = [];
+    
+    if (nvdData.vulnerabilities && nvdData.vulnerabilities.length > 0) {
+      for (const vuln of nvdData.vulnerabilities) {
+        try {
+          const cve = vuln.cve;
+          const cveId = cve.id;
+          
+          // Check if CVE already exists
+          const existingResult = await db.execute(sql`
+            SELECT id FROM vulnerabilities WHERE id = ${cveId}
+          `);
+          
+          // Extract description
+          const description = cve.descriptions?.find((desc: any) => desc.lang === 'en')?.value || 'No description available';
+          
+          // Extract CVSS scores
+          let cvssV3Score = null;
+          let cvssV3Severity = null;
+          let cvssV2Score = null;
+          let cvssV2Severity = null;
+          
+          const metrics = cve.metrics;
+          if (metrics?.cvssMetricV31?.[0]) {
+            cvssV3Score = metrics.cvssMetricV31[0].cvssData.baseScore;
+            cvssV3Severity = metrics.cvssMetricV31[0].cvssData.baseSeverity;
+          } else if (metrics?.cvssMetricV30?.[0]) {
+            cvssV3Score = metrics.cvssMetricV30[0].cvssData.baseScore;
+            cvssV3Severity = metrics.cvssMetricV30[0].cvssData.baseSeverity;
+          }
+          
+          if (metrics?.cvssMetricV2?.[0]) {
+            cvssV2Score = metrics.cvssMetricV2[0].cvssData.baseScore;
+            cvssV2Severity = metrics.cvssMetricV2[0].baseSeverity;
+          }
+          
+          // Extract weaknesses (CWEs)
+          const weaknesses = cve.weaknesses?.map((weakness: any) => 
+            weakness.description?.find((desc: any) => desc.lang === 'en')?.value
+          ).filter(Boolean) || [];
+          
+          // Extract references
+          const references = cve.references?.map((ref: any) => ({
+            url: ref.url,
+            source: ref.source || 'Unknown',
+            tags: ref.tags || []
+          })) || [];
+          
+          // Convert arrays to proper PostgreSQL format
+          // Ensure weaknesses is a proper string array for PostgreSQL text[]
+          const weaknessesArray = Array.isArray(weaknesses) ? weaknesses : [];
+          const referencesJson = JSON.stringify(references);
+          
+          console.log(`Processing CVE ${cveId} with weaknesses:`, weaknessesArray);
+          
+          // Construct array literal for PostgreSQL
+          const weaknessesLiteral = '{' + weaknessesArray.map(w => `"${w?.replace(/"/g, '\\"') || ''}"`).join(',') + '}';
+          
+          if (existingResult.rows.length === 0) {
+            // Insert new CVE
+            await db.execute(sql`
+              INSERT INTO vulnerabilities (
+                id, description, published_date, last_modified_date, vuln_status,
+                cvss_v3_score, cvss_v3_severity, cvss_v2_score, cvss_v2_severity,
+                weaknesses, reference_urls
+              )
+              VALUES (
+                ${cveId}, ${description}, ${cve.published}, ${cve.lastModified}, ${cve.vulnStatus},
+                ${cvssV3Score !== null ? String(cvssV3Score) : null}, ${cvssV3Severity}, 
+                ${cvssV2Score !== null ? String(cvssV2Score) : null}, ${cvssV2Severity},
+                ${weaknessesLiteral}::text[], ${referencesJson}::jsonb
+              )
+            `);
+            
+            processedCount++;
+            console.log(`Saved new CVE: ${cveId}`);
+          } else {
+            // Update existing CVE with latest information
+            await db.execute(sql`
+              UPDATE vulnerabilities SET
+                description = ${description},
+                published_date = ${cve.published},
+                last_modified_date = ${cve.lastModified},
+                vuln_status = ${cve.vulnStatus},
+                cvss_v3_score = ${cvssV3Score !== null ? String(cvssV3Score) : null},
+                cvss_v3_severity = ${cvssV3Severity},
+                cvss_v2_score = ${cvssV2Score !== null ? String(cvssV2Score) : null},
+                cvss_v2_severity = ${cvssV2Severity},
+                weaknesses = ${weaknessesLiteral}::text[],
+                reference_urls = ${referencesJson}::jsonb
+              WHERE id = ${cveId}
+            `);
+            
+            console.log(`Updated existing CVE: ${cveId}`);
+          }
+        } catch (cveError) {
+          console.error(`Failed to process CVE:`, cveError);
+          errors.push(`Failed to process CVE: ${cveError instanceof Error ? cveError.message : 'Unknown error'}`);
+        }
+      }
+    }
+    
+    console.log(`CVE fetch complete. Processed ${processedCount} new CVEs.`);
+    res.json({ 
+      message: `Successfully fetched ${processedCount} new CVEs`,
+      totalProcessed: processedCount,
+      totalFromAPI: nvdData.vulnerabilities?.length || 0,
+      errors: errors.length > 0 ? errors.slice(0, 5) : [], // Return first 5 errors
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error("Error fetching CVEs:", error);
+    res.status(500).json({ 
+      message: "Failed to fetch CVEs from NVD",
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 }
 
 // Helper functions for fetch-feeds
@@ -1282,5 +2722,483 @@ async function handleFetchArticleEndpoints(req: VercelRequest, res: VercelRespon
 }
 
 async function handleDatabaseEndpoints(req: VercelRequest, res: VercelResponse, action: string) {
-  res.status(501).json({ message: 'Database endpoint not implemented in consolidated version' });
+  const { action: queryAction } = req.query;
+
+  switch (queryAction) {
+    case 'ping':
+      return handlePing(req, res);
+    case 'check':
+      return handleCheckDb(req, res);
+    case 'init':
+      return handleInitDb(req, res);
+    case 'test':
+      return handleTestDb(req, res);
+    case 'test-steps':
+      return handleTestDbSteps(req, res);
+    case 'initialize-sources':
+      return handleInitializeSources(req, res);
+    default:
+      return res.status(400).json({ 
+        error: 'Invalid action', 
+        availableActions: ['ping', 'check', 'init', 'test', 'test-steps', 'initialize-sources']
+      });
+  }
+}
+
+// Ping functionality
+async function handlePing(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
+
+  res.json({ 
+    message: 'API is working!', 
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+}
+
+// Check database functionality
+async function handleCheckDb(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
+
+  try {
+    console.log('Starting database check...');
+    
+    if (!process.env.DATABASE_URL) {
+      return res.status(500).json({ 
+        error: 'DATABASE_URL environment variable is required'
+      });
+    }
+    
+    // Import modules dynamically
+    const { drizzle } = await import('drizzle-orm/neon-serverless');
+    const { Pool } = await import('@neondatabase/serverless');
+    const { sql } = await import('drizzle-orm');
+    
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const db = drizzle(pool);
+    
+    // Test basic connectivity
+    const result = await db.execute(sql`SELECT NOW() as current_time`);
+    const currentTime = result.rows[0]?.current_time;
+    
+    // Check table existence
+    const tableCheck = await db.execute(sql`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name IN ('articles', 'bookmarks', 'rss_sources', 'vulnerabilities')
+      ORDER BY table_name
+    `);
+    
+    const existingTables = tableCheck.rows.map(row => row.table_name);
+    const expectedTables = ['articles', 'bookmarks', 'rss_sources', 'vulnerabilities'];
+    const missingTables = expectedTables.filter(table => !existingTables.includes(table));
+    
+    // Count records in each existing table
+    const tableCounts: Record<string, number> = {};
+    for (const table of existingTables) {
+      try {
+        const countResult = await db.execute(sql.raw(`SELECT COUNT(*) as count FROM ${table}`));
+        tableCounts[table as string] = parseInt(countResult.rows[0]?.count as string || '0');
+      } catch (error) {
+        tableCounts[table as string] = -1; // Error counting
+      }
+    }
+    
+    res.json({
+      status: 'success',
+      database: {
+        connected: true,
+        currentTime,
+        url: process.env.DATABASE_URL ? `${process.env.DATABASE_URL.split('@')[1]?.split('/')[0] || 'hidden'}` : null
+      },
+      tables: {
+        existing: existingTables,
+        missing: missingTables,
+        counts: tableCounts
+      },
+      recommendations: missingTables.length > 0 ? [
+        'Run database initialization to create missing tables',
+        'Check that your database schema is up to date'
+      ] : [
+        'Database appears to be properly configured'
+      ]
+    });
+    
+  } catch (error) {
+    console.error("Database check failed:", error);
+    res.status(500).json({ 
+      status: 'error',
+      error: error instanceof Error ? error.message : 'Unknown database error',
+      database: {
+        connected: false
+      }
+    });
+  }
+}
+
+// Initialize database functionality
+async function handleInitDb(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
+
+  try {
+    console.log('Starting database initialization...');
+    
+    if (!process.env.DATABASE_URL) {
+      return res.status(500).json({ 
+        error: 'DATABASE_URL environment variable is required'
+      });
+    }
+    
+    // Import modules dynamically
+    const { drizzle } = await import('drizzle-orm/neon-serverless');
+    const { Pool } = await import('@neondatabase/serverless');
+    const { sql } = await import('drizzle-orm');
+    
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const db = drizzle(pool);
+    
+    console.log('Creating tables...');
+    
+    // Create articles table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS articles (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        title TEXT NOT NULL,
+        summary TEXT,
+        url TEXT NOT NULL UNIQUE,
+        source TEXT NOT NULL,
+        source_icon TEXT,
+        published_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        threat_level TEXT NOT NULL DEFAULT 'MEDIUM',
+        tags TEXT[] DEFAULT '{}',
+        read_time INTEGER DEFAULT 5,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `);
+    console.log('Articles table created/verified');
+    
+    // Create bookmarks table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS bookmarks (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        article_id UUID NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `);
+    console.log('Bookmarks table created/verified');
+    
+    // Create rss_sources table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS rss_sources (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name TEXT NOT NULL UNIQUE,
+        url TEXT NOT NULL UNIQUE,
+        icon TEXT,
+        color TEXT,
+        is_active BOOLEAN DEFAULT true,
+        last_fetched TIMESTAMP WITH TIME ZONE
+      )
+    `);
+    console.log('RSS sources table created/verified');
+    
+    // Create vulnerabilities table
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS vulnerabilities (
+        id TEXT PRIMARY KEY,
+        description TEXT NOT NULL,
+        published_date TIMESTAMP WITH TIME ZONE NOT NULL,
+        last_modified_date TIMESTAMP WITH TIME ZONE NOT NULL,
+        vuln_status TEXT NOT NULL,
+        cvss_v3_score TEXT,
+        cvss_v3_severity TEXT,
+        cvss_v2_score TEXT,
+        cvss_v2_severity TEXT,
+        weaknesses TEXT[] DEFAULT '{}',
+        reference_urls JSONB DEFAULT '[]'::jsonb,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      )
+    `);
+    console.log('Vulnerabilities table created/verified');
+    
+    // Create indexes for better performance
+    console.log('Creating indexes...');
+    
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS idx_articles_source ON articles(source)
+    `);
+    
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS idx_articles_published_at ON articles(published_at DESC)
+    `);
+    
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS idx_articles_threat_level ON articles(threat_level)
+    `);
+    
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS idx_bookmarks_article_id ON bookmarks(article_id)
+    `);
+    
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS idx_vulnerabilities_severity ON vulnerabilities(cvss_v3_severity)
+    `);
+    
+    await db.execute(sql`
+      CREATE INDEX IF NOT EXISTS idx_vulnerabilities_modified ON vulnerabilities(last_modified_date DESC)
+    `);
+    
+    console.log('Database initialization completed successfully');
+    
+    res.json({
+      message: 'Database initialized successfully',
+      tables: ['articles', 'bookmarks', 'rss_sources', 'vulnerabilities'],
+      indexes: [
+        'idx_articles_source',
+        'idx_articles_published_at', 
+        'idx_articles_threat_level',
+        'idx_bookmarks_article_id',
+        'idx_vulnerabilities_severity',
+        'idx_vulnerabilities_modified'
+      ],
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error("Database initialization failed:", error);
+    res.status(500).json({ 
+      message: "Failed to initialize database",
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
+
+// Test database functionality
+async function handleTestDb(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
+
+  try {
+    if (!process.env.DATABASE_URL) {
+      return res.status(500).json({ 
+        error: 'DATABASE_URL environment variable is required'
+      });
+    }
+    
+    // Import modules dynamically
+    const { drizzle } = await import('drizzle-orm/neon-serverless');
+    const { Pool } = await import('@neondatabase/serverless');
+    const { sql } = await import('drizzle-orm');
+    
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const db = drizzle(pool);
+    
+    // Test database connection
+    const result = await db.execute(sql`SELECT 'Database connection successful' as message, NOW() as timestamp`);
+    
+    res.json({
+      status: 'success',
+      message: result.rows[0]?.message,
+      timestamp: result.rows[0]?.timestamp,
+      database_url_configured: !!process.env.DATABASE_URL
+    });
+    
+  } catch (error) {
+    console.error("Database test failed:", error);
+    res.status(500).json({ 
+      status: 'error',
+      message: "Database connection failed",
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
+
+// Test database steps functionality
+async function handleTestDbSteps(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
+
+  const steps: Array<{ step: string; status: string; message?: string; error?: string }> = [];
+
+  try {
+    // Step 1: Check environment variable
+    steps.push({
+      step: 'Environment Check',
+      status: process.env.DATABASE_URL ? 'success' : 'failed',
+      message: process.env.DATABASE_URL ? 'DATABASE_URL is configured' : 'DATABASE_URL is missing'
+    });
+
+    if (!process.env.DATABASE_URL) {
+      return res.status(500).json({ steps });
+    }
+
+    // Step 2: Import modules
+    try {
+      await import('drizzle-orm/neon-serverless');
+      await import('@neondatabase/serverless');
+      await import('drizzle-orm');
+      steps.push({
+        step: 'Module Import',
+        status: 'success',
+        message: 'All required modules imported successfully'
+      });
+    } catch (error) {
+      steps.push({
+        step: 'Module Import',
+        status: 'failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      return res.status(500).json({ steps });
+    }
+
+    // Step 3: Create connection
+    const { drizzle } = await import('drizzle-orm/neon-serverless');
+    const { Pool } = await import('@neondatabase/serverless');
+    const { sql } = await import('drizzle-orm');
+    
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const db = drizzle(pool);
+    
+    steps.push({
+      step: 'Connection Setup',
+      status: 'success',
+      message: 'Database connection pool created'
+    });
+
+    // Step 4: Test query
+    try {
+      const result = await db.execute(sql`SELECT NOW() as current_time, version() as db_version`);
+      steps.push({
+        step: 'Database Query',
+        status: 'success',
+        message: `Query successful at ${result.rows[0]?.current_time}`
+      });
+    } catch (error) {
+      steps.push({
+        step: 'Database Query',
+        status: 'failed',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      return res.status(500).json({ steps });
+    }
+
+    res.json({ 
+      status: 'success',
+      message: 'All database tests passed',
+      steps 
+    });
+    
+  } catch (error) {
+    steps.push({
+      step: 'Unexpected Error',
+      status: 'failed',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+    
+    res.status(500).json({ 
+      status: 'error',
+      message: 'Database test failed',
+      steps 
+    });
+  }
+}
+
+// Initialize sources functionality
+async function handleInitializeSources(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
+
+  try {
+    if (!process.env.DATABASE_URL) {
+      return res.status(500).json({ 
+        error: 'DATABASE_URL environment variable is required'
+      });
+    }
+    
+    // Import modules dynamically
+    const { drizzle } = await import('drizzle-orm/neon-serverless');
+    const { Pool } = await import('@neondatabase/serverless');
+    const { sql } = await import('drizzle-orm');
+    
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const db = drizzle(pool);
+    
+    const defaultSources = [
+      {
+        name: "Bleeping Computer",
+        url: "https://www.bleepingcomputer.com/feed/",
+        icon: "fas fa-exclamation",
+        color: "#ef4444"
+      },
+      {
+        name: "The Hacker News",
+        url: "https://feeds.feedburner.com/TheHackersNews",
+        icon: "fas fa-user-secret",
+        color: "#f97316"
+      },
+      {
+        name: "Dark Reading",
+        url: "https://www.darkreading.com/rss_simple.asp",
+        icon: "fas fa-eye",
+        color: "#8b5cf6"
+      },
+      {
+        name: "CrowdStrike Blog",
+        url: "https://www.crowdstrike.com/blog/feed/",
+        icon: "fas fa-crow",
+        color: "#dc2626"
+      },
+      {
+        name: "Unit 42",
+        url: "https://unit42.paloaltonetworks.com/feed/",
+        icon: "fas fa-shield-virus",
+        color: "#2563eb"
+      },
+      {
+        name: "The DFIR Report",
+        url: "https://thedfirreport.com/feed/",
+        icon: "fas fa-search",
+        color: "#16a34a"
+      }
+    ];
+
+    let insertedCount = 0;
+    const errors: string[] = [];
+
+    for (const source of defaultSources) {
+      try {
+        await db.execute(sql`
+          INSERT INTO rss_sources (name, url, icon, color, is_active)
+          VALUES (${source.name}, ${source.url}, ${source.icon}, ${source.color}, true)
+          ON CONFLICT (name) DO NOTHING
+        `);
+        insertedCount++;
+      } catch (error) {
+        errors.push(`Failed to insert ${source.name}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
+    res.json({
+      message: `Successfully initialized ${insertedCount} RSS sources`,
+      sourcesInitialized: insertedCount,
+      totalSources: defaultSources.length,
+      errors: errors.length > 0 ? errors : undefined
+    });
+    
+  } catch (error) {
+    console.error("Error initializing sources:", error);
+    res.status(500).json({ 
+      message: "Failed to initialize RSS sources",
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 }
