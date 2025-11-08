@@ -259,15 +259,17 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
                         </button>
                       </Link>
                     )}
-                    <button
-                      className="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-whatcyber-gray hover:text-slate-100"
-                      onClick={() => {
-                        setIsSettingsOpen(false);
-                        // Add other settings options here if needed
-                      }}
-                    >
-                      Settings
-                    </button>
+                    <Link href="/settings">
+                      <button
+                        className="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-whatcyber-gray hover:text-slate-100"
+                        onClick={() => setIsSettingsOpen(false)}
+                      >
+                        <div className="flex items-center">
+                          <Settings className="w-4 h-4 mr-2" />
+                          Settings
+                        </div>
+                      </button>
+                    </Link>
                   </div>
                 </div>
               )}

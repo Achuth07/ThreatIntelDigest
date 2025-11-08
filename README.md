@@ -259,6 +259,23 @@ npm run validate-deployment
 - **Smart Duplicate Prevention:** Prevents adding the same source multiple times
 - **User-Specific Sources:** Each user can customize their own feed sources
 
+### User Settings & Preferences
+- **Comprehensive Settings Page:** Centralized settings interface accessible via gear icon in header
+- **Account Management:** View and edit profile information, manage display name
+- **Security & Privacy:** View active sessions, sign out everywhere (coming soon)
+- **Application Preferences:**
+  - Manage RSS feeds
+  - Watchlist keywords for tracking specific threats (coming soon)
+  - IOC extraction preferences (coming soon)
+  - Customizable IOC type visibility (coming soon)
+- **API & Integrations:**
+  - Generate and manage personal API keys
+  - Integration settings for third-party services (coming soon)
+- **Subscription Management:** View current plan and features (Pro plan coming soon)
+- **Notification Preferences:**
+  - Weekly digest emails (coming soon)
+  - Watchlist alerts (coming soon)
+
 ### User Interface
 - **Dark Theme:** Optimized for security professionals
 - **Responsive Design:** Mobile-first approach with breakpoint-based layouts
@@ -404,6 +421,49 @@ This project integrates with CounterAPI to track visitor statistics. The visitor
    - Value: Your CounterAPI token
 
 The integration automatically increments the counter each time a user visits the site and displays the current count in the footer.
+
+## 🗺️ Roadmap
+
+### Upcoming Features
+
+#### IOC Extraction & Analysis
+- **Automatic IOC Extraction:** Extract indicators of compromise (IP addresses, domains, hashes, URLs, emails) from articles
+- **IOC Enrichment:** Integrate with VirusTotal, AbuseIPDB, Shodan for reputation lookups
+- **Configurable IOC Types:** Allow users to hide specific IOC types they don't need
+- **IOC Export:** Export extracted IOCs in common formats (CSV, JSON, STIX)
+
+#### Watchlist & Alerting
+- **Keyword Tracking:** Monitor articles for specific CVEs, threat actor names, or company names
+- **Real-time Alerts:** Email notifications when high-priority keywords are detected
+- **Weekly Digest:** Summarized email of top threats and matched watchlist items
+- **Custom Alert Rules:** Create complex alert conditions based on threat level, source, and keywords
+
+#### API & Integrations
+- **Public API:** RESTful API for accessing curated feeds, bookmarks, and extracted IOCs
+- **API Rate Limiting:** Fair usage policies for API access
+- **Third-party Integration Keys:** Store and use personal API keys for enrichment services
+- **Webhook Support:** Push notifications to external systems when new threats are detected
+- **SIEM Integration:** Pre-built connectors for Splunk, QRadar, Sentinel
+
+#### Multi-session Management
+- **Session Tracking:** View all active sessions across devices and browsers
+- **Remote Sign Out:** Sign out specific sessions or all sessions remotely
+- **Session Details:** See login time, location, and device information for each session
+
+#### Subscription Plans
+- **Free Tier:** Current features remain free
+- **Pro Plan Features:**
+  - Unlimited IOC extractions per day
+  - Advanced enrichment services
+  - Priority email support
+  - Extended API rate limits
+  - Custom webhook integrations
+  - Export to SIEM/SOAR platforms
+
+#### Enhanced Analytics
+- **Threat Trends:** Visualize threat landscape trends over time
+- **Source Analytics:** Track which sources provide the most relevant intelligence
+- **Personal Statistics:** View your reading habits, bookmark trends, and feed engagement
 
 ## 🤝 Contributing
 
