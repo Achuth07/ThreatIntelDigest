@@ -56,23 +56,10 @@ export function Sidebar({
   // Reference for the add sources button
   const addSourcesButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Function to position tooltip relative to the add sources button
-  const positionTooltip = (buttonElement: HTMLElement) => {
-    const rect = buttonElement.getBoundingClientRect();
-    setTooltipPosition({
-      x: rect.left + rect.width / 2,
-      y: rect.top - 10
-    });
-  };
-
   // Position tooltip when it's shown
   useEffect(() => {
     if (showTooltipGuide && addSourcesButtonRef.current) {
-      // Ensure the button is rendered before positioning
-      const timer = setTimeout(() => {
-        positionTooltip(addSourcesButtonRef.current!);
-      }, 100);
-      return () => clearTimeout(timer);
+      positionTooltip(addSourcesButtonRef.current);
     }
   }, [showTooltipGuide]);
 
@@ -85,16 +72,16 @@ export function Sidebar({
   // Show tooltip guide on first login for all users
   useEffect(() => {
     if (user) {
-      // For debugging - always show tooltip
-      // const hasSeenTooltip = localStorage.getItem('hasSeenSourcesTooltip');
-      // if (!hasSeenTooltip) {
+      // Check if this is the user's first time
+      const hasSeenTooltip = localStorage.getItem('hasSeenSourcesTooltip');
+      if (!hasSeenTooltip) {
         // Delay the tooltip slightly to ensure UI is rendered
         const timer = setTimeout(() => {
           setShowTooltipGuide(true);
-          // localStorage.setItem('hasSeenSourcesTooltip', 'true');
+          localStorage.setItem('hasSeenSourcesTooltip', 'true');
         }, 1000);
         return () => clearTimeout(timer);
-      // }
+      }
     }
   }, [user]);
 
@@ -309,6 +296,15 @@ export function Sidebar({
   }
 
   const totalArticles = userSources.reduce((sum, source) => sum + (source.isActive ? 10 : 0), 0); // Rough estimate
+
+  // Function to position tooltip relative to the add sources button
+  const positionTooltip = (buttonElement: HTMLElement) => {
+    const rect = buttonElement.getBoundingClientRect();
+    setTooltipPosition({
+      x: rect.left + rect.width / 2,
+      y: rect.top - 10
+    });
+  };
 
   return (
     <aside className="w-80 lg:w-80 bg-whatcyber-dark border-r border-whatcyber-light-gray/30 overflow-y-auto h-full">
