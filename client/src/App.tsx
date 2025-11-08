@@ -8,10 +8,25 @@ import Home from "@/pages/home";
 import Settings from "@/pages/settings";
 import NotFound from "@/pages/not-found";
 import { Footer } from "@/components/footer";
-import { useEffect, useState } from "react";
+import { useEffect, useState, createContext, useContext } from "react";
 import { AdminDashboard } from "@/components/admin-dashboard";
 import { LoginPopup } from "@/components/login-popup";
 import { getAuthenticatedUser, isGuestUser, updateAuthToken } from "@/lib/auth";
+
+// Create context for login popup
+interface LoginPopupContextType {
+  showLoginPopup: () => void;
+}
+
+const LoginPopupContext = createContext<LoginPopupContextType | null>(null);
+
+export const useLoginPopup = () => {
+  const context = useContext(LoginPopupContext);
+  if (!context) {
+    throw new Error('useLoginPopup must be used within LoginPopupProvider');
+  }
+  return context;
+};
 
 function Router() {
   return (
@@ -133,17 +148,19 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <TooltipProvider>
-          <Toaster />
-          {showLoginPopup && (
-            <LoginPopup 
-              onLogin={handleLogin} 
-              onContinueAsGuest={handleContinueAsGuest} 
-            />
-          )}
-          <div className="flex flex-col min-h-screen">
-            <Router />
-            <Footer />
-          </div>
+          <LoginPopupContext.Provider value={{ showLoginPopup: () => setShowLoginPopup(true) }}>
+            <Toaster />
+            {showLoginPopup && (
+              <LoginPopup 
+                onLogin={handleLogin} 
+                onContinueAsGuest={handleContinueAsGuest} 
+              />
+            )}
+            <div className="flex flex-col min-h-screen">
+              <Router />
+              <Footer />
+            </div>
+          </LoginPopupContext.Provider>
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>

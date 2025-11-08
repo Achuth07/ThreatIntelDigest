@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Link } from 'wouter';
 import { getAuthenticatedUser, updateAuthToken } from '@/lib/auth';
+import { useLoginPopup } from '@/App';
 import logoImage from '@/assets/logo/android-chrome-512x512.png';
 
 interface User {
@@ -30,6 +31,7 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
   const [loading, setLoading] = useState(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false); // For dropdown menu
   const settingsRef = useRef<HTMLDivElement>(null); // For detecting clicks outside
+  const { showLoginPopup } = useLoginPopup();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -259,17 +261,32 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
                         </button>
                       </Link>
                     )}
-                    <Link href="/settings">
+                    {user ? (
+                      <Link href="/settings">
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-whatcyber-gray hover:text-slate-100"
+                          onClick={() => setIsSettingsOpen(false)}
+                        >
+                          <div className="flex items-center">
+                            <Settings className="w-4 h-4 mr-2" />
+                            Settings
+                          </div>
+                        </button>
+                      </Link>
+                    ) : (
                       <button
                         className="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-whatcyber-gray hover:text-slate-100"
-                        onClick={() => setIsSettingsOpen(false)}
+                        onClick={() => {
+                          setIsSettingsOpen(false);
+                          showLoginPopup();
+                        }}
                       >
                         <div className="flex items-center">
                           <Settings className="w-4 h-4 mr-2" />
                           Settings
                         </div>
                       </button>
-                    </Link>
+                    )}
                   </div>
                 </div>
               )}
