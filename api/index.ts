@@ -160,6 +160,7 @@ function getUserIdFromRequest(req: any): number | null {
 import { pgTable, serial, varchar, text, timestamp } from 'drizzle-orm/pg-core';
 import { eq } from 'drizzle-orm';
 import * as crypto from 'crypto';
+import { boolean as pgBoolean, integer, jsonb } from 'drizzle-orm/pg-core';
 
 // Define the users table schema directly
 const users = pgTable('users', {
@@ -170,6 +171,21 @@ const users = pgTable('users', {
   avatar: text('avatar'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   lastLoginAt: timestamp('last_login_at').defaultNow().notNull(),
+});
+
+// Define the user_preferences table schema directly
+const userPreferences = pgTable('user_preferences', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().unique().references(() => users.id, { onDelete: 'cascade' }),
+  displayName: text('display_name'),
+  watchlistKeywords: text('watchlist_keywords'),
+  autoExtractIOCs: pgBoolean('auto_extract_iocs').default(true),
+  autoEnrichIOCs: pgBoolean('auto_enrich_iocs').default(false),
+  hiddenIOCTypes: jsonb('hidden_ioc_types').$type<string[]>().default([]),
+  emailWeeklyDigest: pgBoolean('email_weekly_digest').default(false),
+  emailWatchlistAlerts: pgBoolean('email_watchlist_alerts').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
 
 // Admin email from environment variable
@@ -1950,8 +1966,6 @@ async function handleUserPreferencesEndpoints(req: VercelRequest, res: VercelRes
 
     const { drizzle } = await import('drizzle-orm/neon-serverless');
     const { Pool } = await import('@neondatabase/serverless');
-    const { eq } = await import('drizzle-orm');
-    const { userPreferences } = await import('../shared/schema');
     
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
     const db = drizzle(pool);
