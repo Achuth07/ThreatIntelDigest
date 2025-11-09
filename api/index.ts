@@ -996,17 +996,44 @@ async function handleArticlesEndpoints(req: VercelRequest, res: VercelResponse, 
       
       // Check if user is authenticated and get their source preferences
       const userId = getUserIdFromRequest(req);
-      let userActiveSourceIds: string[] = [];
+      let userActiveSourceNames: string[] = [];
+      let userHasAnyPreferences = false;
       
       if (userId) {
         console.log('User authenticated, fetching their active sources...');
-        // Get user's active source preferences
-        const userPrefsResult = await db.execute(sql`
-          SELECT source_id FROM user_source_preferences 
-          WHERE user_id = ${userId} AND is_active = true
+        
+        // First, check if user has ANY preferences at all
+        const allPrefsResult = await db.execute(sql`
+          SELECT COUNT(*) as count FROM user_source_preferences 
+          WHERE user_id = ${userId}
         `);
-        userActiveSourceIds = userPrefsResult.rows.map((row: any) => row.source_id);
-        console.log('User active sources:', userActiveSourceIds);
+        userHasAnyPreferences = (allPrefsResult.rows[0] as any).count > 0;
+        console.log('User has preferences:', userHasAnyPreferences);
+        
+        if (userHasAnyPreferences) {
+          // User has explicit preferences - get sources they haven't disabled
+          // If a source is NOT in their preferences OR is marked as active=true, include it
+          const userPrefsResult = await db.execute(sql`
+            SELECT rs.name 
+            FROM rss_sources rs
+            WHERE rs.is_active = true
+              AND NOT EXISTS (
+                SELECT 1 FROM user_source_preferences usp 
+                WHERE usp.source_id = rs.id 
+                  AND usp.user_id = ${userId} 
+                  AND usp.is_active = false
+              )
+          `);
+          userActiveSourceNames = userPrefsResult.rows.map((row: any) => row.name);
+        } else {
+          // User has no preferences yet - show all active sources
+          const allSourcesResult = await db.execute(sql`
+            SELECT name FROM rss_sources WHERE is_active = true
+          `);
+          userActiveSourceNames = allSourcesResult.rows.map((row: any) => row.name);
+        }
+        
+        console.log('User active source names:', userActiveSourceNames);
       }
       
       // Build base query
@@ -1018,10 +1045,9 @@ async function handleArticlesEndpoints(req: VercelRequest, res: VercelResponse, 
       if (source && source !== 'all') {
         // Specific source selected
         conditions.push(sql`source = ${source}`);
-      } else if (userId && userActiveSourceIds.length > 0) {
-        // User is authenticated and has preferences - filter by active sources only
-        // Use IN clause with the source IDs
-        const inClause = userActiveSourceIds.map(id => sql`${id}`).reduce((acc, curr, idx) => 
+      } else if (userId && userActiveSourceNames.length > 0) {
+        // User is authenticated and has preferences - filter by active source names
+        const inClause = userActiveSourceNames.map((name: string) => sql`${name}`).reduce((acc: any, curr: any, idx: number) => 
           idx === 0 ? curr : sql`${acc}, ${curr}`
         );
         conditions.push(sql`source IN (${inClause})`);
