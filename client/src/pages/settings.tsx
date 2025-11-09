@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { 
   User, Shield, Settings as SettingsIcon, Key, CreditCard, Bell, 
@@ -47,28 +47,14 @@ export default function Settings() {
   const [isSaving, setIsSaving] = useState(false);
   const [isEditingDisplayName, setIsEditingDisplayName] = useState(false);
   const [displayNameError, setDisplayNameError] = useState('');
+  const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   
   // Available IOC types to hide
   const iocTypes = ['MD5', 'SHA1', 'SHA256', 'SHA512', 'IPv4', 'IPv6', 'Domain', 'URL', 'Email'];
 
-  useEffect(() => {
-    // Redirect to home if not authenticated
-    if (!user) {
-      navigate('/');
-      return;
-    }
-    
-    // Load user preferences from API
-    loadUserPreferences();
-    
-    // Load API key from localStorage
-    const savedApiKey = localStorage.getItem('user_api_key');
-    if (savedApiKey) {
-      setApiKey(savedApiKey);
-    }
-  }, [user, navigate]);
-
-  const loadUserPreferences = async () => {
+  const loadUserPreferences = useCallback(async () => {
+    setIsLoadingPreferences(true);
     try {
       const response = await apiRequest('GET', '/api/user-preferences');
       const prefs = await response.json();
@@ -81,10 +67,32 @@ export default function Settings() {
         emailWeeklyDigest: prefs.emailWeeklyDigest ?? false,
         emailWatchlistAlerts: prefs.emailWatchlistAlerts ?? false,
       });
+      setHasLoadedOnce(true);
     } catch (error) {
       console.error('Error loading user preferences:', error);
+    } finally {
+      setIsLoadingPreferences(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // Redirect to home if not authenticated
+    if (!user) {
+      navigate('/');
+      return;
+    }
+    
+    // Load user preferences from API (only once on mount)
+    if (!hasLoadedOnce && !isLoadingPreferences) {
+      loadUserPreferences();
+    }
+    
+    // Load API key from localStorage
+    const savedApiKey = localStorage.getItem('user_api_key');
+    if (savedApiKey) {
+      setApiKey(savedApiKey);
+    }
+  }, [user, navigate, hasLoadedOnce, isLoadingPreferences, loadUserPreferences]);
 
   const validateDisplayName = (name: string): boolean => {
     if (!name || name.trim() === '') {
