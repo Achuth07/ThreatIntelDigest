@@ -329,7 +329,7 @@ export function Sidebar({
   const positionTooltip = (buttonElement: HTMLElement) => {
     const rect = buttonElement.getBoundingClientRect();
     setTooltipPosition({
-      x: rect.left + rect.width / 2,
+      x: rect.left + rect.width / 2 - 40, // Shift 40px left to align arrow with + button
       y: rect.top - 100 // Move 100px higher to be completely above the heading
     });
   };
