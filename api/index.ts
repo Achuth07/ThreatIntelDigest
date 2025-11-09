@@ -1930,12 +1930,15 @@ async function handleUserSourcePreferencesEndpoints(req: VercelRequest, res: Ver
 
 async function handleUserPreferencesEndpoints(req: VercelRequest, res: VercelResponse, action: string) {
   console.log(`User Preferences API ${req.method} ${req.url}`);
+  console.log('Request body:', JSON.stringify(req.body));
   
   // Get user ID from request (for authenticated endpoints)
   const userId = getUserIdFromRequest(req);
+  console.log('Extracted userId:', userId);
   
   // Require authentication for all endpoints
   if (!userId) {
+    console.log('❌ No userId found - authentication required');
     return res.status(401).json({ message: "Authentication required" });
   }
   
