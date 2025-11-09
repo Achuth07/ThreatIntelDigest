@@ -994,6 +994,21 @@ async function handleArticlesEndpoints(req: VercelRequest, res: VercelResponse, 
       console.log('Fetching articles...');
       const { source, limit = '10', offset = '0', search, sortBy = 'newest' } = req.query;
       
+      // Check if user is authenticated and get their source preferences
+      const userId = getUserIdFromRequest(req);
+      let userActiveSourceIds: string[] = [];
+      
+      if (userId) {
+        console.log('User authenticated, fetching their active sources...');
+        // Get user's active source preferences
+        const userPrefsResult = await db.execute(sql`
+          SELECT source_id FROM user_source_preferences 
+          WHERE user_id = ${userId} AND is_active = true
+        `);
+        userActiveSourceIds = userPrefsResult.rows.map((row: any) => row.source_id);
+        console.log('User active sources:', userActiveSourceIds);
+      }
+      
       // Build base query
       let baseQuery = sql`SELECT id, title, summary, url, source, threat_level, tags, read_time, published_at, created_at FROM articles`;
       
@@ -1001,8 +1016,13 @@ async function handleArticlesEndpoints(req: VercelRequest, res: VercelResponse, 
       const conditions: any[] = [];
       
       if (source && source !== 'all') {
+        // Specific source selected
         conditions.push(sql`source = ${source}`);
+      } else if (userId && userActiveSourceIds.length > 0) {
+        // User is authenticated and has preferences - filter by active sources only
+        conditions.push(sql`source = ANY(${userActiveSourceIds})`);
       }
+      // If no source filter and user has no preferences, show all articles
       
       if (search) {
         const searchTerm = `%${search}%`;
