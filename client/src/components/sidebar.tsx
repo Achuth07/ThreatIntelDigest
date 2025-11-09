@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -52,6 +52,7 @@ export function Sidebar({
   });
   const [showTooltipGuide, setShowTooltipGuide] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [hasLoadedSources, setHasLoadedSources] = useState(false);
 
   // Reference for the add sources button
   const addSourcesButtonRef = useRef<HTMLButtonElement>(null);
@@ -85,45 +86,53 @@ export function Sidebar({
     }
   }, [user]);
 
-  // Fetch user-specific sources
-  useEffect(() => {
-    const fetchUserSources = async () => {
-      if (!user) {
-        // For unauthenticated users, fetch all active sources
-        try {
-          const response = await apiRequest('GET', '/api/sources');
-          const sources = await response.json();
-          setUserSources(sources);
-        } catch (error) {
-          console.error('Error fetching sources:', error);
-        } finally {
-          setIsLoadingSources(false);
-        }
-        return;
-      }
-
-      // For authenticated users, fetch user-specific sources
+  // Fetch user-specific sources with useCallback to prevent re-creation
+  const fetchUserSources = useCallback(async (force = false) => {
+    if (hasLoadedSources && !force) return; // Prevent multiple loads unless forced
+    
+    setIsLoadingSources(true);
+    
+    if (!user) {
+      // For unauthenticated users, fetch all active sources
       try {
         const response = await apiRequest('GET', '/api/sources');
         const sources = await response.json();
         setUserSources(sources);
+        setHasLoadedSources(true);
       } catch (error) {
-        console.error('Error fetching user sources:', error);
-        // Fallback to all active sources
-        try {
-          const response = await apiRequest('GET', '/api/sources');
-          const sources = await response.json();
-          setUserSources(sources);
-        } catch (fallbackError) {
-          console.error('Error fetching fallback sources:', fallbackError);
-        }
+        console.error('Error fetching sources:', error);
       } finally {
         setIsLoadingSources(false);
       }
-    };
+      return;
+    }
 
+    // For authenticated users, fetch user-specific sources
+    try {
+      const response = await apiRequest('GET', '/api/sources');
+      const sources = await response.json();
+      setUserSources(sources);
+      setHasLoadedSources(true);
+    } catch (error) {
+      console.error('Error fetching user sources:', error);
+      // Fallback to all active sources
+      try {
+        const response = await apiRequest('GET', '/api/sources');
+        const sources = await response.json();
+        setUserSources(sources);
+        setHasLoadedSources(true);
+      } catch (fallbackError) {
+        console.error('Error fetching fallback sources:', fallbackError);
+      }
+    } finally {
+      setIsLoadingSources(false);
+    }
+  }, [user, hasLoadedSources]);
+
+  // Fetch sources only once on mount or when user changes
+  useEffect(() => {
     fetchUserSources();
-  }, [user]);
+  }, [fetchUserSources]);
 
   const refreshFeedsMutation = useMutation({
     mutationFn: () => apiRequest('POST', '/api/fetch-feeds'),
@@ -183,6 +192,8 @@ export function Sidebar({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/sources'] });
       queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
+      // Refetch sources after updating (force refresh)
+      fetchUserSources(true);
     },
     onError: () => {
       toast({
