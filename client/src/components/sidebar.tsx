@@ -330,7 +330,7 @@ export function Sidebar({
     const rect = buttonElement.getBoundingClientRect();
     setTooltipPosition({
       x: rect.left + rect.width / 2,
-      y: rect.top - 30 // Move 30px higher (was -10, now -30 for more clearance)
+      y: rect.top - 100 // Move 100px higher to be completely above the heading
     });
   };
 
