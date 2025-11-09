@@ -78,11 +78,19 @@ export function Sidebar({
   useEffect(() => {
     if (user) {
       // Delay the tooltip slightly to ensure UI is rendered
-      const timer = setTimeout(() => {
+      const showTimer = setTimeout(() => {
         setShowTooltipGuide(true);
-        // Note: We're not setting localStorage item anymore so it shows every time
       }, 1000);
-      return () => clearTimeout(timer);
+      
+      // Auto-hide after 20 seconds (1s delay + 20s visible)
+      const hideTimer = setTimeout(() => {
+        setShowTooltipGuide(false);
+      }, 21000);
+      
+      return () => {
+        clearTimeout(showTimer);
+        clearTimeout(hideTimer);
+      };
     }
   }, [user]);
 
@@ -445,11 +453,12 @@ export function Sidebar({
         {/* Tooltip Guide Popup */}
         {showTooltipGuide && (
           <div 
-            className="fixed z-50 animate-fade-in-up"
+            className="fixed z-50 animate-bounce"
             style={{
               left: `${tooltipPosition.x}px`,
               top: `${tooltipPosition.y}px`,
-              transform: 'translate(-50%, -100%)'
+              transform: 'translate(-50%, -100%)',
+              animationDuration: '1s'
             }}
           >
             <div className="relative bg-slate-800 border border-slate-700 rounded-lg p-4 w-64 shadow-lg">
@@ -466,7 +475,7 @@ export function Sidebar({
                 <div className="ml-2">
                   <h4 className="text-sm font-semibold text-slate-100">Add Threat Sources</h4>
                   <p className="mt-1 text-xs text-slate-400">
-                    Click here to add new threat intelligence sources and customize your feed
+                    Click on the + to add new threat intelligence sources and customize your feed
                   </p>
                 </div>
               </div>
