@@ -1,9 +1,9 @@
 import { and, desc, asc, ilike, inArray, eq } from 'drizzle-orm';
 import { getDb } from './db';
-import { articles, bookmarks, rssSources, vulnerabilities, users, userSourcePreferences } from '../shared/schema';
+import { articles, bookmarks, rssSources, vulnerabilities, users, userSourcePreferences, userPreferences } from '../shared/schema';
 import type { IStorage, CVE, InsertCVE } from './storage';
 import type { Article, InsertArticle, Bookmark, InsertBookmark, RssSource, InsertRssSource } from '../shared/schema';
-import type { User, InsertUser, UserSourcePreference, InsertUserSourcePreference } from '../shared/schema';
+import type { User, InsertUser, UserSourcePreference, InsertUserSourcePreference, UserPreferences, InsertUserPreferences } from '../shared/schema';
 
 export class PostgresStorage implements IStorage {
   private db = getDb();
@@ -331,6 +331,69 @@ export class PostgresStorage implements IStorage {
     } catch (error) {
       console.error('Error deleting user source preference:', error);
       return false;
+    }
+  }
+
+  // User Preferences
+  async getUserPreferences(userId: number): Promise<UserPreferences | undefined> {
+    try {
+      const result = await this.db.select().from(userPreferences).where(eq(userPreferences.userId, userId)).limit(1);
+      return result[0];
+    } catch (error) {
+      console.error('Error fetching user preferences:', error);
+      return undefined;
+    }
+  }
+
+  async createUserPreferences(insertPreferences: InsertUserPreferences): Promise<UserPreferences> {
+    try {
+      const result = await this.db.insert(userPreferences).values({
+        userId: insertPreferences.userId,
+        displayName: insertPreferences.displayName || null,
+        watchlistKeywords: insertPreferences.watchlistKeywords || null,
+        autoExtractIOCs: insertPreferences.autoExtractIOCs,
+        autoEnrichIOCs: insertPreferences.autoEnrichIOCs,
+        hiddenIOCTypes: insertPreferences.hiddenIOCTypes as string[],
+        emailWeeklyDigest: insertPreferences.emailWeeklyDigest,
+        emailWatchlistAlerts: insertPreferences.emailWatchlistAlerts,
+      }).returning();
+      return result[0];
+    } catch (error) {
+      console.error('Error creating user preferences:', error);
+      throw error;
+    }
+  }
+
+  async updateUserPreferences(userId: number, updatePreferences: Partial<InsertUserPreferences>): Promise<UserPreferences | undefined> {
+    try {
+      // Check if preferences exist
+      const existing = await this.getUserPreferences(userId);
+      
+      if (!existing) {
+        // Create new if doesn't exist
+        const defaults: InsertUserPreferences = {
+          userId,
+          autoExtractIOCs: true,
+          autoEnrichIOCs: false,
+          hiddenIOCTypes: [],
+          emailWeeklyDigest: false,
+          emailWatchlistAlerts: false,
+          ...updatePreferences,
+        };
+        return this.createUserPreferences(defaults);
+      }
+
+      const result = await this.db.update(userPreferences)
+        .set({
+          ...updatePreferences,
+          updatedAt: new Date(),
+        })
+        .where(eq(userPreferences.userId, userId))
+        .returning();
+      return result[0];
+    } catch (error) {
+      console.error('Error updating user preferences:', error);
+      return undefined;
     }
   }
 

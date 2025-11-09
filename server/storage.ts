@@ -1,4 +1,4 @@
-import { type Article, type InsertArticle, type Bookmark, type InsertBookmark, type RssSource, type InsertRssSource, type UserSourcePreference, type InsertUserSourcePreference } from "@shared/schema";
+import { type Article, type InsertArticle, type Bookmark, type InsertBookmark, type RssSource, type InsertRssSource, type UserSourcePreference, type InsertUserSourcePreference, type UserPreferences, type InsertUserPreferences } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 // Define CVE types for in-memory storage
@@ -32,7 +32,7 @@ interface InsertCVE {
 }
 
 // Re-export types for use in other files
-export { type Article, type InsertArticle, type Bookmark, type InsertBookmark, type RssSource, type InsertRssSource, type UserSourcePreference, type InsertUserSourcePreference, type CVE, type InsertCVE };
+export { type Article, type InsertArticle, type Bookmark, type InsertBookmark, type RssSource, type InsertRssSource, type UserSourcePreference, type InsertUserSourcePreference, type UserPreferences, type InsertUserPreferences, type CVE, type InsertCVE };
 
 export interface IStorage {
   // Articles
@@ -61,6 +61,11 @@ export interface IStorage {
   updateUserSourcePreference(userId: number, sourceId: string, preference: Partial<InsertUserSourcePreference>): Promise<UserSourcePreference | undefined>;
   deleteUserSourcePreference(userId: number, sourceId: string): Promise<boolean>;
   
+  // User Preferences
+  getUserPreferences(userId: number): Promise<UserPreferences | undefined>;
+  createUserPreferences(preferences: InsertUserPreferences): Promise<UserPreferences>;
+  updateUserPreferences(userId: number, preferences: Partial<InsertUserPreferences>): Promise<UserPreferences | undefined>;
+  
   // CVE/Vulnerabilities
   getCVEs(params?: { limit?: number; offset?: number; severity?: string; sort?: string }): Promise<CVE[]>;
   getCVE(id: string): Promise<CVE | undefined>;
@@ -74,6 +79,7 @@ export class MemStorage implements IStorage {
   private rssSources: Map<string, RssSource>;
   private cves: Map<string, CVE>;
   private userSourcePreferences: Map<string, UserSourcePreference>;
+  private userPreferences: Map<number, UserPreferences>;
 
   constructor() {
     this.articles = new Map();
@@ -81,6 +87,7 @@ export class MemStorage implements IStorage {
     this.rssSources = new Map();
     this.cves = new Map();
     this.userSourcePreferences = new Map();
+    this.userPreferences = new Map();
     this.initializeDefaultSources();
   }
 
@@ -417,6 +424,57 @@ export class MemStorage implements IStorage {
     
     if (!existingId) return false;
     return this.userSourcePreferences.delete(existingId);
+  }
+
+  // User Preferences
+  async getUserPreferences(userId: number): Promise<UserPreferences | undefined> {
+    return this.userPreferences.get(userId);
+  }
+
+  async createUserPreferences(insertPreferences: InsertUserPreferences): Promise<UserPreferences> {
+    const id = Math.max(0, ...Array.from(this.userPreferences.keys()), 0) + 1;
+    const preferences: UserPreferences = {
+      id,
+      userId: insertPreferences.userId,
+      displayName: insertPreferences.displayName ?? null,
+      watchlistKeywords: insertPreferences.watchlistKeywords ?? null,
+      autoExtractIOCs: insertPreferences.autoExtractIOCs ?? true,
+      autoEnrichIOCs: insertPreferences.autoEnrichIOCs ?? false,
+      hiddenIOCTypes: insertPreferences.hiddenIOCTypes ?? [],
+      emailWeeklyDigest: insertPreferences.emailWeeklyDigest ?? false,
+      emailWatchlistAlerts: insertPreferences.emailWatchlistAlerts ?? false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    this.userPreferences.set(insertPreferences.userId, preferences);
+    return preferences;
+  }
+
+  async updateUserPreferences(userId: number, updatePreferences: Partial<InsertUserPreferences>): Promise<UserPreferences | undefined> {
+    const existing = this.userPreferences.get(userId);
+    
+    if (!existing) {
+      // Create new if doesn't exist - provide defaults for required fields
+      const defaults: InsertUserPreferences = {
+        userId,
+        autoExtractIOCs: true,
+        autoEnrichIOCs: false,
+        hiddenIOCTypes: [],
+        emailWeeklyDigest: false,
+        emailWatchlistAlerts: false,
+        ...updatePreferences,
+      };
+      return this.createUserPreferences(defaults);
+    }
+
+    const updated: UserPreferences = {
+      ...existing,
+      ...updatePreferences,
+      userId, // Ensure userId doesn't change
+      updatedAt: new Date(),
+    };
+    this.userPreferences.set(userId, updated);
+    return updated;
   }
 
   // CVE/Vulnerabilities

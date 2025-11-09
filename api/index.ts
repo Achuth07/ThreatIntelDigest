@@ -40,6 +40,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return handleUserSourcePreferencesEndpoints(req, res, action);
     }
     
+    // User preferences endpoints
+    if (pathname.startsWith('/api/user-preferences')) {
+      return handleUserPreferencesEndpoints(req, res, action);
+    }
+    
     // Visitor count endpoints
     if (pathname.startsWith('/api/visitor-count')) {
       return handleVisitorCountEndpoints(req, res, action);
@@ -1920,6 +1925,115 @@ async function handleUserSourcePreferencesEndpoints(req: VercelRequest, res: Ver
     }
   } else {
     res.status(405).json({ message: 'Method not allowed' });
+  }
+}
+
+async function handleUserPreferencesEndpoints(req: VercelRequest, res: VercelResponse, action: string) {
+  console.log(`User Preferences API ${req.method} ${req.url}`);
+  
+  // Get user ID from request (for authenticated endpoints)
+  const userId = getUserIdFromRequest(req);
+  
+  // Require authentication for all endpoints
+  if (!userId) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  
+  // Get database connection
+  try {
+    if (!process.env.DATABASE_URL) {
+      return res.status(500).json({ error: 'DATABASE_URL environment variable is required' });
+    }
+
+    const { drizzle } = await import('drizzle-orm/neon-serverless');
+    const { Pool } = await import('@neondatabase/serverless');
+    const { eq } = await import('drizzle-orm');
+    const { userPreferences } = await import('../shared/schema');
+    
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const db = drizzle(pool);
+    
+    if (req.method === 'GET') {
+      // Get user preferences
+      const result = await db.select().from(userPreferences).where(eq(userPreferences.userId, userId)).limit(1);
+      
+      if (result.length === 0) {
+        // Return default preferences if none exist
+        return res.json({
+          userId,
+          displayName: null,
+          watchlistKeywords: null,
+          autoExtractIOCs: true,
+          autoEnrichIOCs: false,
+          hiddenIOCTypes: [],
+          emailWeeklyDigest: false,
+          emailWatchlistAlerts: false,
+        });
+      }
+      
+      res.json(result[0]);
+    } else if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
+      // Update or create user preferences
+      const { displayName, watchlistKeywords, autoExtractIOCs, autoEnrichIOCs, hiddenIOCTypes, emailWeeklyDigest, emailWatchlistAlerts } = req.body;
+      
+      // Validate displayName if provided
+      if (displayName !== undefined && displayName !== null && displayName !== '') {
+        if (typeof displayName !== 'string') {
+          return res.status(400).json({ message: "Display name must be a string" });
+        }
+        if (displayName.length > 50) {
+          return res.status(400).json({ message: "Display name must be 50 characters or less" });
+        }
+        if (!/^[a-zA-Z0-9\s]+$/.test(displayName)) {
+          return res.status(400).json({ message: "Display name must contain only letters, numbers, and spaces" });
+        }
+      }
+      
+      // Check if preferences exist
+      const existing = await db.select().from(userPreferences).where(eq(userPreferences.userId, userId)).limit(1);
+      
+      if (existing.length === 0) {
+        // Create new preferences
+        const result = await db.insert(userPreferences).values({
+          userId,
+          displayName: displayName || null,
+          watchlistKeywords: watchlistKeywords || null,
+          autoExtractIOCs: autoExtractIOCs ?? true,
+          autoEnrichIOCs: autoEnrichIOCs ?? false,
+          hiddenIOCTypes: hiddenIOCTypes || [],
+          emailWeeklyDigest: emailWeeklyDigest ?? false,
+          emailWatchlistAlerts: emailWatchlistAlerts ?? false,
+        }).returning();
+        
+        return res.status(201).json(result[0]);
+      } else {
+        // Update existing preferences
+        const updateData: any = { updatedAt: new Date() };
+        
+        if (displayName !== undefined) updateData.displayName = displayName || null;
+        if (watchlistKeywords !== undefined) updateData.watchlistKeywords = watchlistKeywords || null;
+        if (autoExtractIOCs !== undefined) updateData.autoExtractIOCs = autoExtractIOCs;
+        if (autoEnrichIOCs !== undefined) updateData.autoEnrichIOCs = autoEnrichIOCs;
+        if (hiddenIOCTypes !== undefined) updateData.hiddenIOCTypes = hiddenIOCTypes;
+        if (emailWeeklyDigest !== undefined) updateData.emailWeeklyDigest = emailWeeklyDigest;
+        if (emailWatchlistAlerts !== undefined) updateData.emailWatchlistAlerts = emailWatchlistAlerts;
+        
+        const result = await db.update(userPreferences)
+          .set(updateData)
+          .where(eq(userPreferences.userId, userId))
+          .returning();
+        
+        return res.json(result[0]);
+      }
+    } else {
+      res.status(405).json({ message: 'Method not allowed' });
+    }
+  } catch (error) {
+    console.error('User preferences API error:', error);
+    res.status(500).json({ 
+      message: "Failed to process user preferences request",
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 }
 

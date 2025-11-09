@@ -120,6 +120,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     await consolidatedApiHandler(mockReq as any, mockRes as any);
   });
   
+  // User Preferences API
+  app.get('/api/user-preferences', async (req, res) => {
+    const { mockReq, mockRes } = createMockHandlers(req, res, '/api/user-preferences');
+    await consolidatedApiHandler(mockReq as any, mockRes as any);
+  });
+  
+  app.post('/api/user-preferences', async (req, res) => {
+    const { mockReq, mockRes } = createMockHandlers(req, res, '/api/user-preferences');
+    await consolidatedApiHandler(mockReq as any, mockRes as any);
+  });
+  
+  app.put('/api/user-preferences', async (req, res) => {
+    const { mockReq, mockRes } = createMockHandlers(req, res, '/api/user-preferences');
+    await consolidatedApiHandler(mockReq as any, mockRes as any);
+  });
+  
+  app.patch('/api/user-preferences', async (req, res) => {
+    const { mockReq, mockRes } = createMockHandlers(req, res, '/api/user-preferences');
+    await consolidatedApiHandler(mockReq as any, mockRes as any);
+  });
+  
   // Fetch feeds API
   app.post('/api/fetch-feeds', async (req, res) => {
     const { mockReq, mockRes } = createMockHandlers(req, res, '/api/fetch-feeds');

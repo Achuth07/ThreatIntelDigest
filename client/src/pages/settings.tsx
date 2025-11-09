@@ -3,7 +3,7 @@ import { useLocation } from 'wouter';
 import { 
   User, Shield, Settings as SettingsIcon, Key, CreditCard, Bell, 
   ChevronRight, Monitor, LogOut, Save, AlertCircle, Eye, EyeOff,
-  RefreshCw, Trash2
+  RefreshCw, Trash2, Check, X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { getAuthenticatedUser } from '@/lib/auth';
+import { apiRequest } from '@/lib/queryClient';
 import { Header } from '@/components/header';
 
 interface UserSettings {
@@ -44,6 +45,8 @@ export default function Settings() {
   const [apiKey, setApiKey] = useState('');
   const [apiKeyVisible, setApiKeyVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isEditingDisplayName, setIsEditingDisplayName] = useState(false);
+  const [displayNameError, setDisplayNameError] = useState('');
   
   // Available IOC types to hide
   const iocTypes = ['MD5', 'SHA1', 'SHA256', 'SHA512', 'IPv4', 'IPv6', 'Domain', 'URL', 'Email'];
@@ -55,16 +58,8 @@ export default function Settings() {
       return;
     }
     
-    // Load user settings from localStorage (temporary until API is implemented)
-    const savedSettings = localStorage.getItem('user_settings');
-    if (savedSettings) {
-      try {
-        const parsed = JSON.parse(savedSettings);
-        setSettings({ ...settings, ...parsed });
-      } catch (error) {
-        console.error('Error loading settings:', error);
-      }
-    }
+    // Load user preferences from API
+    loadUserPreferences();
     
     // Load API key from localStorage
     const savedApiKey = localStorage.getItem('user_api_key');
@@ -73,11 +68,94 @@ export default function Settings() {
     }
   }, [user, navigate]);
 
+  const loadUserPreferences = async () => {
+    try {
+      const response = await apiRequest('GET', '/api/user-preferences');
+      const prefs = await response.json();
+      setSettings({
+        displayName: prefs.displayName || '',
+        watchlistKeywords: prefs.watchlistKeywords || '',
+        autoExtractIOCs: prefs.autoExtractIOCs ?? true,
+        autoEnrichIOCs: prefs.autoEnrichIOCs ?? false,
+        hiddenIOCTypes: prefs.hiddenIOCTypes || [],
+        emailWeeklyDigest: prefs.emailWeeklyDigest ?? false,
+        emailWatchlistAlerts: prefs.emailWatchlistAlerts ?? false,
+      });
+    } catch (error) {
+      console.error('Error loading user preferences:', error);
+    }
+  };
+
+  const validateDisplayName = (name: string): boolean => {
+    if (!name || name.trim() === '') {
+      setDisplayNameError('');
+      return true;
+    }
+    
+    if (name.length > 50) {
+      setDisplayNameError('Display name must be 50 characters or less');
+      return false;
+    }
+    
+    if (!/^[a-zA-Z0-9\s]+$/.test(name)) {
+      setDisplayNameError('Display name must contain only letters, numbers, and spaces');
+      return false;
+    }
+    
+    setDisplayNameError('');
+    return true;
+  };
+
+  const handleDisplayNameChange = (value: string) => {
+    setSettings({ ...settings, displayName: value });
+    validateDisplayName(value);
+  };
+
+  const handleSaveDisplayName = async () => {
+    if (!validateDisplayName(settings.displayName || '')) {
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await apiRequest('POST', '/api/user-preferences', {
+        displayName: settings.displayName || null,
+      });
+      
+      setIsEditingDisplayName(false);
+      toast({
+        title: "Display Name Saved",
+        description: "Your display name has been updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save display name. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancelDisplayName = () => {
+    setIsEditingDisplayName(false);
+    setDisplayNameError('');
+    // Reload preferences to reset
+    loadUserPreferences();
+  };
+
   const handleSaveSettings = async () => {
     setIsSaving(true);
     try {
-      // Save to localStorage (temporary until API is implemented)
-      localStorage.setItem('user_settings', JSON.stringify(settings));
+      await apiRequest('POST', '/api/user-preferences', {
+        watchlistKeywords: settings.watchlistKeywords || null,
+        autoExtractIOCs: settings.autoExtractIOCs,
+        autoEnrichIOCs: settings.autoEnrichIOCs,
+        hiddenIOCTypes: settings.hiddenIOCTypes,
+        emailWeeklyDigest: settings.emailWeeklyDigest,
+        emailWatchlistAlerts: settings.emailWatchlistAlerts,
+      });
       
       toast({
         title: "Settings Saved",
@@ -181,19 +259,50 @@ export default function Settings() {
                       <div className="flex items-center space-x-2 mt-1">
                         <Input
                           id="name"
-                          value={settings.displayName || user.name}
-                          onChange={(e) => setSettings({ ...settings, displayName: e.target.value })}
-                          className="bg-whatcyber-dark border-whatcyber-light-gray text-slate-100"
-                          placeholder="Enter display name"
+                          value={settings.displayName || ''}
+                          onChange={(e) => handleDisplayNameChange(e.target.value)}
+                          className="bg-whatcyber-dark border-whatcyber-light-gray text-slate-100 disabled:opacity-50"
+                          placeholder={user.name || "Enter display name"}
+                          disabled={!isEditingDisplayName}
                         />
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="border-whatcyber-light-gray text-slate-300 hover:bg-whatcyber-dark"
-                        >
-                          Edit
-                        </Button>
+                        {!isEditingDisplayName ? (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setIsEditingDisplayName(true)}
+                            className="border-whatcyber-light-gray text-slate-300 hover:bg-whatcyber-dark"
+                          >
+                            Edit
+                          </Button>
+                        ) : (
+                          <>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={handleSaveDisplayName}
+                              disabled={isSaving || !!displayNameError}
+                              className="border-green-600 text-green-500 hover:bg-green-600 hover:text-white disabled:opacity-50"
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={handleCancelDisplayName}
+                              disabled={isSaving}
+                              className="border-red-600 text-red-500 hover:bg-red-600 hover:text-white disabled:opacity-50"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
                       </div>
+                      {displayNameError && (
+                        <p className="text-xs text-red-400 mt-1">{displayNameError}</p>
+                      )}
+                      {!isEditingDisplayName && (
+                        <p className="text-xs text-slate-500 mt-1">Click Edit to change your display name (letters, numbers, and spaces only, max 50 characters)</p>
+                      )}
                     </div>
                     <div>
                       <Label className="text-slate-300">Email</Label>

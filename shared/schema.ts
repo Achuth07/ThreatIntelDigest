@@ -79,6 +79,20 @@ export const userSourcePreferences = pgTable('user_source_preferences', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
+export const userPreferences = pgTable('user_preferences', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').notNull().unique().references(() => users.id, { onDelete: 'cascade' }),
+  displayName: text('display_name'),
+  watchlistKeywords: text('watchlist_keywords'),
+  autoExtractIOCs: pgBoolean('auto_extract_iocs').default(true),
+  autoEnrichIOCs: pgBoolean('auto_enrich_iocs').default(false),
+  hiddenIOCTypes: jsonb('hidden_ioc_types').$type<string[]>().default([]),
+  emailWeeklyDigest: pgBoolean('email_weekly_digest').default(false),
+  emailWatchlistAlerts: pgBoolean('email_watchlist_alerts').default(false),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
 export const insertArticleSchema = createInsertSchema(articles, {
   title: z.string().min(1),
   url: z.string().url(),
@@ -147,6 +161,21 @@ export const insertUserSourcePreferenceSchema = createInsertSchema(userSourcePre
   updatedAt: true,
 });
 
+export const insertUserPreferencesSchema = createInsertSchema(userPreferences, {
+  userId: z.number().int().positive(),
+  displayName: z.string().regex(/^[a-zA-Z0-9\s]+$/, "Display name must contain only letters, numbers, and spaces").min(1).max(50).optional(),
+  watchlistKeywords: z.string().optional(),
+  autoExtractIOCs: z.boolean().default(true),
+  autoEnrichIOCs: z.boolean().default(false),
+  hiddenIOCTypes: z.array(z.string()).default([]),
+  emailWeeklyDigest: z.boolean().default(false),
+  emailWatchlistAlerts: z.boolean().default(false),
+}).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export type InsertArticle = z.infer<typeof insertArticleSchema>;
 export type Article = typeof articles.$inferSelect;
 export type InsertBookmark = z.infer<typeof insertBookmarkSchema>;
@@ -159,3 +188,5 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertUserSourcePreference = z.infer<typeof insertUserSourcePreferenceSchema>;
 export type UserSourcePreference = typeof userSourcePreferences.$inferSelect;
+export type InsertUserPreferences = z.infer<typeof insertUserPreferencesSchema>;
+export type UserPreferences = typeof userPreferences.$inferSelect;
