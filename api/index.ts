@@ -1020,7 +1020,11 @@ async function handleArticlesEndpoints(req: VercelRequest, res: VercelResponse, 
         conditions.push(sql`source = ${source}`);
       } else if (userId && userActiveSourceIds.length > 0) {
         // User is authenticated and has preferences - filter by active sources only
-        conditions.push(sql`source = ANY(${userActiveSourceIds})`);
+        // Use IN clause with the source IDs
+        const inClause = userActiveSourceIds.map(id => sql`${id}`).reduce((acc, curr, idx) => 
+          idx === 0 ? curr : sql`${acc}, ${curr}`
+        );
+        conditions.push(sql`source IN (${inClause})`);
       }
       // If no source filter and user has no preferences, show all articles
       
