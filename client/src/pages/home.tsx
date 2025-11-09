@@ -22,7 +22,7 @@ export default function Home() {
   const [selectedSource, setSelectedSource] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('newest');
-  const [timeFilter, setTimeFilter] = useState('today');
+  const [timeFilter, setTimeFilter] = useState('all');
   const [threatFilters, setThreatFilters] = useState(['CRITICAL', 'HIGH', 'MEDIUM']);
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [showVulnerabilities, setShowVulnerabilities] = useState(false);
