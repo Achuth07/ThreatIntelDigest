@@ -7,6 +7,7 @@ import { getAuthenticatedUser, updateAuthToken, isAdmin } from '@/lib/auth';
 interface User {
   id: number;
   name: string;
+  displayName?: string | null;
   email: string;
   avatar: string | null;
   createdAt: string;
@@ -148,6 +149,7 @@ export function AdminDashboard() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>User</TableHead>
+                    <TableHead>Display Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>First Login</TableHead>
                     <TableHead>Last Login</TableHead>
@@ -171,6 +173,13 @@ export function AdminDashboard() {
                             <span>{user.name}</span>
                           </div>
                         </TableCell>
+                        <TableCell>
+                          {user.displayName ? (
+                            <span className="text-whatcyber-teal">{user.displayName}</span>
+                          ) : (
+                            <span className="text-slate-500 italic">Not set</span>
+                          )}
+                        </TableCell>
                         <TableCell>{user.email}</TableCell>
                         <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
                         <TableCell>{new Date(user.lastLoginAt).toLocaleDateString()}</TableCell>
@@ -178,7 +187,7 @@ export function AdminDashboard() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center">
+                      <TableCell colSpan={5} className="text-center">
                         No recent users found
                       </TableCell>
                     </TableRow>

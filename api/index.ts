@@ -1579,6 +1579,10 @@ async function getUserStatistics() {
   try {
     const allUsers = await db.select().from(users);
     
+    // Fetch user preferences for display names
+    const allPreferences = await db.select().from(userPreferences);
+    const preferencesMap = new Map(allPreferences.map(p => [p.userId, p.displayName]));
+    
     // Calculate statistics
     const totalUsers = allUsers.length;
     
@@ -1599,13 +1603,14 @@ async function getUserStatistics() {
       new Date(user.lastLoginAt) > oneWeekAgo
     ).length;
     
-    // Get the 10 most recent logins
+    // Get the 10 most recent logins with display names
     const recentUsers = [...allUsers]
       .sort((a, b) => new Date(b.lastLoginAt).getTime() - new Date(a.lastLoginAt).getTime())
       .slice(0, 10)
       .map(user => ({
         id: user.id,
         name: user.name,
+        displayName: preferencesMap.get(user.id) || null,
         email: user.email,
         avatar: user.avatar || null,
         createdAt: user.createdAt,

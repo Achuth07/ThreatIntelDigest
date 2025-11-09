@@ -313,6 +313,17 @@ export default function Settings() {
                       )}
                     </div>
                     <div>
+                      <Label className="text-slate-300">Full Name</Label>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <Input
+                          value={user.name}
+                          disabled
+                          className="bg-whatcyber-dark/50 border-whatcyber-light-gray text-slate-400 cursor-not-allowed"
+                        />
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">From your Google account (cannot be changed)</p>
+                    </div>
+                    <div>
                       <Label className="text-slate-300">Email</Label>
                       <div className="flex items-center space-x-2 mt-1">
                         <Input

@@ -28,6 +28,7 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [displayName, setDisplayName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false); // For dropdown menu
   const settingsRef = useRef<HTMLDivElement>(null); // For detecting clicks outside
@@ -60,6 +61,8 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
         setUser(userData);
         // Store user data in localStorage for persistence
         updateAuthToken(userData);
+        // Fetch display name
+        fetchDisplayName(userData.token);
         // Remove the user parameter from the URL
         urlParams.delete('user');
         const newUrl = `${window.location.pathname}${urlParams.toString() ? '?' + urlParams.toString() : ''}`;
@@ -93,6 +96,8 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
       const userData = getAuthenticatedUser();
       if (userData) {
         setUser(userData);
+        // Fetch user preferences to get display name
+        fetchDisplayName(userData.token);
       }
     } catch (error) {
       console.error('Failed to check auth status:', error);
@@ -101,6 +106,27 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
       setTimeout(() => {
         setLoading(false);
       }, 100);
+    }
+  };
+
+  const fetchDisplayName = async (token?: string) => {
+    if (!token) return;
+    
+    try {
+      const response = await fetch('/api/user-preferences', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const prefs = await response.json();
+        if (prefs.displayName) {
+          setDisplayName(prefs.displayName);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch display name:', error);
     }
   };
 
@@ -313,7 +339,7 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
                   )}
                   <div className="flex items-center space-x-1">
                     <span className="text-sm text-slate-300 hidden md:inline" data-testid="text-user-name">
-                      {user.name}
+                      {displayName || user.name}
                     </span>
                     <Button
                       variant="ghost"
