@@ -77,20 +77,29 @@ export function Sidebar({
   // Show tooltip guide on every login for all users
   useEffect(() => {
     if (user) {
-      // Delay the tooltip slightly to ensure UI is rendered
-      const showTimer = setTimeout(() => {
-        setShowTooltipGuide(true);
-      }, 1000);
+      // Check if tooltip has already been shown in this session
+      const hasShownTooltip = sessionStorage.getItem('tooltip_shown');
       
-      // Auto-hide after 20 seconds (1s delay + 20s visible)
-      const hideTimer = setTimeout(() => {
-        setShowTooltipGuide(false);
-      }, 21000);
-      
-      return () => {
-        clearTimeout(showTimer);
-        clearTimeout(hideTimer);
-      };
+      if (!hasShownTooltip) {
+        // Delay the tooltip slightly to ensure UI is rendered
+        const showTimer = setTimeout(() => {
+          setShowTooltipGuide(true);
+        }, 1000);
+        
+        // Auto-hide after 20 seconds and mark as shown for this session
+        const hideTimer = setTimeout(() => {
+          setShowTooltipGuide(false);
+          sessionStorage.setItem('tooltip_shown', 'true');
+        }, 21000);
+        
+        return () => {
+          clearTimeout(showTimer);
+          clearTimeout(hideTimer);
+        };
+      }
+    } else {
+      // User logged out - clear the session flag so it shows again on next login
+      sessionStorage.removeItem('tooltip_shown');
     }
   }, [user]);
 
@@ -321,7 +330,7 @@ export function Sidebar({
     const rect = buttonElement.getBoundingClientRect();
     setTooltipPosition({
       x: rect.left + rect.width / 2,
-      y: rect.top - 10
+      y: rect.top - 30 // Move 30px higher (was -10, now -30 for more clearance)
     });
   };
 
@@ -463,7 +472,10 @@ export function Sidebar({
           >
             <div className="relative bg-slate-800 border border-slate-700 rounded-lg p-4 w-64 shadow-lg">
               <button
-                onClick={() => setShowTooltipGuide(false)}
+                onClick={() => {
+                  setShowTooltipGuide(false);
+                  sessionStorage.setItem('tooltip_shown', 'true');
+                }}
                 className="absolute top-2 right-2 text-slate-400 hover:text-slate-200"
               >
                 <X className="w-4 h-4" />
