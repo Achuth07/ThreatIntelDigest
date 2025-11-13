@@ -1,11 +1,11 @@
-import { getDb } from './db';
-import { users } from '../shared/schema';
+import { getDb } from './db.js';
+import { users } from '../shared/schema.js';
 import { eq } from 'drizzle-orm';
 
 // Simple interface for user tracking data
 export interface UserLoginRecord {
   id: number;
-  googleId: string;
+  googleId: string | null;
   name: string;
   email: string;
   avatar: string | null;

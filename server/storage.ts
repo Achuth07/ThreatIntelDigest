@@ -1,4 +1,4 @@
-import { type Article, type InsertArticle, type Bookmark, type InsertBookmark, type RssSource, type InsertRssSource, type UserSourcePreference, type InsertUserSourcePreference, type UserPreferences, type InsertUserPreferences } from "@shared/schema";
+import { type Article, type InsertArticle, type Bookmark, type InsertBookmark, type RssSource, type InsertRssSource, type UserSourcePreference, type InsertUserSourcePreference, type UserPreferences, type InsertUserPreferences } from "@shared/schema.js";
 import { randomUUID } from "crypto";
 
 // Define CVE types for in-memory storage

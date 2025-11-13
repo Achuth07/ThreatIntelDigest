@@ -1,9 +1,9 @@
 import { and, desc, asc, ilike, inArray, eq } from 'drizzle-orm';
-import { getDb } from './db';
-import { articles, bookmarks, rssSources, vulnerabilities, users, userSourcePreferences, userPreferences } from '../shared/schema';
-import type { IStorage, CVE, InsertCVE } from './storage';
-import type { Article, InsertArticle, Bookmark, InsertBookmark, RssSource, InsertRssSource } from '../shared/schema';
-import type { User, InsertUser, UserSourcePreference, InsertUserSourcePreference, UserPreferences, InsertUserPreferences } from '../shared/schema';
+import { getDb } from './db.js';
+import { articles, bookmarks, rssSources, vulnerabilities, users, userSourcePreferences, userPreferences } from '../shared/schema.js';
+import type { IStorage, CVE, InsertCVE } from './storage.js';
+import type { Article, InsertArticle, Bookmark, InsertBookmark, RssSource, InsertRssSource } from '../shared/schema.js';
+import type { User, InsertUser, UserSourcePreference, InsertUserSourcePreference, UserPreferences, InsertUserPreferences } from '../shared/schema.js';
 
 export class PostgresStorage implements IStorage {
   private db = getDb();
