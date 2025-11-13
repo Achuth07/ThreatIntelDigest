@@ -570,18 +570,18 @@ async function handleEmailAuthEndpoints(req: VercelRequest, res: VercelResponse)
   // Dynamically import dependencies
   const { drizzle } = await import('drizzle-orm/neon-serverless');
   const { Pool } = await import('@neondatabase/serverless');
-  const { PostgresStorage } = await import('../server/postgres-storage');
+  const { PostgresStorage } = await import('../server/postgres-storage.js');
   const { 
     hashPassword, 
     verifyPassword, 
     generateSecureToken, 
     validatePasswordStrength 
-  } = await import('../server/auth/password-utils');
+  } = await import('../server/auth/password-utils.js');
   const { 
     sendVerificationEmail, 
     sendPasswordResetEmail 
-  } = await import('../server/email-service');
-  const { users: usersTable } = await import('../shared/schema');
+  } = await import('../server/email-service.js');
+  const { users: usersTable } = await import('../shared/schema.js');
   const { eq } = await import('drizzle-orm');
   
   // Create database connection and storage
