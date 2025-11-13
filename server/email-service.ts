@@ -47,8 +47,14 @@ export async function sendVerificationEmail(
   try {
     await mailerSend.email.send(emailParams);
     console.log('✅ Verification email sent to:', to);
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Error sending verification email:', error);
+    
+    // Check if it's a MailerSend trial account limitation
+    if (error?.body?.message?.includes('Trial accounts can only send emails')) {
+      throw new Error('Email verification is temporarily unavailable. Please contact support or try again later.');
+    }
+    
     throw new Error('Failed to send verification email');
   }
 }
@@ -86,8 +92,14 @@ export async function sendPasswordResetEmail(
   try {
     await mailerSend.email.send(emailParams);
     console.log('✅ Password reset email sent to:', to);
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Error sending password reset email:', error);
+    
+    // Check if it's a MailerSend trial account limitation
+    if (error?.body?.message?.includes('Trial accounts can only send emails')) {
+      throw new Error('Password reset email is temporarily unavailable. Please contact support or try again later.');
+    }
+    
     throw new Error('Failed to send password reset email');
   }
 }
