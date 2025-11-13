@@ -643,15 +643,27 @@ async function handleEmailAuthEndpoints(req: VercelRequest, res: VercelResponse)
         verificationTokenExpiry
       });
 
+      console.log('✅ User created successfully, preparing to send verification email:', {
+        email,
+        name,
+        userId: user?.id,
+        hasToken: !!verificationToken
+      });
+
       // Send verification email
-      const verificationUrl = `${baseUrl}/verify-email?token=${verificationToken}`;
-      await sendVerificationEmail(email, name, verificationUrl);
+      try {
+        await sendVerificationEmail(email, name, verificationToken);
+        console.log('✅ Verification email sent successfully for:', email);
+      } catch (emailError) {
+        console.error('❌ Failed to send verification email:', emailError);
+        // Don't fail registration if email fails - user can request new verification email
+      }
 
       return res.status(201).json({ 
         message: 'Registration successful! Please check your email to verify your account.' 
       });
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error('❌ Registration error:', error);
       return res.status(500).json({ error: 'Registration failed' });
     }
   }
@@ -770,8 +782,7 @@ async function handleEmailAuthEndpoints(req: VercelRequest, res: VercelResponse)
       await storage.setResetToken(user.id, resetToken, resetTokenExpiry);
 
       // Send password reset email
-      const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
-      await sendPasswordResetEmail(email, user.name, resetUrl);
+      await sendPasswordResetEmail(email, user.name, resetToken);
 
       return res.status(200).json({ 
         message: 'If an account with this email exists, a password reset link has been sent.' 

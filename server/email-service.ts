@@ -1,5 +1,13 @@
 import nodemailer from 'nodemailer';
 
+// Log SMTP configuration (without sensitive data)
+console.log('📧 SMTP Configuration:', {
+  host: process.env.SMTP_HOST || 'smtp.mailersend.net',
+  port: process.env.SMTP_PORT || '587',
+  user: process.env.SMTP_USER ? '***SET***' : '***NOT SET***',
+  pass: process.env.SMTP_PASS ? '***SET***' : '***NOT SET***',
+});
+
 // SMTP Configuration
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.mailersend.net',
@@ -9,6 +17,15 @@ const transporter = nodemailer.createTransport({
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
+});
+
+// Verify SMTP connection
+transporter.verify((error, success) => {
+  if (error) {
+    console.error('❌ SMTP connection error:', error);
+  } else {
+    console.log('✅ SMTP server is ready to send emails');
+  }
 });
 
 const SENDER_EMAIL = 'contact@whatcyber.com';
