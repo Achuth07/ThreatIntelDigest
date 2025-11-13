@@ -632,4 +632,130 @@ export class PostgresStorage implements IStorage {
       return [];
     }
   }
+
+  // Email Authentication Methods
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    try {
+      const result = await this.db.select().from(users).where(eq(users.email, email)).limit(1);
+      return result[0];
+    } catch (error) {
+      console.error('Error fetching user by email:', error);
+      return undefined;
+    }
+  }
+
+  async getUserByVerificationToken(token: string): Promise<User | undefined> {
+    try {
+      const { sql } = await import('drizzle-orm');
+      const result = await this.db.select().from(users).where(
+        and(
+          eq(users.verificationToken, token),
+          sql`${users.verificationTokenExpiry} > NOW()`
+        )
+      ).limit(1);
+      return result[0];
+    } catch (error) {
+      console.error('Error fetching user by verification token:', error);
+      return undefined;
+    }
+  }
+
+  async getUserByResetToken(token: string): Promise<User | undefined> {
+    try {
+      const { sql } = await import('drizzle-orm');
+      const result = await this.db.select().from(users).where(
+        and(
+          eq(users.resetToken, token),
+          sql`${users.resetTokenExpiry} > NOW()`
+        )
+      ).limit(1);
+      return result[0];
+    } catch (error) {
+      console.error('Error fetching user by reset token:', error);
+      return undefined;
+    }
+  }
+
+  async createEmailUser(user: {
+    name: string;
+    email: string;
+    passwordHash: string;
+    verificationToken: string;
+    verificationTokenExpiry: Date;
+  }): Promise<User> {
+    try {
+      const result = await this.db.insert(users).values({
+        name: user.name,
+        email: user.email,
+        passwordHash: user.passwordHash,
+        verificationToken: user.verificationToken,
+        verificationTokenExpiry: user.verificationTokenExpiry,
+        emailVerified: false,
+        createdAt: new Date(),
+        lastLoginAt: new Date(),
+      }).returning();
+      return result[0];
+    } catch (error) {
+      console.error('Error creating email user:', error);
+      throw new Error('Failed to create user');
+    }
+  }
+
+  async verifyUserEmail(userId: number): Promise<boolean> {
+    try {
+      const result = await this.db.update(users)
+        .set({
+          emailVerified: true,
+          verificationToken: null,
+          verificationTokenExpiry: null,
+        })
+        .where(eq(users.id, userId));
+      return (result.rowCount ?? 0) > 0;
+    } catch (error) {
+      console.error('Error verifying user email:', error);
+      return false;
+    }
+  }
+
+  async updateUserPassword(userId: number, passwordHash: string): Promise<boolean> {
+    try {
+      const result = await this.db.update(users)
+        .set({ passwordHash })
+        .where(eq(users.id, userId));
+      return (result.rowCount ?? 0) > 0;
+    } catch (error) {
+      console.error('Error updating user password:', error);
+      return false;
+    }
+  }
+
+  async setResetToken(userId: number, resetToken: string, expiry: Date): Promise<boolean> {
+    try {
+      const result = await this.db.update(users)
+        .set({
+          resetToken,
+          resetTokenExpiry: expiry,
+        })
+        .where(eq(users.id, userId));
+      return (result.rowCount ?? 0) > 0;
+    } catch (error) {
+      console.error('Error setting reset token:', error);
+      return false;
+    }
+  }
+
+  async clearResetToken(userId: number): Promise<boolean> {
+    try {
+      const result = await this.db.update(users)
+        .set({
+          resetToken: null,
+          resetTokenExpiry: null,
+        })
+        .where(eq(users.id, userId));
+      return (result.rowCount ?? 0) > 0;
+    } catch (error) {
+      console.error('Error clearing reset token:', error);
+      return false;
+    }
+  }
 }

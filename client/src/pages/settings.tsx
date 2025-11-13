@@ -384,6 +384,23 @@ export default function Settings() {
               <Separator className="bg-whatcyber-light-gray" />
               
               <div>
+                <h4 className="text-sm font-medium text-slate-300 mb-3">Password</h4>
+                <Button
+                  variant="outline"
+                  className="border-whatcyber-teal text-whatcyber-teal hover:bg-whatcyber-teal/10"
+                  onClick={() => navigate('/set-password')}
+                >
+                  <Key className="w-4 h-4 mr-2" />
+                  Set/Change Password
+                </Button>
+                <p className="text-xs text-slate-500 mt-2">
+                  Set or update your account password to enable email/password login
+                </p>
+              </div>
+              
+              <Separator className="bg-whatcyber-light-gray" />
+              
+              <div>
                 <Button
                   variant="outline"
                   className="border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"

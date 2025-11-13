@@ -71,6 +71,22 @@ export interface IStorage {
   getCVE(id: string): Promise<CVE | undefined>;
   createCVE(cve: InsertCVE): Promise<CVE>;
   cveExists(id: string): Promise<boolean>;
+  
+  // Email Authentication
+  getUserByEmail(email: string): Promise<any | undefined>;
+  getUserByVerificationToken(token: string): Promise<any | undefined>;
+  getUserByResetToken(token: string): Promise<any | undefined>;
+  createEmailUser(user: {
+    name: string;
+    email: string;
+    passwordHash: string;
+    verificationToken: string;
+    verificationTokenExpiry: Date;
+  }): Promise<any>;
+  verifyUserEmail(userId: number): Promise<boolean>;
+  updateUserPassword(userId: number, passwordHash: string): Promise<boolean>;
+  setResetToken(userId: number, resetToken: string, expiry: Date): Promise<boolean>;
+  clearResetToken(userId: number): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -549,6 +565,53 @@ export class MemStorage implements IStorage {
 
   async cveExists(id: string): Promise<boolean> {
     return this.cves.has(id);
+  }
+
+  // Email Authentication methods (stubs for MemStorage)
+  async getUserByEmail(email: string): Promise<any | undefined> {
+    console.warn('getUserByEmail not implemented in MemStorage');
+    return undefined;
+  }
+
+  async getUserByVerificationToken(token: string): Promise<any | undefined> {
+    console.warn('getUserByVerificationToken not implemented in MemStorage');
+    return undefined;
+  }
+
+  async getUserByResetToken(token: string): Promise<any | undefined> {
+    console.warn('getUserByResetToken not implemented in MemStorage');
+    return undefined;
+  }
+
+  async createEmailUser(user: {
+    name: string;
+    email: string;
+    passwordHash: string;
+    verificationToken: string;
+    verificationTokenExpiry: Date;
+  }): Promise<any> {
+    console.warn('createEmailUser not implemented in MemStorage');
+    throw new Error('Email authentication requires PostgreSQL database');
+  }
+
+  async verifyUserEmail(userId: number): Promise<boolean> {
+    console.warn('verifyUserEmail not implemented in MemStorage');
+    return false;
+  }
+
+  async updateUserPassword(userId: number, passwordHash: string): Promise<boolean> {
+    console.warn('updateUserPassword not implemented in MemStorage');
+    return false;
+  }
+
+  async setResetToken(userId: number, resetToken: string, expiry: Date): Promise<boolean> {
+    console.warn('setResetToken not implemented in MemStorage');
+    return false;
+  }
+
+  async clearResetToken(userId: number): Promise<boolean> {
+    console.warn('clearResetToken not implemented in MemStorage');
+    return false;
   }
 }
 

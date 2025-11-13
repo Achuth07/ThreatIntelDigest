@@ -10,7 +10,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   
   // Handle different API endpoints based on pathname and action
   try {
-    // Auth endpoints
+    // Auth endpoints - handle email auth separately from Google OAuth
+    if (pathname.startsWith('/api/auth/email')) {
+      return handleEmailAuthEndpoints(req, res);
+    }
+    
     if (pathname.startsWith('/api/auth')) {
       return handleAuthEndpoints(req, res, action);
     }
@@ -550,6 +554,345 @@ async function handleLogout(req: VercelRequest, res: VercelResponse) {
   res.status(200).json({ 
     message: 'Logged out successfully. User data is cleared from localStorage.' 
   });
+}
+
+async function handleEmailAuthEndpoints(req: VercelRequest, res: VercelResponse) {
+  const { pathname } = new URL(req.url!, `https://${req.headers.host}`);
+  
+  // Check if database is configured
+  if (!process.env.DATABASE_URL) {
+    return res.status(500).json({ 
+      error: 'Database not configured',
+      message: 'EMAIL authentication requires PostgreSQL database'
+    });
+  }
+
+  // Dynamically import dependencies
+  const { drizzle } = await import('drizzle-orm/neon-serverless');
+  const { Pool } = await import('@neondatabase/serverless');
+  const { PostgresStorage } = await import('../server/postgres-storage');
+  const { 
+    hashPassword, 
+    verifyPassword, 
+    generateSecureToken, 
+    validatePasswordStrength 
+  } = await import('../server/auth/password-utils');
+  const { 
+    sendVerificationEmail, 
+    sendPasswordResetEmail 
+  } = await import('../server/email-service');
+  const { users: usersTable } = await import('../shared/schema');
+  const { eq } = await import('drizzle-orm');
+  
+  // Create database connection and storage
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const db = drizzle(pool);
+  const storage = new PostgresStorage();
+  
+  // Determine environment for URL construction
+  const isProduction = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
+  const baseUrl = isProduction ? 'https://threatfeed.whatcyber.com' : 'http://localhost:5173';
+
+  // POST /api/auth/email/register - Register new user with email/password
+  if (pathname === '/api/auth/email/register' && req.method === 'POST') {
+    try {
+      const { name, email, password } = req.body;
+      
+      // Validate input
+      if (!name || !email || !password) {
+        return res.status(400).json({ error: 'Name, email, and password are required' });
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: 'Invalid email format' });
+      }
+
+      // Validate password strength
+      const passwordValidation = validatePasswordStrength(password);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({ 
+          error: 'Password does not meet requirements',
+          message: passwordValidation.message
+        });
+      }
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        // Don't reveal if user exists (prevent email enumeration)
+        return res.status(200).json({ 
+          message: 'If this email is not already registered, you will receive a verification email shortly.' 
+        });
+      }
+
+      // Hash password
+      const passwordHash = await hashPassword(password);
+
+      // Generate verification token (expires in 24 hours)
+      const verificationToken = generateSecureToken();
+      const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      // Create user
+      const user = await storage.createEmailUser({
+        name,
+        email,
+        passwordHash,
+        verificationToken,
+        verificationTokenExpiry
+      });
+
+      // Send verification email
+      const verificationUrl = `${baseUrl}/verify-email?token=${verificationToken}`;
+      await sendVerificationEmail(email, name, verificationUrl);
+
+      return res.status(201).json({ 
+        message: 'Registration successful! Please check your email to verify your account.' 
+      });
+    } catch (error) {
+      console.error('Registration error:', error);
+      return res.status(500).json({ error: 'Registration failed' });
+    }
+  }
+
+  // GET /api/auth/email/verify - Verify email with token
+  if (pathname === '/api/auth/email/verify' && req.method === 'GET') {
+    try {
+      const token = req.query.token as string;
+      
+      if (!token) {
+        return res.status(400).json({ error: 'Verification token is required' });
+      }
+
+      // Find user by verification token (also checks expiry)
+      const user = await storage.getUserByVerificationToken(token);
+      if (!user) {
+        return res.status(400).json({ error: 'Invalid or expired verification token' });
+      }
+
+      // Verify the user's email
+      await storage.verifyUserEmail(user.id);
+
+      return res.status(200).json({ 
+        message: 'Email verified successfully! You can now log in.' 
+      });
+    } catch (error) {
+      console.error('Email verification error:', error);
+      return res.status(500).json({ error: 'Email verification failed' });
+    }
+  }
+
+  // POST /api/auth/email/login - Login with email/password
+  if (pathname === '/api/auth/email/login' && req.method === 'POST') {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password are required' });
+      }
+
+      // Find user by email
+      const user = await storage.getUserByEmail(email);
+      if (!user || !user.passwordHash) {
+        // Don't reveal if user exists
+        return res.status(401).json({ error: 'Invalid email or password' });
+      }
+
+      // Verify password
+      const isPasswordValid = await verifyPassword(password, user.passwordHash);
+      if (!isPasswordValid) {
+        return res.status(401).json({ error: 'Invalid email or password' });
+      }
+
+      // Check if email is verified
+      if (!user.emailVerified) {
+        return res.status(403).json({ 
+          error: 'Email not verified',
+          message: 'Please verify your email before logging in. Check your inbox for the verification link.' 
+        });
+      }
+
+      // Update last login
+      await db.update(usersTable)
+        .set({ lastLoginAt: new Date() })
+        .where(eq(usersTable.id, user.id));
+
+      // Generate JWT token
+      const tokenPayload = {
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        isAdmin: user.email === ADMIN_EMAIL,
+      };
+      const token = generateToken(tokenPayload);
+
+      return res.status(200).json({ 
+        token,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          avatar: user.avatar,
+          isAdmin: user.email === ADMIN_EMAIL
+        }
+      });
+    } catch (error) {
+      console.error('Login error:', error);
+      return res.status(500).json({ error: 'Login failed' });
+    }
+  }
+
+  // POST /api/auth/email/forgot-password - Request password reset
+  if (pathname === '/api/auth/email/forgot-password' && req.method === 'POST') {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      // Find user by email
+      const user = await storage.getUserByEmail(email);
+      
+      // Always return success to prevent email enumeration
+      if (!user || !user.passwordHash) {
+        return res.status(200).json({ 
+          message: 'If an account with this email exists, a password reset link has been sent.' 
+        });
+      }
+
+      // Generate reset token (expires in 1 hour)
+      const resetToken = generateSecureToken();
+      const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000);
+
+      // Save reset token
+      await storage.setResetToken(user.id, resetToken, resetTokenExpiry);
+
+      // Send password reset email
+      const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
+      await sendPasswordResetEmail(email, user.name, resetUrl);
+
+      return res.status(200).json({ 
+        message: 'If an account with this email exists, a password reset link has been sent.' 
+      });
+    } catch (error) {
+      console.error('Password reset request error:', error);
+      return res.status(500).json({ error: 'Password reset request failed' });
+    }
+  }
+
+  // POST /api/auth/email/reset-password - Reset password with token
+  if (pathname === '/api/auth/email/reset-password' && req.method === 'POST') {
+    try {
+      const { token, password } = req.body;
+      
+      if (!token || !password) {
+        return res.status(400).json({ error: 'Token and new password are required' });
+      }
+
+      // Validate password strength
+      const passwordValidation = validatePasswordStrength(password);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({ 
+          error: 'Password does not meet requirements',
+          message: passwordValidation.message
+        });
+      }
+
+      // Find user by reset token (also checks expiry)
+      const user = await storage.getUserByResetToken(token);
+      if (!user) {
+        return res.status(400).json({ error: 'Invalid or expired reset token' });
+      }
+
+      // Hash new password
+      const passwordHash = await hashPassword(password);
+
+      // Update password and clear reset token
+      await storage.updateUserPassword(user.id, passwordHash);
+      await storage.clearResetToken(user.id);
+
+      return res.status(200).json({ 
+        message: 'Password reset successfully! You can now log in with your new password.' 
+      });
+    } catch (error) {
+      console.error('Password reset error:', error);
+      return res.status(500).json({ error: 'Password reset failed' });
+    }
+  }
+
+  // POST /api/auth/email/set-password - Allow authenticated users to set/change password
+  if (pathname === '/api/auth/email/set-password' && req.method === 'POST') {
+    try {
+      // Get user ID from JWT token
+      const userId = getUserIdFromRequest(req);
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      const { currentPassword, newPassword } = req.body;
+      
+      if (!newPassword) {
+        return res.status(400).json({ error: 'New password is required' });
+      }
+
+      // Validate new password strength
+      const passwordValidation = validatePasswordStrength(newPassword);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({ 
+          error: 'Password does not meet requirements',
+          message: passwordValidation.message
+        });
+      }
+
+      // Get user from database
+      const { users: usersTable } = await import('../shared/schema');
+      const { eq } = await import('drizzle-orm');
+      const userResult = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+      
+      if (!userResult || userResult.length === 0) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const user = userResult[0];
+
+      // If user already has a password, verify the current password
+      if (user.passwordHash) {
+        if (!currentPassword) {
+          return res.status(400).json({ error: 'Current password is required' });
+        }
+        
+        const isCurrentPasswordValid = await verifyPassword(currentPassword, user.passwordHash);
+        if (!isCurrentPasswordValid) {
+          return res.status(401).json({ error: 'Current password is incorrect' });
+        }
+      }
+
+      // Hash new password
+      const newPasswordHash = await hashPassword(newPassword);
+
+      // Update password
+      await storage.updateUserPassword(userId, newPasswordHash);
+
+      // If this is a Google OAuth user setting their first password, mark email as verified
+      if (user.googleId && !user.passwordHash) {
+        await storage.verifyUserEmail(userId);
+      }
+
+      return res.status(200).json({ 
+        message: user.passwordHash 
+          ? 'Password changed successfully!' 
+          : 'Password set successfully! You can now log in with your email and password.'
+      });
+    } catch (error) {
+      console.error('Set password error:', error);
+      return res.status(500).json({ error: 'Failed to set password' });
+    }
+  }
+
+  // If no route matched
+  return res.status(404).json({ error: 'Email auth endpoint not found' });
 }
 
 async function handleAuthEndpoints(req: VercelRequest, res: VercelResponse, action: string) {

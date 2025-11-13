@@ -127,6 +127,133 @@ app.use((req, res, next) => {
     });
   });
 
+  // Email authentication routes - these will be handled by consolidated API handler
+  app.post('/api/auth/email/register', async (req, res) => {
+    const { default: consolidatedApiHandler } = await import('../api/index');
+    const mockReq = {
+      method: 'POST',
+      url: '/api/auth/email/register',
+      headers: req.headers,
+      query: req.query,
+      body: req.body,
+      params: req.params,
+    };
+    const mockRes = {
+      status: (code: number) => { res.status(code); return mockRes; },
+      json: (data: any) => { res.json(data); return mockRes; },
+      send: (data: any) => { res.send(data); return mockRes; },
+      setHeader: (name: string, value: string) => { res.setHeader(name, value); return mockRes; },
+      end: () => { res.end(); return mockRes; },
+      redirect: (url: string) => { res.redirect(url); return mockRes; }
+    };
+    await consolidatedApiHandler(mockReq as any, mockRes as any);
+  });
+
+  app.get('/api/auth/email/verify', async (req, res) => {
+    const { default: consolidatedApiHandler } = await import('../api/index');
+    const mockReq = {
+      method: 'GET',
+      url: '/api/auth/email/verify',
+      headers: req.headers,
+      query: req.query,
+      body: req.body,
+      params: req.params,
+    };
+    const mockRes = {
+      status: (code: number) => { res.status(code); return mockRes; },
+      json: (data: any) => { res.json(data); return mockRes; },
+      send: (data: any) => { res.send(data); return mockRes; },
+      setHeader: (name: string, value: string) => { res.setHeader(name, value); return mockRes; },
+      end: () => { res.end(); return mockRes; },
+      redirect: (url: string) => { res.redirect(url); return mockRes; }
+    };
+    await consolidatedApiHandler(mockReq as any, mockRes as any);
+  });
+
+  app.post('/api/auth/email/login', async (req, res) => {
+    const { default: consolidatedApiHandler } = await import('../api/index');
+    const mockReq = {
+      method: 'POST',
+      url: '/api/auth/email/login',
+      headers: req.headers,
+      query: req.query,
+      body: req.body,
+      params: req.params,
+    };
+    const mockRes = {
+      status: (code: number) => { res.status(code); return mockRes; },
+      json: (data: any) => { res.json(data); return mockRes; },
+      send: (data: any) => { res.send(data); return mockRes; },
+      setHeader: (name: string, value: string) => { res.setHeader(name, value); return mockRes; },
+      end: () => { res.end(); return mockRes; },
+      redirect: (url: string) => { res.redirect(url); return mockRes; }
+    };
+    await consolidatedApiHandler(mockReq as any, mockRes as any);
+  });
+
+  app.post('/api/auth/email/forgot-password', async (req, res) => {
+    const { default: consolidatedApiHandler } = await import('../api/index');
+    const mockReq = {
+      method: 'POST',
+      url: '/api/auth/email/forgot-password',
+      headers: req.headers,
+      query: req.query,
+      body: req.body,
+      params: req.params,
+    };
+    const mockRes = {
+      status: (code: number) => { res.status(code); return mockRes; },
+      json: (data: any) => { res.json(data); return mockRes; },
+      send: (data: any) => { res.send(data); return mockRes; },
+      setHeader: (name: string, value: string) => { res.setHeader(name, value); return mockRes; },
+      end: () => { res.end(); return mockRes; },
+      redirect: (url: string) => { res.redirect(url); return mockRes; }
+    };
+    await consolidatedApiHandler(mockReq as any, mockRes as any);
+  });
+
+  app.post('/api/auth/email/reset-password', async (req, res) => {
+    const { default: consolidatedApiHandler } = await import('../api/index');
+    const mockReq = {
+      method: 'POST',
+      url: '/api/auth/email/reset-password',
+      headers: req.headers,
+      query: req.query,
+      body: req.body,
+      params: req.params,
+    };
+    const mockRes = {
+      status: (code: number) => { res.status(code); return mockRes; },
+      json: (data: any) => { res.json(data); return mockRes; },
+      send: (data: any) => { res.send(data); return mockRes; },
+      setHeader: (name: string, value: string) => { res.setHeader(name, value); return mockRes; },
+      end: () => { res.end(); return mockRes; },
+      redirect: (url: string) => { res.redirect(url); return mockRes; }
+    };
+    await consolidatedApiHandler(mockReq as any, mockRes as any);
+  });
+
+  app.post('/api/auth/email/set-password', async (req, res) => {
+    const { default: consolidatedApiHandler } = await import('../api/index');
+    const mockReq = {
+      method: 'POST',
+      url: '/api/auth/email/set-password',
+      headers: req.headers,
+      query: req.query,
+      body: req.body,
+      params: req.params,
+    };
+    const mockRes = {
+      status: (code: number) => { res.status(code); return mockRes; },
+      json: (data: any) => { res.json(data); return mockRes; },
+      send: (data: any) => { res.send(data); return mockRes; },
+      setHeader: (name: string, value: string) => { res.setHeader(name, value); return mockRes; },
+      end: () => { res.end(); return mockRes; },
+      redirect: (url: string) => { res.redirect(url); return mockRes; }
+    };
+    await consolidatedApiHandler(mockReq as any, mockRes as any);
+  });
+
   // Check authentication status
   app.get('/api/auth/status', (req, res) => {
     if (req.isAuthenticated()) {

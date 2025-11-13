@@ -10,6 +10,7 @@ import LoginPage from "@/pages/login";
 import RegisterPage from "@/pages/register";
 import ForgotPasswordPage from "@/pages/forgot-password";
 import ResetPasswordPage from "@/pages/reset-password";
+import SetPasswordPage from "@/pages/set-password";
 import NotFound from "@/pages/not-found";
 import { Footer } from "@/components/footer";
 import { useEffect, useState, createContext, useContext } from "react";
@@ -40,6 +41,7 @@ function Router() {
       <Route path="/register" component={RegisterPage} />
       <Route path="/forgot-password" component={ForgotPasswordPage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
+      <Route path="/set-password" component={SetPasswordPage} />
       <Route path="/settings" component={Settings} />
       <Route path="/admin" component={AdminDashboard} />
       <Route component={NotFound} />
