@@ -457,8 +457,9 @@ if (pathname.startsWith('/api/auth/email')) {
 ### 4. Environment Variables
 **Add to `.env` and Vercel:**
 ```properties
-MAILERSEND_API_KEY=mlsn.bc638a312fca0a336d0d39d8f202b2e7cd2ff17a950e8aea6b16fe19a7e8794b
+MAILERSEND_API_KEY=your_mailersend_api_key_here
 ```
+**Note:** Get your MailerSend API key from the MailerSend dashboard and add it to both your local `.env` file and Vercel environment variables.
 
 ### 5. Security Measures Implemented
 
