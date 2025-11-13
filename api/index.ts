@@ -847,7 +847,7 @@ async function handleEmailAuthEndpoints(req: VercelRequest, res: VercelResponse)
       }
 
       // Get user from database
-      const { users: usersTable } = await import('../shared/schema');
+      const { users: usersTable } = await import('../shared/schema.js');
       const { eq } = await import('drizzle-orm');
       const userResult = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
       
