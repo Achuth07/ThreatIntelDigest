@@ -52,6 +52,15 @@ RSS fetch (`/api/fetch-feeds`) -> normalize -> store as `articles` -> user bookm
 - Large responses: consider pagination parameters matching existing patterns (`limit`, `offset`, `search`, `sortBy`).
 - Do not bypass `createMockHandlers` in `server/routes.ts`; consistency is key for future serverless portability.
 
+### Security & Secrets Management
+**CRITICAL: Never expose API keys, tokens, or secrets in code, documentation, or commit messages.**
+- **NEVER** copy API keys, tokens, passwords, or secrets from `.env` files to any documentation, markdown files, code comments, or implementation guides
+- **NEVER** include actual API keys in example code or configuration files that will be committed to Git
+- Always use placeholder text like `your_api_key_here`, `your_secret_here`, or `***REDACTED***` in documentation
+- If accidentally committed, immediately remove from current files, commit the fix, and notify the user to rotate/regenerate the exposed credentials
+- Environment variables in `.env` files should NEVER be copied verbatim—always reference them generically
+- When documenting environment setup, only show the variable names and placeholder values, never actual secrets
+
 ### When Unsure
 Search for an existing pattern first (e.g. bookmark create flow) and mirror structure. Keep new code TypeScript strict using existing types. Ask for clarification if a change would introduce a second persistence path or a divergent auth scheme.
 
