@@ -62,10 +62,16 @@ export const vulnerabilities = pgTable("vulnerabilities", {
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
-  googleId: varchar('google_id', { length: 255 }).unique().notNull(),
+  googleId: varchar('google_id', { length: 255 }).unique(),
   name: text('name').notNull(),
-  email: text('email').notNull(),
+  email: text('email').notNull().unique(),
   avatar: text('avatar'),
+  passwordHash: text('password_hash'),
+  emailVerified: pgBoolean('email_verified').default(false),
+  verificationToken: text('verification_token'),
+  verificationTokenExpiry: timestamp('verification_token_expiry'),
+  resetToken: text('reset_token'),
+  resetTokenExpiry: timestamp('reset_token_expiry'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   lastLoginAt: timestamp('last_login_at').defaultNow().notNull(),
 });

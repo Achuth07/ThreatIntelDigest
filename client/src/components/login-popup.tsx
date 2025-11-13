@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { getAuthenticatedUser, isGuestUser } from '@/lib/auth';
 import logoImage from '@/assets/logo/android-chrome-512x512.png';
+import { Mail } from 'lucide-react';
 
 interface LoginPopupProps {
   onLogin: () => void;
@@ -11,6 +13,7 @@ interface LoginPopupProps {
 
 export function LoginPopup({ onLogin, onContinueAsGuest }: LoginPopupProps) {
   const [showPopup, setShowPopup] = useState(false);
+  const [, navigate] = useLocation();
 
   useEffect(() => {
     // Check if user is already authenticated or has chosen to continue as guest
@@ -82,13 +85,14 @@ export function LoginPopup({ onLogin, onContinueAsGuest }: LoginPopupProps) {
           </Button>
           <Button 
             onClick={() => {
-              onContinueAsGuest();
               setShowPopup(false);
+              navigate('/login');
             }}
             variant="outline"
             className="w-full bg-whatcyber-gray border-whatcyber-light-gray text-slate-100 hover:bg-whatcyber-light-gray"
           >
-            Continue as Guest
+            <Mail className="w-4 h-4 mr-2" />
+            Sign in with Email
           </Button>
         </CardFooter>
       </Card>

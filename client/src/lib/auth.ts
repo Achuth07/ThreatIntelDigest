@@ -72,6 +72,30 @@ export function updateAuthToken(user: User): void {
 }
 
 /**
+ * Set authentication token directly
+ * @param token JWT token string
+ */
+export function setAuthToken(token: string): void {
+  try {
+    // Parse token to get user data
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const user: User = {
+      id: payload.userId || payload.id,
+      name: payload.name || '',
+      email: payload.email || '',
+      avatar: payload.avatar || '',
+      isAdmin: payload.isAdmin || false,
+      token: token,
+    };
+    localStorage.setItem('cyberfeed_user', JSON.stringify(user));
+    // Remove guest flag when user logs in
+    localStorage.removeItem('guestUser');
+  } catch (error) {
+    console.error('Error setting auth token:', error);
+  }
+}
+
+/**
  * Remove user authentication data
  */
 export function removeAuthData(): void {
