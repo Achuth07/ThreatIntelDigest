@@ -4,7 +4,7 @@ const mailerSend = new MailerSend({
   apiKey: process.env.MAILERSEND_API_KEY || '',
 });
 
-const SENDER_EMAIL = 'noreply@whatcyber.com';
+const SENDER_EMAIL = 'contact@whatcyber.com';
 const SENDER_NAME = 'WhatCyber';
 const BASE_URL = process.env.VERCEL_ENV === 'production' 
   ? 'https://threatfeed.whatcyber.com' 
@@ -27,6 +27,13 @@ export async function sendVerificationEmail(
 ): Promise<void> {
   const verificationUrl = `${BASE_URL}/api/auth/email/verify?token=${verificationToken}`;
   
+  console.log('📧 Preparing to send verification email:', {
+    to,
+    from: SENDER_EMAIL,
+    templateId: VERIFICATION_TEMPLATE_ID,
+    verificationUrl
+  });
+  
   const sentFrom = new Sender(SENDER_EMAIL, SENDER_NAME);
   const recipients = [new Recipient(to, name)];
 
@@ -45,14 +52,25 @@ export async function sendVerificationEmail(
     ]);
 
   try {
-    await mailerSend.email.send(emailParams);
-    console.log('✅ Verification email sent to:', to);
+    const response = await mailerSend.email.send(emailParams);
+    console.log('✅ Verification email sent successfully:', { to, response });
   } catch (error: any) {
-    console.error('❌ Error sending verification email:', error);
+    console.error('❌ Error sending verification email:', {
+      to,
+      statusCode: error?.statusCode,
+      message: error?.body?.message,
+      errors: error?.body?.errors,
+      fullError: error
+    });
     
     // Check if it's a MailerSend trial account limitation
     if (error?.body?.message?.includes('Trial accounts can only send emails')) {
       throw new Error('Email verification is temporarily unavailable. Please contact support or try again later.');
+    }
+    
+    // Check if it's a domain verification issue
+    if (error?.body?.errors?.['from.email']) {
+      throw new Error('Email configuration error. Please contact support.');
     }
     
     throw new Error('Failed to send verification email');
