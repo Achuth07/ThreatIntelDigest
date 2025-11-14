@@ -1,38 +1,36 @@
 import nodemailer from 'nodemailer';
-
-// Log SMTP configuration (without sensitive data)
-console.log('📧 SMTP Configuration:', {
-  host: process.env.SMTP_HOST || 'smtp.mailersend.net',
-  port: process.env.SMTP_PORT || '587',
-  user: process.env.SMTP_USER ? '***SET***' : '***NOT SET***',
-  pass: process.env.SMTP_PASS ? '***SET***' : '***NOT SET***',
-});
-
-// SMTP Configuration
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.mailersend.net',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: false, // true for 465, false for other ports
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
-
-// Verify SMTP connection
-transporter.verify((error, success) => {
-  if (error) {
-    console.error('❌ SMTP connection error:', error);
-  } else {
-    console.log('✅ SMTP server is ready to send emails');
-  }
-});
+import type { Transporter } from 'nodemailer';
 
 const SENDER_EMAIL = 'contact@whatcyber.com';
 const SENDER_NAME = 'WhatCyber';
 const BASE_URL = process.env.VERCEL_ENV === 'production' 
   ? 'https://threatfeed.whatcyber.com' 
   : 'http://localhost:5173';
+
+/**
+ * Create SMTP transporter (called lazily to avoid serverless timeout issues)
+ */
+function createTransporter(): Transporter {
+  console.log('📧 Creating SMTP transporter with config:', {
+    host: process.env.SMTP_HOST || 'smtp.mailersend.net',
+    port: process.env.SMTP_PORT || '587',
+    user: process.env.SMTP_USER ? '***SET***' : '***NOT SET***',
+    pass: process.env.SMTP_PASS ? '***SET***' : '***NOT SET***',
+  });
+
+  return nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.mailersend.net',
+    port: parseInt(process.env.SMTP_PORT || '587'),
+    secure: false, // true for 465, false for other ports
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 10000, // 10 seconds
+    socketTimeout: 10000, // 10 seconds
+  });
+}
 
 /**
  * Send email verification email using SMTP
@@ -124,6 +122,7 @@ export async function sendVerificationEmail(
   };
 
   try {
+    const transporter = createTransporter();
     const info = await transporter.sendMail(mailOptions);
     console.log('✅ Verification email sent successfully:', { 
       to, 
@@ -239,6 +238,7 @@ export async function sendPasswordResetEmail(
   };
 
   try {
+    const transporter = createTransporter();
     const info = await transporter.sendMail(mailOptions);
     console.log('✅ Password reset email sent successfully:', { 
       to, 
