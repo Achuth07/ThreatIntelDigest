@@ -674,24 +674,38 @@ async function handleEmailAuthEndpoints(req: VercelRequest, res: VercelResponse)
       const token = req.query.token as string;
       
       if (!token) {
-        return res.status(400).json({ error: 'Verification token is required' });
+        // Redirect to login with error
+        const loginUrl = isProduction 
+          ? 'https://threatfeed.whatcyber.com/login?error=missing_token' 
+          : 'http://localhost:5173/login?error=missing_token';
+        return res.redirect(302, loginUrl);
       }
 
       // Find user by verification token (also checks expiry)
       const user = await storage.getUserByVerificationToken(token);
       if (!user) {
-        return res.status(400).json({ error: 'Invalid or expired verification token' });
+        // Redirect to login with error
+        const loginUrl = isProduction 
+          ? 'https://threatfeed.whatcyber.com/login?error=invalid_token' 
+          : 'http://localhost:5173/login?error=invalid_token';
+        return res.redirect(302, loginUrl);
       }
 
       // Verify the user's email
       await storage.verifyUserEmail(user.id);
 
-      return res.status(200).json({ 
-        message: 'Email verified successfully! You can now log in.' 
-      });
+      // Redirect to login with success message
+      const loginUrl = isProduction 
+        ? 'https://threatfeed.whatcyber.com/login?verified=true' 
+        : 'http://localhost:5173/login?verified=true';
+      return res.redirect(302, loginUrl);
     } catch (error) {
       console.error('Email verification error:', error);
-      return res.status(500).json({ error: 'Email verification failed' });
+      // Redirect to login with error
+      const loginUrl = isProduction 
+        ? 'https://threatfeed.whatcyber.com/login?error=verification_failed' 
+        : 'http://localhost:5173/login?error=verification_failed';
+      return res.redirect(302, loginUrl);
     }
   }
 

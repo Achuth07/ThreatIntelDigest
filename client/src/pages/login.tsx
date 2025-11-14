@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,6 +18,41 @@ export default function LoginPage() {
     email: '',
     password: '',
   });
+
+  // Check for verification or error messages in URL
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const verified = params.get('verified');
+    const error = params.get('error');
+
+    if (verified === 'true') {
+      toast({
+        title: '✅ Email Verified!',
+        description: 'Your email has been verified successfully. You can now sign in.',
+        duration: 5000,
+      });
+      // Clean up URL
+      window.history.replaceState({}, '', '/login');
+    } else if (error) {
+      let errorMessage = 'An error occurred during verification.';
+      if (error === 'invalid_token') {
+        errorMessage = 'Invalid or expired verification link. Please request a new one.';
+      } else if (error === 'missing_token') {
+        errorMessage = 'Verification link is missing required information.';
+      } else if (error === 'verification_failed') {
+        errorMessage = 'Email verification failed. Please try again or contact support.';
+      }
+      
+      toast({
+        title: 'Verification Error',
+        description: errorMessage,
+        variant: 'destructive',
+        duration: 5000,
+      });
+      // Clean up URL
+      window.history.replaceState({}, '', '/login');
+    }
+  }, [toast]);
 
   const handleGoogleLogin = () => {
     const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');

@@ -61,47 +61,90 @@ export async function sendVerificationEmail(
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; }
+          </style>
         </head>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to WhatCyber!</h1>
-          </div>
-          
-          <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
-            <h2 style="color: #333; margin-top: 0;">Hi ${name},</h2>
-            
-            <p style="font-size: 16px; margin-bottom: 25px;">
-              Thank you for registering with WhatCyber, your trusted source for cybersecurity threat intelligence.
-            </p>
-            
-            <p style="font-size: 16px; margin-bottom: 25px;">
-              To complete your registration and verify your email address, please click the button below:
-            </p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${verificationUrl}" 
-                 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px; display: inline-block;">
-                Verify Email Address
-              </a>
-            </div>
-            
-            <p style="font-size: 14px; color: #666; margin-top: 30px;">
-              If the button doesn't work, copy and paste this link into your browser:
-            </p>
-            <p style="font-size: 12px; color: #667eea; word-break: break-all; background: white; padding: 10px; border-radius: 5px;">
-              ${verificationUrl}
-            </p>
-            
-            <p style="font-size: 14px; color: #666; margin-top: 30px;">
-              This verification link will expire in 24 hours for security reasons.
-            </p>
-            
-            <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
-            
-            <p style="font-size: 12px; color: #999; text-align: center;">
-              If you didn't create an account with WhatCyber, you can safely ignore this email.
-            </p>
-          </div>
+        <body style="margin: 0; padding: 0; background-color: #0f1419;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f1419; padding: 40px 20px;">
+            <tr>
+              <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #0a0f1f; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);">
+                  
+                  <!-- Header with Logo -->
+                  <tr>
+                    <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 30px; text-align: center;">
+                      <img src="https://threatfeed.whatcyber.com/logo512.png" alt="WhatCyber Logo" style="width: 64px; height: 64px; margin-bottom: 20px; border-radius: 8px;">
+                      <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">Welcome to WhatCyber</h1>
+                      <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0; font-size: 14px;">Cybersecurity Threat Intelligence Platform</p>
+                    </td>
+                  </tr>
+                  
+                  <!-- Content -->
+                  <tr>
+                    <td style="padding: 40px 30px; color: #e2e8f0;">
+                      <h2 style="color: #10b981; margin: 0 0 20px 0; font-size: 22px; font-weight: 600;">Verify Your Email Address</h2>
+                      
+                      <p style="font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; color: #cbd5e1;">
+                        Hi <strong style="color: #10b981;">${name}</strong>,
+                      </p>
+                      
+                      <p style="font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; color: #cbd5e1;">
+                        Thank you for signing up for WhatCyber! You're one step away from accessing real-time cybersecurity threat intelligence, CVE tracking, and security news feeds.
+                      </p>
+                      
+                      <p style="font-size: 16px; line-height: 1.6; margin: 0 0 30px 0; color: #cbd5e1;">
+                        Click the button below to verify your email address and activate your account:
+                      </p>
+                      
+                      <!-- CTA Button -->
+                      <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td align="center" style="padding: 20px 0;">
+                            <a href="${verificationUrl}" 
+                               style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);">
+                              Verify Email Address
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+                      
+                      <!-- Alternative Link -->
+                      <div style="background-color: #1e293b; padding: 20px; border-radius: 8px; margin: 30px 0;">
+                        <p style="font-size: 13px; color: #94a3b8; margin: 0 0 10px 0;">
+                          If the button doesn't work, copy and paste this link into your browser:
+                        </p>
+                        <p style="font-size: 12px; color: #10b981; word-break: break-all; margin: 0;">
+                          ${verificationUrl}
+                        </p>
+                      </div>
+                      
+                      <!-- Security Notice -->
+                      <div style="background-color: rgba(16, 185, 129, 0.1); border-left: 4px solid #10b981; padding: 15px; border-radius: 4px; margin: 20px 0;">
+                        <p style="font-size: 14px; color: #cbd5e1; margin: 0; line-height: 1.5;">
+                          <strong style="color: #10b981;">🔒 Security Notice:</strong> This verification link will expire in 24 hours for your security.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                  
+                  <!-- Footer -->
+                  <tr>
+                    <td style="background-color: #0f1419; padding: 30px; text-align: center; border-top: 1px solid #1e293b;">
+                      <p style="font-size: 12px; color: #64748b; margin: 0 0 10px 0; line-height: 1.5;">
+                        If you didn't create an account with WhatCyber, you can safely ignore this email.
+                      </p>
+                      <p style="font-size: 12px; color: #64748b; margin: 0;">
+                        © 2025 WhatCyber. All rights reserved.<br>
+                        <a href="https://threatfeed.whatcyber.com" style="color: #10b981; text-decoration: none;">threatfeed.whatcyber.com</a>
+                      </p>
+                    </td>
+                  </tr>
+                  
+                </table>
+              </td>
+            </tr>
+          </table>
         </body>
       </html>
     `,
@@ -171,53 +214,97 @@ export async function sendPasswordResetEmail(
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; }
+          </style>
         </head>
-        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">Password Reset Request</h1>
-          </div>
-          
-          <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
-            <h2 style="color: #333; margin-top: 0;">Hi ${name},</h2>
-            
-            <p style="font-size: 16px; margin-bottom: 25px;">
-              We received a request to reset your password for your WhatCyber account.
-            </p>
-            
-            <p style="font-size: 16px; margin-bottom: 25px;">
-              To reset your password, please click the button below:
-            </p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${resetUrl}" 
-                 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px; display: inline-block;">
-                Reset Password
-              </a>
-            </div>
-            
-            <p style="font-size: 14px; color: #666; margin-top: 30px;">
-              If the button doesn't work, copy and paste this link into your browser:
-            </p>
-            <p style="font-size: 12px; color: #667eea; word-break: break-all; background: white; padding: 10px; border-radius: 5px;">
-              ${resetUrl}
-            </p>
-            
-            <p style="font-size: 14px; color: #666; margin-top: 30px;">
-              This password reset link will expire in 1 hour for security reasons.
-            </p>
-            
-            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 25px 0; border-radius: 5px;">
-              <p style="margin: 0; font-size: 14px; color: #856404;">
-                <strong>Security Notice:</strong> If you didn't request a password reset, please ignore this email or contact support if you're concerned about your account security.
-              </p>
-            </div>
-            
-            <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
-            
-            <p style="font-size: 12px; color: #999; text-align: center;">
-              This is an automated message from WhatCyber. Please do not reply to this email.
-            </p>
-          </div>
+        <body style="margin: 0; padding: 0; background-color: #0f1419;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f1419; padding: 40px 20px;">
+            <tr>
+              <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #0a0f1f; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);">
+                  
+                  <!-- Header with Logo -->
+                  <tr>
+                    <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 30px; text-align: center;">
+                      <img src="https://threatfeed.whatcyber.com/logo512.png" alt="WhatCyber Logo" style="width: 64px; height: 64px; margin-bottom: 20px; border-radius: 8px;">
+                      <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">Password Reset Request</h1>
+                      <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0; font-size: 14px;">WhatCyber Account Security</p>
+                    </td>
+                  </tr>
+                  
+                  <!-- Content -->
+                  <tr>
+                    <td style="padding: 40px 30px; color: #e2e8f0;">
+                      <h2 style="color: #10b981; margin: 0 0 20px 0; font-size: 22px; font-weight: 600;">Reset Your Password</h2>
+                      
+                      <p style="font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; color: #cbd5e1;">
+                        Hi <strong style="color: #10b981;">${name}</strong>,
+                      </p>
+                      
+                      <p style="font-size: 16px; line-height: 1.6; margin: 0 0 20px 0; color: #cbd5e1;">
+                        We received a request to reset the password for your WhatCyber account. If you made this request, click the button below to create a new password.
+                      </p>
+                      
+                      <!-- CTA Button -->
+                      <table width="100%" cellpadding="0" cellspacing="0">
+                        <tr>
+                          <td align="center" style="padding: 20px 0;">
+                            <a href="${resetUrl}" 
+                               style="display: inline-block; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);">
+                              Reset Password
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+                      
+                      <!-- Alternative Link -->
+                      <div style="background-color: #1e293b; padding: 20px; border-radius: 8px; margin: 30px 0;">
+                        <p style="font-size: 13px; color: #94a3b8; margin: 0 0 10px 0;">
+                          If the button doesn't work, copy and paste this link into your browser:
+                        </p>
+                        <p style="font-size: 12px; color: #10b981; word-break: break-all; margin: 0;">
+                          ${resetUrl}
+                        </p>
+                      </div>
+                      
+                      <!-- Security Notices -->
+                      <div style="background-color: rgba(251, 191, 36, 0.1); border-left: 4px solid #fbbf24; padding: 15px; border-radius: 4px; margin: 20px 0;">
+                        <p style="font-size: 14px; color: #fbbf24; margin: 0 0 8px 0; font-weight: 600;">
+                          ⚠️ Important Security Information
+                        </p>
+                        <p style="font-size: 14px; color: #cbd5e1; margin: 0; line-height: 1.5;">
+                          • This reset link will expire in 1 hour<br>
+                          • If you didn't request this, please ignore this email<br>
+                          • Your password won't change until you create a new one
+                        </p>
+                      </div>
+                      
+                      <div style="background-color: rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444; padding: 15px; border-radius: 4px; margin: 20px 0;">
+                        <p style="font-size: 14px; color: #cbd5e1; margin: 0; line-height: 1.5;">
+                          <strong style="color: #ef4444;">Didn't request this?</strong> If you're concerned about your account security, please contact us immediately at <a href="mailto:contact@whatcyber.com" style="color: #10b981; text-decoration: none;">contact@whatcyber.com</a>
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                  
+                  <!-- Footer -->
+                  <tr>
+                    <td style="background-color: #0f1419; padding: 30px; text-align: center; border-top: 1px solid #1e293b;">
+                      <p style="font-size: 12px; color: #64748b; margin: 0 0 10px 0; line-height: 1.5;">
+                        This is an automated security email from WhatCyber.
+                      </p>
+                      <p style="font-size: 12px; color: #64748b; margin: 0;">
+                        © 2025 WhatCyber. All rights reserved.<br>
+                        <a href="https://threatfeed.whatcyber.com" style="color: #10b981; text-decoration: none;">threatfeed.whatcyber.com</a>
+                      </p>
+                    </td>
+                  </tr>
+                  
+                </table>
+              </td>
+            </tr>
+          </table>
         </body>
       </html>
     `,
