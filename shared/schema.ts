@@ -184,6 +184,7 @@ export const insertUserPreferencesSchema = createInsertSchema(userPreferences, {
 
 export type InsertArticle = z.infer<typeof insertArticleSchema>;
 export type Article = typeof articles.$inferSelect;
+export type ArticleWithSource = Article & { sourceUrl?: string | null; isBookmarked?: boolean };
 export type InsertBookmark = z.infer<typeof insertBookmarkSchema>;
 export type Bookmark = typeof bookmarks.$inferSelect;
 export type InsertRssSource = z.infer<typeof insertRssSourceSchema>;

@@ -1404,8 +1404,15 @@ async function handleArticlesEndpoints(req: VercelRequest, res: VercelResponse, 
         console.log('User active source names:', userActiveSourceNames);
       }
       
-      // Build base query
-      let baseQuery = sql`SELECT id, title, summary, url, source, threat_level, tags, read_time, published_at, created_at FROM articles`;
+      // Build base query with LEFT JOIN to get source URL from rss_sources
+      let baseQuery = sql`
+        SELECT 
+          a.id, a.title, a.summary, a.url, a.source, a.threat_level, a.tags, 
+          a.read_time, a.published_at, a.created_at,
+          rs.url as source_url
+        FROM articles a
+        LEFT JOIN rss_sources rs ON a.source = rs.name
+      `;
       
       // Add WHERE conditions
       const conditions: any[] = [];
@@ -1455,6 +1462,7 @@ async function handleArticlesEndpoints(req: VercelRequest, res: VercelResponse, 
         summary: row.summary,
         url: row.url,
         source: row.source,
+        sourceUrl: row.source_url || null,
         threatLevel: row.threat_level,
         tags: row.tags || [],
         readTime: row.read_time,
@@ -1584,9 +1592,11 @@ class SimpleBookmarkStorage {
           a.tags,
           a.read_time,
           a.published_at,
-          a.created_at as article_created_at
+          a.created_at as article_created_at,
+          rs.url as source_url
         FROM bookmarks b
         INNER JOIN articles a ON b.article_id = a.id
+        LEFT JOIN rss_sources rs ON a.source = rs.name
         WHERE b.user_id = ${userId}
         ORDER BY b.created_at DESC
       `);
@@ -1604,6 +1614,7 @@ class SimpleBookmarkStorage {
           summary: row.summary,
           url: row.url,
           source: row.source,
+          sourceUrl: row.source_url || null,
           threatLevel: row.threat_level,
           tags: row.tags || [],
           readTime: row.read_time,

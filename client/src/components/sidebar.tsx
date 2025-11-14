@@ -12,6 +12,7 @@ import { AddSourcesDialog } from '@/components/add-sources-dialog';
 import { ConfirmationDialog } from '@/components/confirmation-dialog';
 import { exportBookmarks } from '@/lib/export-utils';
 import { getAuthenticatedUser } from '@/lib/auth';
+import { getFaviconUrl } from '@/lib/favicon-utils';
 import type { RssSource } from '@shared/schema';
 
 interface SidebarProps {
@@ -274,23 +275,31 @@ export function Sidebar({
     setDeleteConfirmation({ open: false, sourceId: null, sourceName: null });
   };
 
-  // Update the getSourceIcon function to show different icons for active/inactive sources
-  const getSourceIcon = (iconClass: string | null | undefined, isActive: boolean = true) => {
-    if (!iconClass) return <Rss className={`w-5 h-5 ${isActive ? '' : 'opacity-50'}`} />;
+  // Render favicon for source
+  const renderSourceFavicon = (source: RssSource) => {
+    const isActive = source.isActive !== false;
+    const faviconUrl = getFaviconUrl(source.url, 20);
     
-    // Map Font Awesome classes to Lucide icons
-    const iconMap: Record<string, JSX.Element> = {
-      'fas fa-exclamation': <div className={`w-5 h-5 rounded-sm flex items-center justify-center text-white text-xs ${isActive ? 'bg-red-500' : 'bg-red-500/50'}`}>!</div>,
-      'fas fa-user-secret': <div className={`w-5 h-5 rounded-sm flex items-center justify-center text-white text-xs ${isActive ? 'bg-orange-500' : 'bg-orange-500/50'}`}>H</div>,
-      'fas fa-eye': <div className={`w-5 h-5 rounded-sm flex items-center justify-center text-white text-xs ${isActive ? 'bg-purple-500' : 'bg-purple-500/50'}`}>👁</div>,
-      'fas fa-crow': <div className={`w-5 h-5 rounded-sm flex items-center justify-center text-white text-xs ${isActive ? 'bg-red-600' : 'bg-red-600/50'}`}>🐦</div>,
-      'fas fa-shield-virus': <div className={`w-5 h-5 rounded-sm flex items-center justify-center text-white text-xs ${isActive ? 'bg-blue-600' : 'bg-blue-600/50'}`}>🛡</div>,
-      'fas fa-search': <div className={`w-5 h-5 rounded-sm flex items-center justify-center text-white text-xs ${isActive ? 'bg-green-600' : 'bg-green-600/50'}`}>🔍</div>,
-      'fas fa-flash': <div className={`w-5 h-5 rounded-sm flex items-center justify-center text-white text-xs ${isActive ? 'bg-yellow-500' : 'bg-yellow-500/50'}`}>⚡</div>,
-      'fas fa-microsoft': <div className={`w-5 h-5 rounded-sm flex items-center justify-center text-white text-xs ${isActive ? 'bg-blue-500' : 'bg-blue-500/50'}`}>M</div>,
-    };
-    
-    return iconMap[iconClass] || <Rss className={`w-5 h-5 ${isActive ? '' : 'opacity-50'}`} />;
+    return (
+      <div className={`w-5 h-5 flex items-center justify-center ${isActive ? '' : 'opacity-50'}`}>
+        <img 
+          src={faviconUrl} 
+          alt={`${source.name} icon`}
+          className="w-5 h-5 rounded-sm"
+          onError={(e) => {
+            // Fallback to RSS icon if favicon fails to load
+            const target = e.target as HTMLImageElement;
+            target.style.display = 'none';
+            const parent = target.parentElement;
+            if (parent) {
+              const fallbackDiv = document.createElement('div');
+              fallbackDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-slate-400"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19 7.38 20 6.18 20C5 20 4 19 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1Z"/></svg>';
+              parent.appendChild(fallbackDiv.firstChild!);
+            }
+          }}
+        />
+      </div>
+    );
   };
 
   if (isLoadingSources) {
@@ -557,7 +566,7 @@ export function Sidebar({
                   className="flex-1 flex items-center space-x-3 text-left"
                   onClick={() => onSourceSelect(source.name)}
                 >
-                  {getSourceIcon(source.icon, source.isActive !== false)}
+                  {renderSourceFavicon(source)}
                   <span className="text-slate-300 group-hover:text-slate-100 transition-colors">
                     {source.name}
                   </span>

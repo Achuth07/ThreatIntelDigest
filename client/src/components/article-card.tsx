@@ -7,10 +7,11 @@ import { Bookmark, Eye, ExternalLink, Clock, BookOpen } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { getAuthenticatedUser } from '@/lib/auth';
-import type { Article } from '@shared/schema';
+import { getFaviconUrl } from '@/lib/favicon-utils';
+import type { ArticleWithSource } from '@shared/schema';
 
 interface ArticleCardProps {
-  article: Article & { isBookmarked?: boolean };
+  article: ArticleWithSource;
   isFeatured?: boolean;
   onReadHere?: (articleUrl: string) => void;
 }
@@ -81,19 +82,6 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
     }
   };
 
-  const getSourceIcon = (source: string) => {
-    const iconMap: Record<string, JSX.Element> = {
-      'Bleeping Computer': <div className="w-6 h-6 bg-red-500 rounded-sm flex items-center justify-center text-white text-sm">!</div>,
-      'The Hacker News': <div className="w-6 h-6 bg-orange-500 rounded-sm flex items-center justify-center text-white text-sm">H</div>,
-      'Dark Reading': <div className="w-6 h-6 bg-purple-500 rounded-sm flex items-center justify-center text-white text-sm">👁</div>,
-      'CrowdStrike Blog': <div className="w-6 h-6 bg-red-600 rounded-sm flex items-center justify-center text-white text-sm">🐦</div>,
-      'Unit 42': <div className="w-6 h-6 bg-blue-600 rounded-sm flex items-center justify-center text-white text-sm">🛡</div>,
-      'The DFIR Report': <div className="w-6 h-6 bg-green-600 rounded-sm flex items-center justify-center text-white text-sm">🔍</div>,
-    };
-
-    return iconMap[source] || <div className="w-6 h-6 bg-slate-600 rounded-sm flex items-center justify-center text-white text-sm">📰</div>;
-  };
-
   const formatTimeAgo = (date: Date | string) => {
     const now = new Date();
     const articleDate = new Date(date);
@@ -112,7 +100,15 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
         <div className="flex items-start justify-between mb-3 lg:mb-4">
           <div className="flex items-center space-x-2 lg:space-x-3 min-w-0 flex-1">
             <div className="flex-shrink-0">
-              {getSourceIcon(article.source)}
+              <img 
+                src={getFaviconUrl(article.sourceUrl, 32)} 
+                alt={`${article.source} favicon`}
+                className="w-6 h-6 rounded-sm"
+                onError={(e) => {
+                  // Fallback to generic RSS icon if favicon fails to load
+                  e.currentTarget.src = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19 7.38 20 6.18 20C5 20 4 19 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1Z"/></svg>')}`;
+                }}
+              />
             </div>
             <span 
               className="text-xs lg:text-sm font-medium text-slate-300 truncate" 
