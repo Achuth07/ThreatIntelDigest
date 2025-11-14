@@ -2022,10 +2022,9 @@ async function getUserStatistics() {
       new Date(user.lastLoginAt) > oneWeekAgo
     ).length;
     
-    // Get the 10 most recent logins with display names
-    const recentUsers = [...allUsers]
-      .sort((a, b) => new Date(b.lastLoginAt).getTime() - new Date(a.lastLoginAt).getTime())
-      .slice(0, 10)
+    // Get ALL users (not just recent 10) with display names, sorted by creation date (newest first)
+    const allUsersList = [...allUsers]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .map(user => ({
         id: user.id,
         name: user.name,
@@ -2038,12 +2037,33 @@ async function getUserStatistics() {
         lastLoginAt: user.lastLoginAt,
       }));
     
+    // Calculate signup trend data (last 30 days)
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const signupTrend = [];
+    
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+      const startOfDay = new Date(date.setHours(0, 0, 0, 0));
+      const endOfDay = new Date(date.setHours(23, 59, 59, 999));
+      
+      const count = allUsers.filter(user => {
+        const createdDate = new Date(user.createdAt);
+        return createdDate >= startOfDay && createdDate <= endOfDay;
+      }).length;
+      
+      signupTrend.push({
+        date: startOfDay.toISOString().split('T')[0],
+        count: count
+      });
+    }
+    
     return {
       totalUsers,
       recentLogins,
       newUserCount,
       activeUsersWeek,
-      recentUsers,
+      allUsers: allUsersList,
+      signupTrend,
     };
   } catch (error) {
     console.error('Error in getUserStatistics:', error);
@@ -2053,7 +2073,8 @@ async function getUserStatistics() {
       recentLogins: 0,
       newUserCount: 0,
       activeUsersWeek: 0,
-      recentUsers: [],
+      allUsers: [],
+      signupTrend: [],
     };
   }
 }
@@ -2105,39 +2126,39 @@ async function handleUserManagementEndpoints(req: VercelRequest, res: VercelResp
       });
     }
 
-    // For GET requests, we need to check authorization
-    if (req.method === 'GET') {
-      // Get authorization header
-      const authHeader = req.headers.authorization;
-      
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ 
-          error: 'Unauthorized',
-          message: 'Missing or invalid authorization header'
-        });
-      }
-      
-      const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-      const decoded = verifyToken(token);
-      
-      if (!decoded) {
-        return res.status(401).json({ 
-          error: 'Unauthorized',
-          message: 'Invalid or expired token'
-        });
-      }
-      
-      // Check if user is admin
-      if (!decoded.isAdmin) {
-        return res.status(403).json({ 
-          error: 'Forbidden',
-          message: 'Access denied. Admin access required.'
-        });
-      }
+    // Verify admin authorization for all requests
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ 
+        error: 'Unauthorized',
+        message: 'Missing or invalid authorization header'
+      });
+    }
+    
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    const decoded = verifyToken(token);
+    
+    if (!decoded) {
+      return res.status(401).json({ 
+        error: 'Unauthorized',
+        message: 'Invalid or expired token'
+      });
+    }
+    
+    // Check if user is admin
+    if (!decoded.isAdmin) {
+      return res.status(403).json({ 
+        error: 'Forbidden',
+        message: 'Access denied. Admin access required.'
+      });
+    }
 
-      // Refresh the token for continued sessions
-      const newToken = refreshToken(decoded);
-      
+    // Refresh the token for continued sessions
+    const newToken = refreshToken(decoded);
+
+    // GET requests
+    if (req.method === 'GET') {
       const { stats } = req.query;
       
       if (stats === 'true') {
@@ -2149,7 +2170,97 @@ async function handleUserManagementEndpoints(req: VercelRequest, res: VercelResp
         const users = await getAllUsers();
         res.status(200).json({ users, token: newToken });
       }
-    } else {
+    }
+    // POST requests
+    else if (req.method === 'POST' && action === 'resend-verification') {
+      const { userId } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ error: 'User ID is required' });
+      }
+
+      // Import storage and email service dynamically
+      const { PostgresStorage } = await import('../server/postgres-storage.js');
+      const { sendVerificationEmail } = await import('../server/email-service.js');
+      const storage = new PostgresStorage();
+
+      // Get user by ID
+      const { drizzle } = await import('drizzle-orm/neon-serverless');
+      const { Pool } = await import('@neondatabase/serverless');
+      const { users } = await import('../shared/schema.js');
+      const { eq } = await import('drizzle-orm');
+      
+      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+      const db = drizzle(pool);
+      
+      const userResult = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+      const user = userResult[0];
+      
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      if (user.googleId) {
+        return res.status(400).json({ error: 'Google users do not need email verification' });
+      }
+
+      if (user.emailVerified) {
+        return res.status(400).json({ error: 'User email is already verified' });
+      }
+
+      // Generate new verification token
+      const { generateSecureToken } = await import('../server/auth/password-utils.js');
+      const verificationToken = generateSecureToken();
+      const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      // Update user with new token
+      await db.update(users)
+        .set({ 
+          verificationToken, 
+          verificationTokenExpiry 
+        })
+        .where(eq(users.id, userId));
+
+      // Send verification email
+      await sendVerificationEmail(user.email, user.name, verificationToken);
+
+      res.status(200).json({ 
+        message: 'Verification email sent successfully',
+        token: newToken 
+      });
+    }
+    // DELETE requests
+    else if (req.method === 'DELETE' && action === 'delete') {
+      const { userId } = req.query;
+      
+      if (!userId) {
+        return res.status(400).json({ error: 'User ID is required' });
+      }
+
+      const userIdNum = parseInt(userId as string);
+
+      // Prevent admin from deleting themselves
+      if (decoded.userId === userIdNum) {
+        return res.status(400).json({ error: 'Cannot delete your own account' });
+      }
+
+      // Delete user (cascade will handle related records)
+      const { drizzle } = await import('drizzle-orm/neon-serverless');
+      const { Pool } = await import('@neondatabase/serverless');
+      const { users } = await import('../shared/schema.js');
+      const { eq } = await import('drizzle-orm');
+      
+      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+      const db = drizzle(pool);
+      
+      await db.delete(users).where(eq(users.id, userIdNum));
+
+      res.status(200).json({ 
+        message: 'User deleted successfully',
+        token: newToken 
+      });
+    }
+    else {
       res.status(405).json({ error: 'Method not allowed' });
     }
   } catch (error) {

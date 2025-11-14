@@ -3,6 +3,18 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getAuthenticatedUser, updateAuthToken, isAdmin } from '@/lib/auth';
+import { useToast } from '@/hooks/use-toast';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface User {
   id: number;
@@ -21,7 +33,8 @@ interface UserStats {
   recentLogins: number;
   newUserCount: number;
   activeUsersWeek: number;
-  recentUsers: User[];
+  allUsers: User[];
+  signupTrend: Array<{ date: string; count: number }>;
   token?: string;
 }
 
@@ -29,6 +42,9 @@ export function AdminDashboard() {
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleteUserId, setDeleteUserId] = useState<number | null>(null);
+  const [resendingEmail, setResendingEmail] = useState<number | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchAdminData = async () => {
@@ -84,6 +100,85 @@ export function AdminDashboard() {
 
     fetchAdminData();
   }, []);
+
+  const handleResendVerification = async (userId: number, email: string) => {
+    setResendingEmail(userId);
+    try {
+      const userData = getAuthenticatedUser();
+      if (!userData) return;
+
+      const response = await fetch('/api/user-management?action=resend-verification', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${userData.token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: '✅ Verification Email Sent',
+          description: `Verification email has been resent to ${email}`,
+        });
+      } else {
+        const data = await response.json();
+        throw new Error(data.message || 'Failed to resend verification email');
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to resend verification email',
+        variant: 'destructive',
+      });
+    } finally {
+      setResendingEmail(null);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteUserId) return;
+    
+    try {
+      const userData = getAuthenticatedUser();
+      if (!userData) return;
+
+      const response = await fetch(`/api/user-management?action=delete&userId=${deleteUserId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${userData.token}`,
+        },
+      });
+
+      if (response.ok) {
+        toast({
+          title: '✅ User Deleted',
+          description: 'User has been successfully deleted',
+        });
+        
+        // Refresh the user list
+        setStats(prevStats => {
+          if (!prevStats) return null;
+          return {
+            ...prevStats,
+            allUsers: prevStats.allUsers.filter(u => u.id !== deleteUserId),
+            totalUsers: prevStats.totalUsers - 1,
+          };
+        });
+      } else {
+        const data = await response.json();
+        throw new Error(data.message || 'Failed to delete user');
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to delete user',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleteUserId(null);
+    }
+  };
 
   if (error) {
     return (
@@ -145,8 +240,59 @@ export function AdminDashboard() {
                 </Card>
               </div>
 
-              {/* Recent Users Table */}
-              <h3 className="text-lg font-semibold mb-4">Recent Users</h3>
+              {/* Signup Trend Graph */}
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle className="text-lg">User Signups (Last 30 Days)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={stats.signupTrend}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                        <XAxis 
+                          dataKey="date" 
+                          stroke="#94a3b8"
+                          tick={{ fill: '#94a3b8' }}
+                          tickFormatter={(value) => {
+                            const date = new Date(value);
+                            return `${date.getMonth() + 1}/${date.getDate()}`;
+                          }}
+                        />
+                        <YAxis 
+                          stroke="#94a3b8"
+                          tick={{ fill: '#94a3b8' }}
+                          allowDecimals={false}
+                        />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: '#0a0f1f', 
+                            border: '1px solid #334155',
+                            borderRadius: '8px',
+                            color: '#e2e8f0'
+                          }}
+                          labelFormatter={(value) => {
+                            const date = new Date(value);
+                            return date.toLocaleDateString();
+                          }}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="count" 
+                          stroke="#10b981" 
+                          strokeWidth={2}
+                          dot={{ fill: '#10b981', r: 4 }}
+                          activeDot={{ r: 6 }}
+                          name="Signups"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* All Users Table */}
+              <h3 className="text-lg font-semibold mb-4">All Users ({stats.totalUsers})</h3>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -157,11 +303,12 @@ export function AdminDashboard() {
                     <TableHead>Verified</TableHead>
                     <TableHead>First Login</TableHead>
                     <TableHead>Last Login</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {stats.recentUsers && stats.recentUsers.length > 0 ? (
-                    stats.recentUsers.map((user) => (
+                  {stats.allUsers && stats.allUsers.length > 0 ? (
+                    stats.allUsers.map((user) => (
                       <TableRow key={user.id}>
                         <TableCell>
                           <div className="flex items-center">
@@ -224,11 +371,53 @@ export function AdminDashboard() {
                         </TableCell>
                         <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
                         <TableCell>{new Date(user.lastLoginAt).toLocaleDateString()}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {/* Show resend button only for unverified email users */}
+                            {!user.googleId && !user.emailVerified && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleResendVerification(user.id, user.email)}
+                                disabled={resendingEmail === user.id}
+                                className="text-xs"
+                              >
+                                {resendingEmail === user.id ? (
+                                  <>
+                                    <svg className="animate-spin -ml-1 mr-2 h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Sending...
+                                  </>
+                                ) : (
+                                  <>
+                                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                    </svg>
+                                    Resend
+                                  </>
+                                )}
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => setDeleteUserId(user.id)}
+                              className="text-xs"
+                            >
+                              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                              Delete
+                            </Button>
+                          </div>
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center">
+                      <TableCell colSpan={8} className="text-center">
                         No recent users found
                       </TableCell>
                     </TableRow>
@@ -239,6 +428,30 @@ export function AdminDashboard() {
           ) : null}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteUserId !== null} onOpenChange={() => setDeleteUserId(null)}>
+        <AlertDialogContent className="bg-whatcyber-dark border-whatcyber-light-gray">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-slate-100">Delete User</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-400">
+              Are you sure you want to delete this user? This action cannot be undone. 
+              All user data including bookmarks and preferences will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-slate-700 text-slate-100 hover:bg-slate-600">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUser}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              Delete User
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
