@@ -50,22 +50,12 @@ export function getAuthenticatedUser(): User | null {
 }
 
 /**
- * Check if user has chosen to continue as guest
- * @returns true if user has chosen to continue as guest, false otherwise
- */
-export function isGuestUser(): boolean {
-  return localStorage.getItem('guestUser') === 'true';
-}
-
-/**
  * Update user token in localStorage
  * @param user User object with new token
  */
 export function updateAuthToken(user: User): void {
   try {
     localStorage.setItem('cyberfeed_user', JSON.stringify(user));
-    // Remove guest flag when user logs in
-    localStorage.removeItem('guestUser');
   } catch (error) {
     console.error('Error updating auth token:', error);
   }
@@ -88,8 +78,6 @@ export function setAuthToken(token: string): void {
       token: token,
     };
     localStorage.setItem('cyberfeed_user', JSON.stringify(user));
-    // Remove guest flag when user logs in
-    localStorage.removeItem('guestUser');
   } catch (error) {
     console.error('Error setting auth token:', error);
   }

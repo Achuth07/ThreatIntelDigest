@@ -16,7 +16,7 @@ import { Footer } from "@/components/footer";
 import { useEffect, useState, createContext, useContext } from "react";
 import { AdminDashboard } from "@/components/admin-dashboard";
 import { LoginPopup } from "@/components/login-popup";
-import { getAuthenticatedUser, isGuestUser, updateAuthToken } from "@/lib/auth";
+import { getAuthenticatedUser, updateAuthToken } from "@/lib/auth";
 
 // Create context for login popup
 interface LoginPopupContextType {
@@ -83,12 +83,11 @@ function App() {
   }, []);
 
   useEffect(() => {
-    // Check if user is authenticated or has chosen to continue as guest
+    // Check if user is authenticated - always show login if not
     const checkAuthStatus = () => {
       const user = getAuthenticatedUser();
-      const guest = isGuestUser();
       
-      if (!user && !guest) {
+      if (!user) {
         setShowLoginPopup(true);
       } else {
         setShowLoginPopup(false);
@@ -133,16 +132,8 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleContinueAsGuest = () => {
-    setShowLoginPopup(false);
-    // Set a flag in localStorage to remember user's choice
-    localStorage.setItem('guestUser', 'true');
-  };
-
   const handleLogin = () => {
     setShowLoginPopup(false);
-    // Remove guest flag if user logs in
-    localStorage.removeItem('guestUser');
   };
 
   // Don't render the app until we've checked for authentication
@@ -163,7 +154,6 @@ function App() {
             {showLoginPopup && (
               <LoginPopup 
                 onLogin={handleLogin} 
-                onContinueAsGuest={handleContinueAsGuest} 
               />
             )}
             <div className="flex flex-col min-h-screen">

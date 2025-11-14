@@ -2,25 +2,23 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { getAuthenticatedUser, isGuestUser } from '@/lib/auth';
+import { getAuthenticatedUser } from '@/lib/auth';
 import logoImage from '@/assets/logo/android-chrome-512x512.png';
 import { Mail } from 'lucide-react';
 
 interface LoginPopupProps {
   onLogin: () => void;
-  onContinueAsGuest: () => void;
 }
 
-export function LoginPopup({ onLogin, onContinueAsGuest }: LoginPopupProps) {
+export function LoginPopup({ onLogin }: LoginPopupProps) {
   const [showPopup, setShowPopup] = useState(false);
   const [, navigate] = useLocation();
 
   useEffect(() => {
-    // Check if user is already authenticated or has chosen to continue as guest
+    // Check if user is already authenticated
     const user = getAuthenticatedUser();
-    const isGuest = isGuestUser();
     
-    if (!user && !isGuest) {
+    if (!user) {
       // Show popup after a short delay to allow UI to load
       const timer = setTimeout(() => {
         setShowPopup(true);
@@ -65,7 +63,7 @@ export function LoginPopup({ onLogin, onContinueAsGuest }: LoginPopupProps) {
             Stay updated with the latest cybersecurity threats and vulnerabilities
           </p>
           <p className="text-slate-400 text-center text-sm">
-            Sign in to access personalized features and save your preferences
+            Please sign in to access the platform
           </p>
         </CardContent>
         <CardFooter className="flex flex-col space-y-4">
