@@ -25,32 +25,50 @@ export default function LoginPage() {
     const verified = params.get('verified');
     const error = params.get('error');
 
-    if (verified === 'true') {
-      toast({
-        title: '✅ Email Verified!',
-        description: 'Your email has been verified successfully. You can now sign in.',
-        duration: 5000,
-      });
-      // Clean up URL
-      window.history.replaceState({}, '', '/login');
-    } else if (error) {
-      let errorMessage = 'An error occurred during verification.';
-      if (error === 'invalid_token') {
-        errorMessage = 'Invalid or expired verification link. Please request a new one.';
-      } else if (error === 'missing_token') {
-        errorMessage = 'Verification link is missing required information.';
-      } else if (error === 'verification_failed') {
-        errorMessage = 'Email verification failed. Please try again or contact support.';
+    console.log('Login page - URL params:', { verified, error });
+
+    // Small delay to ensure toast system is ready
+    const showMessage = () => {
+      if (verified === 'true') {
+        console.log('Showing verification success toast');
+        toast({
+          title: '✅ Email Verified!',
+          description: 'Your email has been verified successfully. You can now sign in.',
+          duration: 5000,
+        });
+        // Clean up URL
+        window.history.replaceState({}, '', '/login');
+      } else if (error) {
+        let errorMessage = 'An error occurred during verification.';
+        let errorTitle = 'Verification Error';
+        
+        if (error === 'invalid_token') {
+          errorTitle = '❌ Verification Failed';
+          errorMessage = 'Invalid or expired verification link. Please request a new one.';
+        } else if (error === 'missing_token') {
+          errorTitle = '❌ Verification Failed';
+          errorMessage = 'Verification link is missing required information.';
+        } else if (error === 'verification_failed') {
+          errorTitle = '❌ Verification Failed';
+          errorMessage = 'Email verification failed. Please try again or contact support.';
+        }
+        
+        console.log('Showing verification error toast:', { errorTitle, errorMessage });
+        toast({
+          title: errorTitle,
+          description: errorMessage,
+          variant: 'destructive',
+          duration: 6000,
+        });
+        // Clean up URL
+        window.history.replaceState({}, '', '/login');
       }
-      
-      toast({
-        title: 'Verification Error',
-        description: errorMessage,
-        variant: 'destructive',
-        duration: 5000,
-      });
-      // Clean up URL
-      window.history.replaceState({}, '', '/login');
+    };
+
+    if (verified || error) {
+      console.log('Scheduling toast display with 100ms delay');
+      // Delay to ensure toast system is mounted
+      setTimeout(showMessage, 100);
     }
   }, [toast]);
 
