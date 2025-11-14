@@ -1971,6 +1971,7 @@ async function getUserStatistics() {
   const { drizzle } = await import('drizzle-orm/neon-serverless');
   const { Pool } = await import('@neondatabase/serverless');
   const { sql } = await import('drizzle-orm');
+  const { users, userPreferences } = await import('../shared/schema.js');
   
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
@@ -2017,6 +2018,8 @@ async function getUserStatistics() {
         displayName: preferencesMap.get(user.id) || null,
         email: user.email,
         avatar: user.avatar || null,
+        googleId: user.googleId || null,
+        emailVerified: user.emailVerified || false,
         createdAt: user.createdAt,
         lastLoginAt: user.lastLoginAt,
       }));
