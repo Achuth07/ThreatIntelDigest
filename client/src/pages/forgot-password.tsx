@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import logoImage from '@/assets/logo/android-chrome-512x512.png';
+import { SEO } from '@/components/seo';
 import { Mail, ArrowLeft, CheckCircle2 } from 'lucide-react';
 
 export default function ForgotPasswordPage() {
@@ -64,6 +65,11 @@ export default function ForgotPasswordPage() {
   if (emailSent) {
     return (
       <div className="min-h-screen bg-whatcyber-dark flex items-center justify-center p-4">
+        <SEO 
+          title="Password Reset Email Sent - WhatCyber ThreatFeed"
+          description="Password reset instructions have been sent to your email. Check your inbox to reset your password."
+          keywords="password reset, email sent, cybersecurity, threat intelligence, CVE, vulnerabilities"
+        />
         <Card className="w-full max-w-md bg-whatcyber-dark border-whatcyber-light-gray">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
@@ -91,7 +97,7 @@ export default function ForgotPasswordPage() {
           <CardFooter>
             <Button
               className="w-full bg-whatcyber-teal hover:bg-whatcyber-teal/80"
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/login/')}
             >
               Back to Login
             </Button>
@@ -103,12 +109,17 @@ export default function ForgotPasswordPage() {
 
   return (
     <div className="min-h-screen bg-whatcyber-dark flex items-center justify-center p-4">
+      <SEO 
+        title="Forgot Password - WhatCyber ThreatFeed"
+        description="Reset your password for your WhatCyber ThreatFeed account to access cybersecurity threat intelligence."
+        keywords="forgot password, reset password, cybersecurity, threat intelligence, CVE, vulnerabilities"
+      />
       <Card className="w-full max-w-md bg-whatcyber-dark border-whatcyber-light-gray">
         <CardHeader className="text-center">
           <Button
             variant="ghost"
             className="absolute left-4 top-4 text-slate-400 hover:text-slate-100"
-            onClick={() => navigate('/login')}
+            onClick={() => navigate('/login/')}
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Login
@@ -160,7 +171,7 @@ export default function ForgotPasswordPage() {
             <Button
               variant="link"
               className="text-whatcyber-teal hover:text-whatcyber-teal/80 p-0 h-auto"
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/login/')}
             >
               Sign in here
               </Button>

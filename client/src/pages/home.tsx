@@ -12,6 +12,7 @@ import { ChevronDown, Clock } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { getAuthenticatedUser } from '@/lib/auth';
+import { SEO } from '@/components/seo';
 import type { Article, Bookmark } from '@shared/schema';
 
 export default function Home() {
@@ -251,6 +252,11 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-whatcyber-darker text-slate-100 flex flex-col">
+      <SEO 
+        title="WhatCyber - ThreatFeed"
+        description="Stay updated with the latest cybersecurity threats, vulnerabilities, and intelligence from trusted sources."
+        keywords="cybersecurity, threat intelligence, CVE, vulnerabilities, security news, cyber threats"
+      />
       <Header 
         onSearch={handleSearch}
         bookmarkCount={(bookmarks as Bookmark[]).length}

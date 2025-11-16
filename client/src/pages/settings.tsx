@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { apiRequest } from '@/lib/queryClient';
 import { Header } from '@/components/header';
+import { SEO } from '@/components/seo';
 
 interface UserSettings {
   displayName?: string;
@@ -224,6 +225,11 @@ export default function Settings() {
 
   return (
     <div className="min-h-screen bg-whatcyber-dark">
+      <SEO 
+        title="Settings - WhatCyber ThreatFeed"
+        description="Manage your WhatCyber ThreatFeed account settings, preferences, and integrations for cybersecurity threat intelligence."
+        keywords="settings, cybersecurity, threat intelligence, CVE, vulnerabilities, security news, preferences"
+      />
       <Header 
         onSearch={() => {}}
         bookmarkCount={0}
@@ -388,7 +394,7 @@ export default function Settings() {
                 <Button
                   variant="outline"
                   className="border-whatcyber-teal text-whatcyber-teal hover:bg-whatcyber-teal/10"
-                  onClick={() => navigate('/set-password')}
+                  onClick={() => navigate('/set-password/')}
                 >
                   <Key className="w-4 h-4 mr-2" />
                   Set/Change Password

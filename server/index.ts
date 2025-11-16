@@ -1,7 +1,14 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
+import path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+
+// Get __dirname equivalent in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Load environment variables from .env file in development
 if (process.env.NODE_ENV === 'development') {
@@ -43,6 +50,44 @@ const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
   }
   res.status(401).json({ message: 'Unauthorized' });
 };
+
+// Serve robots.txt and sitemap.xml
+app.get('/robots.txt', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/public/robots.txt'));
+});
+
+app.get('/sitemap.xml', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/public/sitemap.xml'));
+});
+
+// Redirect middleware to enforce authoritative URL standard
+app.use((req, res, next) => {
+  const host = req.get('Host');
+  const protocol = req.protocol;
+  const path = req.path;
+  const query = req.url.includes('?') ? req.url.split('?')[1] : '';
+  
+  // Redirect www to non-www
+  if (host && host.startsWith('www.')) {
+    const newHost = host.replace('www.', '');
+    const redirectUrl = `https://${newHost}${req.url}`;
+    return res.redirect(301, redirectUrl);
+  }
+  
+  // Redirect HTTP to HTTPS in production
+  if (process.env.NODE_ENV === 'production' && protocol !== 'https') {
+    const redirectUrl = `https://${host || 'whatcyber.com'}${req.url}`;
+    return res.redirect(301, redirectUrl);
+  }
+  
+  // Redirect non-trailing-slash URLs to trailing-slash URLs (except for file extensions)
+  if (path !== '/' && !path.endsWith('/') && !path.includes('.') && !req.query.noRedirect) {
+    const redirectUrl = `https://${host || 'whatcyber.com'}${path}/${query ? `?${query}` : ''}`;
+    return res.redirect(301, redirectUrl);
+  }
+  
+  next();
+});
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -88,7 +133,7 @@ app.use((req, res, next) => {
       // Successful authentication, redirect to frontend
       const frontendUrl = process.env.NODE_ENV === 'development' 
         ? 'http://localhost:3001' 
-        : 'https://threatfeed.whatcyber.com';
+        : 'https://whatcyber.com/';
       res.redirect(frontendUrl);
     }
   );
@@ -103,7 +148,7 @@ app.use((req, res, next) => {
         // Successful authentication, redirect to frontend
         const frontendUrl = process.env.NODE_ENV === 'development' 
           ? 'http://localhost:3001' 
-          : 'https://threatfeed.whatcyber.com';
+          : 'https://whatcyber.com/';
         res.redirect(frontendUrl);
       });
     } else if (action === 'google') {

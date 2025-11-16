@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getAuthenticatedUser, updateAuthToken, isAdmin } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
+import { SEO } from '@/components/seo';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import {
   AlertDialog,
@@ -200,6 +201,11 @@ export function AdminDashboard() {
 
   return (
     <div className="p-6">
+      <SEO 
+        title="Admin Dashboard - WhatCyber ThreatFeed"
+        description="Admin dashboard for managing users, statistics, and system metrics for WhatCyber ThreatFeed."
+        keywords="admin, dashboard, cybersecurity, threat intelligence, CVE, vulnerabilities, user management"
+      />
       <Card>
         <CardHeader>
           <CardTitle>Admin Dashboard</CardTitle>

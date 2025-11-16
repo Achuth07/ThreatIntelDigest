@@ -13,10 +13,30 @@
       "maxDuration": 10
     }
   },
+  "redirects": [
+    {
+      "source": "/:path*/:file*.:ext*",
+      "destination": "/:path*/:file*.:ext*",
+      "permanent": true
+    },
+    {
+      "source": "/:path+",
+      "destination": "/:path+/",
+      "permanent": true
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/(.*)",
       "destination": "/api/index.ts"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/sitemap.xml"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "/robots.txt"
     },
     {
       "source": "/(.*)",

@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://whatcyber.com/sitemap.xml
+
+# Rate limiting for crawlers
+Crawl-delay: 10
+
+# Directories
+Disallow: /api/
+Disallow: /admin/
+Disallow: /private/
+
+# File types
+Disallow: /*.json$
+Disallow: /*.txt$

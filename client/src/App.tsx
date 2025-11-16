@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -17,6 +17,7 @@ import { useEffect, useState, createContext, useContext } from "react";
 import { AdminDashboard } from "@/components/admin-dashboard";
 import { LoginPopup } from "@/components/login-popup";
 import { getAuthenticatedUser, updateAuthToken } from "@/lib/auth";
+import { SEO } from "@/components/seo";
 
 // Create context for login popup
 interface LoginPopupContextType {
@@ -35,17 +36,20 @@ export const useLoginPopup = () => {
 
 function Router() {
   return (
-    <Switch>
-      <Route path="/" component={Home} />
-      <Route path="/login" component={LoginPage} />
-      <Route path="/register" component={RegisterPage} />
-      <Route path="/forgot-password" component={ForgotPasswordPage} />
-      <Route path="/reset-password" component={ResetPasswordPage} />
-      <Route path="/set-password" component={SetPasswordPage} />
-      <Route path="/settings" component={Settings} />
-      <Route path="/admin" component={AdminDashboard} />
-      <Route component={NotFound} />
-    </Switch>
+    <>
+      <SEO />
+      <Switch>
+        <Route path="/" component={Home} />
+        <Route path="/login" component={LoginPage} />
+        <Route path="/register" component={RegisterPage} />
+        <Route path="/forgot-password" component={ForgotPasswordPage} />
+        <Route path="/reset-password" component={ResetPasswordPage} />
+        <Route path="/set-password" component={SetPasswordPage} />
+        <Route path="/settings" component={Settings} />
+        <Route path="/admin" component={AdminDashboard} />
+        <Route component={NotFound} />
+      </Switch>
+    </>
   );
 }
 

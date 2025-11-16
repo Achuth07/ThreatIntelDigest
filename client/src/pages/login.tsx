@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { setAuthToken } from '@/lib/auth';
 import logoImage from '@/assets/logo/android-chrome-512x512.png';
+import { SEO } from '@/components/seo';
 import { Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 
 export default function LoginPage() {
@@ -75,7 +76,7 @@ export default function LoginPage() {
   const handleGoogleLogin = () => {
     const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
     const authUrl = isProduction 
-      ? 'https://threatfeed.whatcyber.com/api/auth?action=google'
+      ? 'https://whatcyber.com/api/auth?action=google'
       : '/api/auth?action=google';
     window.location.href = authUrl;
   };
@@ -137,6 +138,11 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-whatcyber-dark flex items-center justify-center p-4">
+      <SEO 
+        title="Login - WhatCyber ThreatFeed"
+        description="Sign in to your WhatCyber ThreatFeed account to access cybersecurity threat intelligence and vulnerability tracking."
+        keywords="login, cybersecurity, threat intelligence, CVE, vulnerabilities, security news"
+      />
       <Card className="w-full max-w-md bg-whatcyber-dark border-whatcyber-light-gray">
         <CardHeader className="text-center">
           <Button
@@ -235,7 +241,7 @@ export default function LoginPage() {
                 type="button"
                 variant="link"
                 className="text-whatcyber-teal hover:text-whatcyber-teal/80 p-0 h-auto"
-                onClick={() => navigate('/forgot-password')}
+                onClick={() => navigate('/forgot-password/')}
               >
                 Forgot Password?
               </Button>
@@ -256,7 +262,7 @@ export default function LoginPage() {
             <Button
               variant="link"
               className="text-whatcyber-teal hover:text-whatcyber-teal/80 p-0 h-auto"
-              onClick={() => navigate('/register')}
+              onClick={() => navigate('/register/')}
             >
               Register here
             </Button>

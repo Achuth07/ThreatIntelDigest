@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import logoImage from '@/assets/logo/android-chrome-512x512.png';
+import { SEO } from '@/components/seo';
 import { Lock, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 
@@ -32,7 +33,7 @@ export default function ResetPasswordPage() {
         description: 'This password reset link is invalid or has expired',
         variant: 'destructive',
       });
-      navigate('/forgot-password');
+      navigate('/forgot-password/');
     } else {
       setToken(resetToken);
     }
@@ -135,6 +136,11 @@ export default function ResetPasswordPage() {
   if (resetSuccess) {
     return (
       <div className="min-h-screen bg-whatcyber-dark flex items-center justify-center p-4">
+        <SEO 
+          title="Password Reset Successful - WhatCyber ThreatFeed"
+          description="Your password has been successfully reset. You can now sign in with your new password."
+          keywords="password reset, success, cybersecurity, threat intelligence, CVE, vulnerabilities"
+        />
         <Card className="w-full max-w-md bg-whatcyber-dark border-whatcyber-light-gray">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
@@ -153,7 +159,7 @@ export default function ResetPasswordPage() {
           <CardFooter>
             <Button
               className="w-full bg-whatcyber-teal hover:bg-whatcyber-teal/80"
-              onClick={() => navigate('/login')}
+              onClick={() => navigate('/login/')}
             >
               Go to Login
             </Button>
@@ -165,6 +171,11 @@ export default function ResetPasswordPage() {
 
   return (
     <div className="min-h-screen bg-whatcyber-dark flex items-center justify-center p-4">
+      <SEO 
+        title="Reset Password - WhatCyber ThreatFeed"
+        description="Reset your password for your WhatCyber ThreatFeed account to access cybersecurity threat intelligence."
+        keywords="reset password, cybersecurity, threat intelligence, CVE, vulnerabilities"
+      />
       <Card className="w-full max-w-md bg-whatcyber-dark border-whatcyber-light-gray">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">

@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
+import { SEO } from '@/components/seo';
 import { Eye, EyeOff, Lock, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -30,7 +31,7 @@ export default function SetPasswordPage() {
       try {
         const token = localStorage.getItem('token');
         if (!token) {
-          navigate('/login');
+          navigate('/login/');
           return;
         }
 
@@ -120,7 +121,7 @@ export default function SetPasswordPage() {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        navigate('/login');
+        navigate('/login/');
         return;
       }
 
@@ -174,6 +175,11 @@ export default function SetPasswordPage() {
   if (success) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-4">
+        <SEO 
+          title="Password Set Successfully - WhatCyber ThreatFeed"
+          description="Your password has been successfully set. You can now log in using either your email/password or Google account."
+          keywords="password set, success, cybersecurity, threat intelligence, CVE, vulnerabilities"
+        />
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
@@ -196,6 +202,11 @@ export default function SetPasswordPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-4">
+      <SEO 
+        title="Set Password - WhatCyber ThreatFeed"
+        description="Set or change your password for your WhatCyber ThreatFeed account to access cybersecurity threat intelligence."
+        keywords="set password, change password, cybersecurity, threat intelligence, CVE, vulnerabilities"
+      />
       <Card className="w-full max-w-md">
         <CardHeader>
           <div className="flex items-center justify-center mb-4">
