@@ -18,6 +18,11 @@ import { AdminDashboard } from "@/components/admin-dashboard";
 import { LoginPopup } from "@/components/login-popup";
 import { getAuthenticatedUser, updateAuthToken } from "@/lib/auth";
 import { SEO } from "@/components/seo";
+import LandingPage from "@/pages/landing-page";
+import AboutPage from "@/pages/about";
+import ContactPage from "@/pages/contact";
+import PrivacyPolicyPage from "@/pages/privacy";
+import TermsOfServicePage from "@/pages/terms";
 
 // Create context for login popup
 interface LoginPopupContextType {
@@ -39,7 +44,8 @@ function Router() {
     <>
       <SEO />
       <Switch>
-        <Route path="/" component={Home} />
+        <Route path="/" component={LandingPage} />
+        <Route path="/threatfeed" component={Home} />
         <Route path="/login" component={LoginPage} />
         <Route path="/register" component={RegisterPage} />
         <Route path="/forgot-password" component={ForgotPasswordPage} />
@@ -47,6 +53,10 @@ function Router() {
         <Route path="/set-password" component={SetPasswordPage} />
         <Route path="/settings" component={Settings} />
         <Route path="/admin" component={AdminDashboard} />
+        <Route path="/about" component={AboutPage} />
+        <Route path="/contact" component={ContactPage} />
+        <Route path="/privacy" component={PrivacyPolicyPage} />
+        <Route path="/terms" component={TermsOfServicePage} />
         <Route component={NotFound} />
       </Switch>
     </>
@@ -56,6 +66,7 @@ function Router() {
 function App() {
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [userChecked, setUserChecked] = useState(false);
+  const [location] = useLocation();
 
   useEffect(() => {
     // Set the document title
@@ -87,54 +98,70 @@ function App() {
   }, []);
 
   useEffect(() => {
-    // Check if user is authenticated - always show login if not
-    const checkAuthStatus = () => {
-      const user = getAuthenticatedUser();
-      
-      if (!user) {
-        setShowLoginPopup(true);
-      } else {
-        setShowLoginPopup(false);
-      }
-      setUserChecked(true);
-    };
-
-    // Check auth status immediately
-    checkAuthStatus();
-
-    // Also check periodically in case of login/logout events
-    const interval = setInterval(checkAuthStatus, 1000);
-
-    // Increment visitor count on app load through our backend proxy
-    const incrementVisitorCount = async () => {
-      try {
-        // Use the correct endpoint for both development and production
-        const response = await fetch('/api/visitor-count', {
-          method: 'POST'
-        });
+    // Only show login popup on threatfeed routes
+    const shouldShowLoginPopup = location.startsWith('/threatfeed') || 
+                                location.startsWith('/login') || 
+                                location.startsWith('/register') || 
+                                location.startsWith('/forgot-password') || 
+                                location.startsWith('/reset-password') || 
+                                location.startsWith('/set-password') || 
+                                location.startsWith('/settings') || 
+                                location.startsWith('/admin');
+    
+    if (shouldShowLoginPopup) {
+      // Check if user is authenticated - only show login if not authenticated
+      const checkAuthStatus = () => {
+        const user = getAuthenticatedUser();
         
-        if (!response.ok) {
-          throw new Error(`Counter API proxy failed: ${response.status}`);
+        if (!user) {
+          setShowLoginPopup(true);
+        } else {
+          setShowLoginPopup(false);
         }
+        setUserChecked(true);
+      };
 
-        const data = await response.json();
-        // The counter is automatically incremented by the API call
-        // We don't need to do anything with the response data here
-        // The footer component will fetch the updated count
-      } catch (error) {
-        console.error('Error incrementing visitor count:', error);
-        // Fallback to localStorage
-        const stored = localStorage.getItem('visitorCount');
-        const count = stored ? parseInt(stored) + 1 : 1;
-        localStorage.setItem('visitorCount', count.toString());
-      }
-    };
+      // Check auth status immediately
+      checkAuthStatus();
 
-    incrementVisitorCount();
+      // Also check periodically in case of login/logout events
+      const interval = setInterval(checkAuthStatus, 1000);
 
-    // Cleanup interval
-    return () => clearInterval(interval);
-  }, []);
+      // Cleanup interval
+      return () => clearInterval(interval);
+    } else {
+      // For non-threatfeed routes, don't show login popup and mark user as checked
+      setShowLoginPopup(false);
+      setUserChecked(true);
+      
+      // Still increment visitor count on app load through our backend proxy
+      const incrementVisitorCount = async () => {
+        try {
+          // Use the correct endpoint for both development and production
+          const response = await fetch('/api/visitor-count', {
+            method: 'POST'
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Counter API proxy failed: ${response.status}`);
+          }
+
+          const data = await response.json();
+          // The counter is automatically incremented by the API call
+          // We don't need to do anything with the response data here
+          // The footer component will fetch the updated count
+        } catch (error) {
+          console.error('Error incrementing visitor count:', error);
+          // Fallback to localStorage
+          const stored = localStorage.getItem('visitorCount');
+          const count = stored ? parseInt(stored) + 1 : 1;
+          localStorage.setItem('visitorCount', count.toString());
+        }
+      };
+
+      incrementVisitorCount();
+    }
+  }, [location]);
 
   const handleLogin = () => {
     setShowLoginPopup(false);

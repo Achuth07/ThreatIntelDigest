@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Search, Bookmark, Settings, Menu, X, LogOut, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { getAuthenticatedUser, updateAuthToken } from '@/lib/auth';
 import { useLoginPopup } from '@/App';
 import logoImage from '@/assets/logo/android-chrome-512x512.png';
@@ -33,6 +33,7 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
   const [isSettingsOpen, setIsSettingsOpen] = useState(false); // For dropdown menu
   const settingsRef = useRef<HTMLDivElement>(null); // For detecting clicks outside
   const { showLoginPopup } = useLoginPopup();
+  const [location] = useLocation();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -176,6 +177,24 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
     }
   };
 
+  // Check if we're on a route where login popup should be shown
+  const shouldShowLoginPopup = location.startsWith('/threatfeed') || 
+                             location.startsWith('/login') || 
+                             location.startsWith('/register') || 
+                             location.startsWith('/forgot-password') || 
+                             location.startsWith('/reset-password') || 
+                             location.startsWith('/set-password') || 
+                             location.startsWith('/settings') || 
+                             location.startsWith('/admin');
+
+  const handleSettingsClick = () => {
+    if (!user && shouldShowLoginPopup) {
+      showLoginPopup();
+    } else {
+      setIsSettingsOpen(!isSettingsOpen);
+    }
+  };
+
   return (
     <header className="bg-whatcyber-dark border-b border-whatcyber-light-gray/30 sticky top-0 z-50 backdrop-blur-sm bg-whatcyber-dark/95">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -260,7 +279,7 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
                 variant="ghost"
                 size="sm"
                 className="p-2 text-slate-400 hover:text-slate-100 transition-colors"
-                onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                onClick={handleSettingsClick}
                 data-testid="button-settings"
                 title="Settings"
               >
@@ -304,7 +323,9 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
                         className="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-whatcyber-gray hover:text-slate-100"
                         onClick={() => {
                           setIsSettingsOpen(false);
-                          showLoginPopup();
+                          if (shouldShowLoginPopup) {
+                            showLoginPopup();
+                          }
                         }}
                       >
                         <div className="flex items-center">
