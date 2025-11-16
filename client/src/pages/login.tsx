@@ -76,7 +76,7 @@ export default function LoginPage() {
   const handleGoogleLogin = () => {
     const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
     const authUrl = isProduction 
-      ? 'https://whatcyber.com/api/auth?action=google'
+      ? 'https://threatfeed.whatcyber.com/api/auth?action=google'
       : '/api/auth?action=google';
     window.location.href = authUrl;
   };

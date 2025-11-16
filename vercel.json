@@ -15,14 +15,15 @@
   },
   "redirects": [
     {
-      "source": "/:path*/:file*.:ext*",
-      "destination": "/:path*/:file*.:ext*",
-      "permanent": true
-    },
-    {
       "source": "/:path+",
       "destination": "/:path+/",
-      "permanent": true
+      "permanent": true,
+      "has": [
+        {
+          "type": "host",
+          "value": "threatfeed.whatcyber.com"
+        }
+      ]
     }
   ],
   "rewrites": [

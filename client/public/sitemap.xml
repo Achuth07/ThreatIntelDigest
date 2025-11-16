@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://whatcyber.com/</loc>
+    <loc>https://threatfeed.whatcyber.com/</loc>
     <lastmod>2025-11-16</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://whatcyber.com/login/</loc>
+    <loc>https://threatfeed.whatcyber.com/login/</loc>
     <lastmod>2025-11-16</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://whatcyber.com/settings/</loc>
+    <loc>https://threatfeed.whatcyber.com/settings/</loc>
     <lastmod>2025-11-16</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>

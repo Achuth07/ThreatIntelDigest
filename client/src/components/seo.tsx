@@ -12,12 +12,12 @@ interface SEOProps {
 export function SEO({ 
   title = 'WhatCyber - ThreatFeed', 
   description = 'Stay updated with the latest cybersecurity threats, vulnerabilities, and intelligence from trusted sources.',
-  image = 'https://whatcyber.com/og-image.jpg',
+  image = 'https://threatfeed.whatcyber.com/og-image.jpg',
   url,
   keywords = 'cybersecurity, threat intelligence, CVE, vulnerabilities, security news, cyber threats'
 }: SEOProps) {
   const [location] = useLocation();
-  const canonicalUrl = url || `https://whatcyber.com${location === '/' ? '/' : location.endsWith('/') ? location : location + '/'}`;
+  const canonicalUrl = url || `https://threatfeed.whatcyber.com${location === '/' ? '/' : location.endsWith('/') ? location : location + '/'}`;
 
   useEffect(() => {
     // Update title

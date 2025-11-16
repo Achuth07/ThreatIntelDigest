@@ -1,7 +1,7 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://whatcyber.com/sitemap.xml
+Sitemap: https://threatfeed.whatcyber.com/sitemap.xml
 
 # Rate limiting for crawlers
 Crawl-delay: 10

@@ -32,7 +32,7 @@ export function LoginPopup({ onLogin }: LoginPopupProps) {
     // Check if we're in production by looking at the hostname
     const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
     const authUrl = isProduction 
-      ? 'https://whatcyber.com/api/auth?action=google'
+      ? 'https://threatfeed.whatcyber.com/api/auth?action=google'
       : '/api/auth?action=google';
     console.log('Login - Environment Detection:');
     console.log('  Hostname:', window.location.hostname);
