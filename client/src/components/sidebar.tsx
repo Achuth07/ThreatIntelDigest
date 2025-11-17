@@ -37,7 +37,7 @@ export function Sidebar({
   onThreatFilterChange,
   onClose,
   onVulnerabilitiesClick,
-  onFollowSourcesClick, // Add this new prop
+  onFollowSourcesClick,
 }: SidebarProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -583,23 +583,11 @@ export function Sidebar({
               {exportBookmarksMutation.isPending ? 'Exporting...' : 'Export Bookmarks'}
             </Button>
             
-            <Button
-              ref={addSourcesButtonRef}
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start p-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-700 relative"
-              onClick={() => setShowAddSourcesDialog(true)}
-              data-testid="button-add-source"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add New Source
-            </Button>
-            
             {/* New Follow Sources Button */}
             <Button
               variant="ghost"
               size="sm"
-              className="w-full justify-start p-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-700"
+              className="w-full justify-start p-2 text-base font-medium text-slate-300 hover:text-slate-100 hover:bg-slate-700"
               onClick={onFollowSourcesClick}
               data-testid="button-follow-sources"
             >
@@ -663,7 +651,7 @@ export function Sidebar({
           </div>
         )}
 
-        {/* Collapsible Feed Sources */}
+        {/* Collapsible Feed Sources - Removed the + button */}
         <Collapsible open={!isSourcesCollapsed} onOpenChange={(open) => setIsSourcesCollapsed(!open)} className="mb-6">
           <CollapsibleTrigger className="w-full">
             <div className="flex items-center justify-between mb-4 group">
@@ -671,22 +659,8 @@ export function Sidebar({
                 <Rss className="w-5 h-5 text-whatcyber-teal mr-2" />
                 Threat Intel Sources
               </h2>
-              <div className="flex items-center space-x-2">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 w-8 p-0 text-slate-400 hover:text-slate-100 hover:bg-slate-700"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowAddSourcesDialog(true);
-                  }}
-                  data-testid="button-add-sources"
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
-                <div className="text-slate-400 hover:text-slate-100 transition-colors">
-                  {isSourcesCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-                </div>
+              <div className="text-slate-400 hover:text-slate-100 transition-colors">
+                {isSourcesCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
               </div>
             </div>
           </CollapsibleTrigger>
@@ -709,38 +683,24 @@ export function Sidebar({
               </span>
             </button>
 
-            {/* Individual Sources */}
+            {/* Individual Sources - Removed the delete/hide button */}
             {activeUserSources.map((source) => (
-              <div
+              <button
                 key={source.id}
-                className={`relative w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors group ${
+                className={`w-full flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors ${
                   selectedSource === source.name ? 'bg-whatcyber-teal/20 border border-whatcyber-teal/30' : 'hover:bg-whatcyber-gray/50'
                 }`}
+                onClick={() => {
+                  onSourceSelect(source.name);
+                  onClose?.(); // Auto-close on mobile after selection
+                }}
                 data-testid={`button-source-${source.name.replace(/\s+/g, '-').toLowerCase()}`}
               >
-                <button
-                  className="flex-1 flex items-center space-x-3 text-left"
-                  onClick={() => onSourceSelect(source.name)}
-                >
-                  {renderSourceFavicon(source)}
-                  <span className="text-slate-300 group-hover:text-slate-100 transition-colors">
-                    {source.name}
-                  </span>
-                </button>
-                
-                {/* Delete/Hide button - shown on hover */}
-                <button
-                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-600 rounded text-red-400 hover:text-white"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteSource(source.id, source.name);
-                  }}
-                  title={`Hide ${source.name}`}
-                  disabled={updateUserSourceMutation.isPending}
-                >
-                  <Minus className="w-3 h-3" />
-                </button>
-              </div>
+                {renderSourceFavicon(source)}
+                <span className="text-slate-300 group-hover:text-slate-100 transition-colors">
+                  {source.name}
+                </span>
+              </button>
             ))}
           </CollapsibleContent>
         </Collapsible>
