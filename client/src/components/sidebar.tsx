@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Globe, Rss, Filter, Zap, RefreshCw, Download, Plus, Minus, Shield, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { Check, Globe, Rss, Filter, Zap, RefreshCw, Download, Plus, Minus, Shield, ChevronDown, ChevronUp, X } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { AddSourcesDialog } from '@/components/add-sources-dialog';
@@ -13,7 +13,8 @@ import { ConfirmationDialog } from '@/components/confirmation-dialog';
 import { exportBookmarks } from '@/lib/export-utils';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { getFaviconUrl } from '@/lib/favicon-utils';
-import type { RssSource } from '@shared/schema';
+import { VENDOR_THREAT_RESEARCH, GOVERNMENT_ALERTS, MALWARE_RESEARCH, GENERAL_SECURITY_NEWS, LEGACY_SOURCES } from '@/lib/rss-sources';
+import type { InsertRssSource, RssSource } from '@shared/schema';
 
 interface SidebarProps {
   selectedSource: string;
@@ -40,6 +41,7 @@ export function Sidebar({
   const queryClient = useQueryClient();
   const [showAddSourcesDialog, setShowAddSourcesDialog] = useState(false);
   const [isSourcesCollapsed, setIsSourcesCollapsed] = useState(false);
+  const [isFollowSourcesCollapsed, setIsFollowSourcesCollapsed] = useState(true);
   const [userSources, setUserSources] = useState<RssSource[]>([]);
   const [isLoadingSources, setIsLoadingSources] = useState(true);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
@@ -222,6 +224,24 @@ export function Sidebar({
     },
   });
 
+  const addSourceMutation = useMutation({
+    mutationFn: (data: InsertRssSource) => 
+      apiRequest('POST', '/api/sources', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/sources'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
+      // Refetch sources after adding (force refresh)
+      fetchUserSources(true);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to add source. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleThreatFilterChange = (threatLevel: string, checked: boolean) => {
     if (checked) {
       onThreatFilterChange([...threatFilters, threatLevel]);
@@ -343,6 +363,127 @@ export function Sidebar({
     });
   };
 
+  // Function to handle adding a source
+  const handleAddSource = (sourceName: string) => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to add sources.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Find the source in our predefined lists
+    const allSources = [
+      ...VENDOR_THREAT_RESEARCH,
+      ...GOVERNMENT_ALERTS,
+      ...MALWARE_RESEARCH,
+      ...GENERAL_SECURITY_NEWS,
+      ...LEGACY_SOURCES
+    ];
+    
+    const sourceToAdd = allSources.find(source => source.name === sourceName);
+    if (!sourceToAdd) return;
+    
+    // Check if source already exists and is active
+    const activeSourceExists = userSources.some(existing => 
+      existing.isActive && (existing.name === sourceToAdd.name || existing.url === sourceToAdd.url)
+    );
+
+    if (activeSourceExists) {
+      toast({
+        title: "Source Already Added",
+        description: `${sourceToAdd.name} is already active in your sources list`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if inactive source exists that we can reactivate
+    const inactiveSource = userSources.find(existing => 
+      !existing.isActive && (existing.name === sourceToAdd.name || existing.url === sourceToAdd.url)
+    );
+
+    if (inactiveSource) {
+      // Reactivate existing inactive source
+      updateUserSourceMutation.mutate({ 
+        sourceId: inactiveSource.id, 
+        isActive: true 
+      });
+    } else {
+      // Add new source
+      addSourceMutation.mutate({
+        name: sourceToAdd.name,
+        url: sourceToAdd.url,
+        icon: sourceToAdd.icon,
+        color: sourceToAdd.color,
+        isActive: true,
+      });
+    }
+  };
+
+  // Function to check if a source is already added
+  const isSourceAdded = (sourceName: string) => {
+    return userSources.some(source => 
+      source.name === sourceName && source.isActive
+    );
+  };
+
+  // Render source card for Follow Sources section
+  const renderSourceCard = (source: any) => {
+    const isAdded = isSourceAdded(source.name);
+    const faviconUrl = getFaviconUrl(source.url, 16);
+    
+    return (
+      <div 
+        key={source.name}
+        className="border border-whatcyber-light-gray/30 rounded-lg p-3 bg-whatcyber-darker hover:bg-whatcyber-gray/50 transition-colors"
+      >
+        <div className="flex items-start space-x-2">
+          <div className="flex-shrink-0 mt-0.5">
+            <img 
+              src={faviconUrl} 
+              alt={`${source.name} icon`}
+              className="w-4 h-4 rounded-sm"
+              onError={(e) => {
+                // Fallback to RSS icon if favicon fails to load
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                const parent = target.parentElement;
+                if (parent) {
+                  const fallbackDiv = document.createElement('div');
+                  fallbackDiv.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-slate-400"><path d="M6.18 15.64a2.18 2.18 0 0 1 2.18 2.18C8.36 19 7.38 20 6.18 20C5 20 4 19 4 17.82a2.18 2.18 0 0 1 2.18-2.18M4 4.44A15.56 15.56 0 0 1 19.56 20h-2.83A12.73 12.73 0 0 0 4 7.27V4.44m0 5.66a9.9 9.9 0 0 1 9.9 9.9h-2.83A7.07 7.07 0 0 0 4 12.93V10.1Z"/></svg>';
+                  parent.appendChild(fallbackDiv.firstChild!);
+                }
+              }}
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="font-medium text-slate-100 text-sm truncate">{source.name}</h4>
+            <p className="text-xs text-slate-400 mt-1 line-clamp-2">
+              {source.description || `Follow threat intelligence from ${source.name}`}
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            className={`h-6 w-6 p-0 ${isAdded ? 'text-green-400 hover:text-green-300' : 'text-whatcyber-teal hover:text-whatcyber-teal'}`}
+            onClick={() => handleAddSource(source.name)}
+            disabled={isAdded || addSourceMutation.isPending || updateUserSourceMutation.isPending}
+            title={isAdded ? "Already added" : "Add source"}
+          >
+            {isAdded ? (
+              <Check className="w-4 h-4" />
+            ) : (
+              <Plus className="w-4 h-4" />
+            )}
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <aside className="w-80 lg:w-80 bg-whatcyber-dark border-r border-whatcyber-light-gray/30 overflow-y-auto h-full">
       <div className="p-4 lg:p-6">
@@ -359,6 +500,7 @@ export function Sidebar({
             </Button>
           </div>
         )}
+        
         {/* Filter Options - Moved to top */}
         <div className="mb-6">
           <h3 className="text-md font-medium text-slate-200 mb-3 flex items-center">
@@ -506,6 +648,66 @@ export function Sidebar({
             </div>
           </div>
         )}
+
+        {/* Follow Sources Section */}
+        <Collapsible open={!isFollowSourcesCollapsed} onOpenChange={(open) => setIsFollowSourcesCollapsed(!open)} className="mb-6">
+          <CollapsibleTrigger className="w-full">
+            <div className="flex items-center justify-between mb-4 group">
+              <h2 className="text-lg font-semibold text-slate-100 flex items-center">
+                <Plus className="w-5 h-5 text-whatcyber-teal mr-2" />
+                Follow Sources
+              </h2>
+              <div className="text-slate-400 hover:text-slate-100 transition-colors">
+                {isFollowSourcesCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+              </div>
+            </div>
+          </CollapsibleTrigger>
+          
+          <CollapsibleContent className="space-y-3">
+            {/* Vendor & Private Threat Research */}
+            <div>
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Vendor & Private Threat Research</h3>
+              <div className="grid grid-cols-1 gap-2">
+                {VENDOR_THREAT_RESEARCH.slice(0, 5).map(renderSourceCard)}
+              </div>
+            </div>
+            
+            {/* Government & Agency Alerts */}
+            <div>
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Government & Agency Alerts</h3>
+              <div className="grid grid-cols-1 gap-2">
+                {GOVERNMENT_ALERTS.slice(0, 3).map(renderSourceCard)}
+              </div>
+            </div>
+            
+            {/* Specialized & Malware Focus */}
+            <div>
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Specialized & Malware Focus</h3>
+              <div className="grid grid-cols-1 gap-2">
+                {MALWARE_RESEARCH.map(renderSourceCard)}
+              </div>
+            </div>
+            
+            {/* General Security News */}
+            <div>
+              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">General Security News</h3>
+              <div className="grid grid-cols-1 gap-2">
+                {GENERAL_SECURITY_NEWS.slice(0, 5).map(renderSourceCard)}
+              </div>
+            </div>
+            
+            {/* Show More Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-slate-400 hover:text-slate-100 hover:bg-whatcyber-gray/50"
+              onClick={() => setShowAddSourcesDialog(true)}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Show More Sources
+            </Button>
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Collapsible Feed Sources */}
         <Collapsible open={!isSourcesCollapsed} onOpenChange={(open) => setIsSourcesCollapsed(!open)} className="mb-6">
