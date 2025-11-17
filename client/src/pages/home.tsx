@@ -201,6 +201,11 @@ export default function Home() {
     setShowFollowSources(false);
   };
 
+  const handleBookmarksSidebarClick = () => {
+    handleBookmarksClick();
+    handleSidebarClose(); // Auto-close sidebar on mobile
+  };
+
   // Filter articles based on current filters
   const filteredArticles = articles.filter(article => {
     // Time filter
@@ -311,6 +316,7 @@ export default function Home() {
             onClose={handleSidebarClose}
             onVulnerabilitiesClick={handleVulnerabilitiesClick}
             onFollowSourcesClick={handleFollowSourcesClick}
+            onBookmarksClick={handleBookmarksSidebarClick} // Add this prop
           />
         </div>
 

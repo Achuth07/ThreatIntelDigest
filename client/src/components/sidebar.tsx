@@ -26,6 +26,7 @@ interface SidebarProps {
   onClose?: () => void;
   onVulnerabilitiesClick?: () => void;
   onFollowSourcesClick?: () => void; // Add this new prop
+  onBookmarksClick?: () => void; // Add this new prop
 }
 
 export function Sidebar({
@@ -38,6 +39,7 @@ export function Sidebar({
   onClose,
   onVulnerabilitiesClick,
   onFollowSourcesClick,
+  onBookmarksClick,
 }: SidebarProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -583,17 +585,17 @@ export function Sidebar({
               {exportBookmarksMutation.isPending ? 'Exporting...' : 'Export Bookmarks'}
             </Button>
             
-            {/* Updated Follow Sources Button as heading with green + symbol */}
-            <div 
-              className="w-full flex items-center justify-between p-2 cursor-pointer hover:bg-slate-700 rounded-lg"
-              onClick={onFollowSourcesClick}
-              data-testid="button-follow-sources"
+            {/* New Bookmarks Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start p-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-700"
+              onClick={onBookmarksClick}
+              data-testid="button-sidebar-bookmarks"
             >
-              <h3 className="text-lg font-semibold text-slate-100 flex items-center">
-                <Plus className="w-5 h-5 text-green-500 mr-2" />
-                Follow Sources
-              </h3>
-            </div>
+              <Plus className="w-4 h-4 mr-2" />
+              Bookmarks
+            </Button>
           </div>
           
           {/* Callout box for adding new sources */}
@@ -610,6 +612,20 @@ export function Sidebar({
               </div>
             </div>
           )}
+        </div>
+
+        {/* Follow Sources Section - Moved to its own section */}
+        <div className="mb-6">
+          <div 
+            className="w-full flex items-center justify-between p-2 cursor-pointer hover:bg-slate-700 rounded-lg"
+            onClick={onFollowSourcesClick}
+            data-testid="button-follow-sources"
+          >
+            <h3 className="text-lg font-semibold text-slate-100 flex items-center">
+              <Plus className="w-5 h-5 text-green-500 mr-2" />
+              Follow Sources
+            </h3>
+          </div>
         </div>
 
         {/* Tooltip Guide Popup */}
