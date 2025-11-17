@@ -15,6 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { SEO } from '@/components/seo';
 import type { Article, Bookmark, RssSource } from '@shared/schema';
+import { Helmet } from "react-helmet-async";
 
 export default function Home() {
   const { toast } = useToast();
@@ -276,21 +277,51 @@ export default function Home() {
   });
 
   return (
-    <div className="min-h-screen bg-whatcyber-darker text-slate-100 flex flex-col">
+    <div className="flex flex-col min-h-screen bg-whatcyber-darker">
       <SEO 
-        title="WhatCyber - ThreatFeed"
-        description="Stay updated with the latest cybersecurity threats, vulnerabilities, and intelligence from trusted sources."
-        keywords="cybersecurity, threat intelligence, CVE, vulnerabilities, security news, cyber threats"
-      />
-      <Header 
-        onSearch={handleSearch}
-        bookmarkCount={(bookmarks as Bookmark[]).length}
-        onBookmarksClick={handleBookmarksClick}
-        onSidebarToggle={handleSidebarToggle}
-        isSidebarOpen={isSidebarOpen}
+        title="Live Cybersecurity News Feed | WhatCyber"
+        description="Your live, aggregated feed of the latest cybersecurity news. Stay updated on vulnerabilities, threat intel, and breaking stories from around the web."
+        keywords="cybersecurity news, threat intelligence, vulnerability feed, security alerts, cyber threats, security updates"
       />
       
-      <div className="flex flex-1 min-h-0 relative">
+      {/* Update the header to have a more descriptive H1 */}
+      <header className="bg-whatcyber-dark border-b border-whatcyber-gray sticky top-0 z-50">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
+            <h1 className="text-xl font-bold text-white">
+              Live Cybersecurity News Feed
+            </h1>
+            <div className="flex items-center space-x-4">
+              <input
+                type="text"
+                className="bg-whatcyber-gray rounded-md py-2 px-4 text-slate-100 outline-none border-2 border-transparent focus:border-slate-300"
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => handleSearch(e.target.value)}
+                data-testid="input-search"
+              />
+              <Button
+                variant="outline"
+                onClick={handleBookmarksClick}
+                className="bg-whatcyber-gray text-slate-100 border-slate-300"
+                data-testid="button-bookmarks"
+              >
+                {bookmarksLoading ? 'Loading...' : `Bookmarks (${bookmarks.length})`}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleSidebarToggle}
+                className="bg-whatcyber-gray text-slate-100 border-slate-300"
+                data-testid="button-sidebar-toggle"
+              >
+                {isSidebarOpen ? 'Close' : 'Filters'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+      
+      <div className="flex flex-1 relative">
         {/* Mobile Overlay */}
         {isSidebarOpen && (
           <div 

@@ -19,7 +19,8 @@ import { LoginPopup } from "@/components/login-popup";
 import { getAuthenticatedUser, updateAuthToken } from "@/lib/auth";
 import { SEO } from "@/components/seo";
 import LandingPage from "@/pages/landing-page";
-import AboutPage from "@/pages/about";
+import AboutPage from "@/pages/AboutPage";
+import SourcesPage from "@/pages/SourcesPage";
 import ContactPage from "@/pages/contact";
 import PrivacyPolicyPage from "@/pages/privacy";
 import TermsOfServicePage from "@/pages/terms";
@@ -54,6 +55,7 @@ function Router() {
         <Route path="/settings" component={Settings} />
         <Route path="/admin" component={AdminDashboard} />
         <Route path="/about" component={AboutPage} />
+        <Route path="/sources" component={SourcesPage} />
         <Route path="/contact" component={ContactPage} />
         <Route path="/privacy" component={PrivacyPolicyPage} />
         <Route path="/terms" component={TermsOfServicePage} />

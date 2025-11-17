@@ -3,6 +3,8 @@ import { Link } from 'wouter';
 import { motion } from 'framer-motion';
 import { Shield, Menu, X, Database, Eye, Settings, Zap, Target, Github, Linkedin, Mail, Globe, Heart } from 'lucide-react';
 import * as THREE from 'three';
+import { Helmet } from "react-helmet-async";
+import { SEO } from '@/components/seo';
 
 // CyberSphere Component
 const CyberSphere = () => {
@@ -565,7 +567,7 @@ const HeroSection = () => {
 
             {/* Subtitle */}
             <motion.p
-              className="text-xl text-[#888] mb-8 max-w-2xl mx-auto lg:mx-0 leading-relaxed"
+              className="text-lg text-[#888] mb-8 max-w-2xl mx-auto lg:mx-0 leading-relaxed"
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
@@ -1098,6 +1100,11 @@ const ChevronDownIcon = ({ className }: { className?: string }) => (
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-gray-900">
+      <SEO 
+        title="WhatCyber: The Cybersecurity News Aggregator"
+        description="Get your real-time cybersecurity news feed from WhatCyber. We aggregate the latest threat intelligence, vulnerabilities, and cyber news from top sources."
+        keywords="cybersecurity, threat intelligence, news aggregator, vulnerability tracking, cyber news, security alerts"
+      />
       <Header />
       <main>
         <HeroSection />
