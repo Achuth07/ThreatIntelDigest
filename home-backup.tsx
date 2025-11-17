@@ -15,7 +15,6 @@ import { useToast } from '@/hooks/use-toast';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { SEO } from '@/components/seo';
 import type { Article, Bookmark, RssSource } from '@shared/schema';
-import { Helmet } from "react-helmet-async";
 
 export default function Home() {
   const { toast } = useToast();
@@ -279,9 +278,9 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-whatcyber-darker text-slate-100 flex flex-col">
       <SEO 
-        title="Live Cybersecurity News Feed | WhatCyber"
-        description="Your live, aggregated feed of the latest cybersecurity news. Stay updated on vulnerabilities, threat intel, and breaking stories from around the web."
-        keywords="cybersecurity news, threat intelligence, vulnerability feed, security alerts, cyber threats, security updates"
+        title="WhatCyber - ThreatFeed"
+        description="Stay updated with the latest cybersecurity threats, vulnerabilities, and intelligence from trusted sources."
+        keywords="cybersecurity, threat intelligence, CVE, vulnerabilities, security news, cyber threats"
       />
       <Header 
         onSearch={handleSearch}
