@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Check, Globe, Rss, Filter, Zap, RefreshCw, Download, Plus, Minus, Shield, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { Check, Globe, Rss, Filter, Zap, RefreshCw, Download, Plus, Minus, Shield, ChevronDown, ChevronUp, X, Bookmark } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { AddSourcesDialog } from '@/components/add-sources-dialog';
@@ -57,58 +57,16 @@ export function Sidebar({
     sourceId: null,
     sourceName: null
   });
-  const [showTooltipGuide, setShowTooltipGuide] = useState(false);
-  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [hasLoadedSources, setHasLoadedSources] = useState(false);
 
   // Reference for the add sources button
   const addSourcesButtonRef = useRef<HTMLButtonElement>(null);
-
-  // Position tooltip when it's shown
-  useEffect(() => {
-    if (showTooltipGuide && addSourcesButtonRef.current) {
-      // Add a small delay to ensure the button is fully rendered
-      const timer = setTimeout(() => {
-        positionTooltip(addSourcesButtonRef.current!);
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [showTooltipGuide]);
 
   // Get authenticated user
   const user = getAuthenticatedUser();
 
   // Filter out inactive sources from the sidebar display
   const activeUserSources = userSources.filter(source => source.isActive !== false);
-
-  // Show tooltip guide on every login for all users
-  useEffect(() => {
-    if (user) {
-      // Check if tooltip has already been shown in this session
-      const hasShownTooltip = sessionStorage.getItem('tooltip_shown');
-      
-      if (!hasShownTooltip) {
-        // Delay the tooltip slightly to ensure UI is rendered
-        const showTimer = setTimeout(() => {
-          setShowTooltipGuide(true);
-        }, 1000);
-        
-        // Auto-hide after 20 seconds and mark as shown for this session
-        const hideTimer = setTimeout(() => {
-          setShowTooltipGuide(false);
-          sessionStorage.setItem('tooltip_shown', 'true');
-        }, 21000);
-        
-        return () => {
-          clearTimeout(showTimer);
-          clearTimeout(hideTimer);
-        };
-      }
-    } else {
-      // User logged out - clear the session flag so it shows again on next login
-      sessionStorage.removeItem('tooltip_shown');
-    }
-  }, [user]);
 
   // Fetch user-specific sources with useCallback to prevent re-creation
   const fetchUserSources = useCallback(async (force = false) => {
@@ -358,15 +316,6 @@ export function Sidebar({
 
   const totalArticles = userSources.reduce((sum, source) => sum + (source.isActive ? 10 : 0), 0); // Rough estimate
 
-  // Function to position tooltip relative to the add sources button
-  const positionTooltip = (buttonElement: HTMLElement) => {
-    const rect = buttonElement.getBoundingClientRect();
-    setTooltipPosition({
-      x: rect.left + rect.width / 2 - 40, // Shift 40px left to align arrow with + button
-      y: rect.top - 100 // Move 100px higher to be completely above the heading
-    });
-  };
-
   // Function to handle adding a source
   const handleAddSource = (sourceName: string) => {
     if (!user) {
@@ -593,9 +542,10 @@ export function Sidebar({
               onClick={onBookmarksClick}
               data-testid="button-sidebar-bookmarks"
             >
-              <Plus className="w-4 h-4 mr-2" />
+              <Bookmark className="w-4 h-4 mr-2" />
               Bookmarks
             </Button>
+
           </div>
           
           {/* Callout box for adding new sources */}
@@ -627,45 +577,6 @@ export function Sidebar({
             </h3>
           </div>
         </div>
-
-        {/* Tooltip Guide Popup */}
-        {showTooltipGuide && (
-          <div 
-            className="fixed z-50 animate-bounce"
-            style={{
-              left: `${tooltipPosition.x}px`,
-              top: `${tooltipPosition.y}px`,
-              transform: 'translate(-50%, -100%)',
-              animationDuration: '1s'
-            }}
-          >
-            <div className="relative bg-slate-800 border border-slate-700 rounded-lg p-4 w-64 shadow-lg">
-              <button
-                onClick={() => {
-                  setShowTooltipGuide(false);
-                  sessionStorage.setItem('tooltip_shown', 'true');
-                }}
-                className="absolute top-2 right-2 text-slate-400 hover:text-slate-200"
-              >
-                <X className="w-4 h-4" />
-              </button>
-              <div className="flex items-start">
-                <div className="flex-shrink-0 mt-0.5">
-                  <Plus className="w-5 h-5 text-whatcyber-teal" />
-                </div>
-                <div className="ml-2">
-                  <h4 className="text-sm font-semibold text-slate-100">Add Threat Sources</h4>
-                  <p className="mt-1 text-xs text-slate-400">
-                    Click on the + to add new threat intelligence sources and customize your feed
-                  </p>
-                </div>
-              </div>
-              <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full">
-                <div className="w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-slate-700"></div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Collapsible Feed Sources - Restore the delete/hide button */}
         <Collapsible open={!isSourcesCollapsed} onOpenChange={(open) => setIsSourcesCollapsed(!open)} className="mb-6">

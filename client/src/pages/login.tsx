@@ -120,8 +120,8 @@ export default function LoginPage() {
           description: 'Welcome back!',
         });
 
-        // Redirect to home page
-        navigate('/');
+        // Redirect to threatfeed page
+        navigate('/threatfeed/');
         window.location.reload(); // Refresh to update auth state
       } else {
         throw new Error('No token received');
