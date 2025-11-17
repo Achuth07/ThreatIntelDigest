@@ -20,7 +20,10 @@ export const SEO: React.FC<SEOProps> = ({
 }) => {
   // Get the current location for canonical URL
   const location = typeof window !== 'undefined' ? window.location.pathname : '';
-  const canonicalUrl = url || `https://www.whatcyber.com${location === '/' ? '/' : location.endsWith('/') ? location : location + '/'}`;
+  // For threatfeed routes, use the correct canonical URL structure
+  const canonicalUrl = url || (location.startsWith('/threatfeed') 
+    ? `https://www.whatcyber.com${location.endsWith('/') ? location : location + '/'}`
+    : `https://www.whatcyber.com${location === '/' ? '/' : location.endsWith('/') ? location : location + '/'}`);
 
   useEffect(() => {
     // Update title

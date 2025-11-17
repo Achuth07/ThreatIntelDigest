@@ -4,7 +4,7 @@ import type { Transporter } from 'nodemailer';
 const SENDER_EMAIL = 'contact@whatcyber.com';
 const SENDER_NAME = 'WhatCyber';
 const BASE_URL = process.env.VERCEL_ENV === 'production' 
-  ? 'https://threatfeed.whatcyber.com' 
+  ? 'https://www.whatcyber.com/threatfeed' 
   : 'http://localhost:5173';
 
 /**
@@ -74,7 +74,7 @@ export async function sendVerificationEmail(
                   <!-- Header with Logo -->
                   <tr>
                     <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 30px; text-align: center;">
-                      <img src="https://threatfeed.whatcyber.com/logo512.png" alt="WhatCyber Logo" style="width: 64px; height: 64px; margin-bottom: 20px; border-radius: 8px;">
+                      <img src="https://www.whatcyber.com/threatfeed/logo512.png" alt="WhatCyber Logo" style="width: 64px; height: 64px; margin-bottom: 20px; border-radius: 8px;">
                       <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">Welcome to WhatCyber</h1>
                       <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0; font-size: 14px;">Cybersecurity Threat Intelligence Platform</p>
                     </td>
@@ -136,7 +136,7 @@ export async function sendVerificationEmail(
                       </p>
                       <p style="font-size: 12px; color: #64748b; margin: 0;">
                         © 2025 WhatCyber. All rights reserved.<br>
-                        <a href="https://threatfeed.whatcyber.com" style="color: #10b981; text-decoration: none;">threatfeed.whatcyber.com</a>
+                        <a href="https://www.whatcyber.com/threatfeed" style="color: #10b981; text-decoration: none;">www.whatcyber.com/threatfeed</a>
                       </p>
                     </td>
                   </tr>
@@ -227,7 +227,7 @@ export async function sendPasswordResetEmail(
                   <!-- Header with Logo -->
                   <tr>
                     <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 30px; text-align: center;">
-                      <img src="https://threatfeed.whatcyber.com/logo512.png" alt="WhatCyber Logo" style="width: 64px; height: 64px; margin-bottom: 20px; border-radius: 8px;">
+                      <img src="https://www.whatcyber.com/threatfeed/logo512.png" alt="WhatCyber Logo" style="width: 64px; height: 64px; margin-bottom: 20px; border-radius: 8px;">
                       <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">Password Reset Request</h1>
                       <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0; font-size: 14px;">WhatCyber Account Security</p>
                     </td>
@@ -296,7 +296,7 @@ export async function sendPasswordResetEmail(
                       </p>
                       <p style="font-size: 12px; color: #64748b; margin: 0;">
                         © 2025 WhatCyber. All rights reserved.<br>
-                        <a href="https://threatfeed.whatcyber.com" style="color: #10b981; text-decoration: none;">threatfeed.whatcyber.com</a>
+                        <a href="https://www.whatcyber.com/threatfeed" style="color: #10b981; text-decoration: none;">www.whatcyber.com/threatfeed</a>
                       </p>
                     </td>
                   </tr>

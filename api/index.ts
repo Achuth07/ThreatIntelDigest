@@ -3247,7 +3247,7 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
           response = await fetch(source.url as string, {
             signal: controller.signal,
             headers: {
-              'User-Agent': process.env.RSS_USER_AGENT || 'ThreatIntelDigest/1.0 (+https://threatfeed.whatcyber.com)'
+              'User-Agent': process.env.RSS_USER_AGENT || 'ThreatIntelDigest/1.0 (+https://www.whatcyber.com/threatfeed)'
             }
           });
           clearTimeout(timeoutId);

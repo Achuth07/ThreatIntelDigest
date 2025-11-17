@@ -231,7 +231,7 @@ async function handleGoogleCallback(req: VercelRequest, res: VercelResponse) {
   
   if (!code) {
     // If there's no code, redirect to the frontend with an error
-    res.redirect('https://threatfeed.whatcyber.com?error=authentication_failed');
+    res.redirect('https://www.whatcyber.com/threatfeed?error=authentication_failed');
     return;
   }
   
@@ -250,7 +250,7 @@ async function handleGoogleCallback(req: VercelRequest, res: VercelResponse) {
         client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
         code: code as string,
         grant_type: 'authorization_code',
-        redirect_uri: 'https://threatfeed.whatcyber.com/api/auth?action=callback',
+        redirect_uri: 'https://www.whatcyber.com/threatfeed/api/auth?action=callback',
       }),
     });
     
@@ -305,17 +305,17 @@ async function handleGoogleCallback(req: VercelRequest, res: VercelResponse) {
     
     // Redirect to frontend with user data (URL encoded)
     const userDataString = encodeURIComponent(JSON.stringify(userData));
-    res.redirect(`https://threatfeed.whatcyber.com?user=${userDataString}`);
+    res.redirect(`https://www.whatcyber.com/threatfeed?user=${userDataString}`);
   } catch (error) {
     console.error('Authentication error:', error);
-    res.redirect('https://threatfeed.whatcyber.com?error=authentication_failed');
+    res.redirect('https://www.whatcyber.com/threatfeed?error=authentication_failed');
   }
 }
 
 async function handleGoogleLogin(req: VercelRequest, res: VercelResponse) {
   const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
     `client_id=${process.env.GOOGLE_CLIENT_ID || ''}` +
-    `&redirect_uri=https://threatfeed.whatcyber.com/api/auth?action=callback` +
+    `&redirect_uri=https://www.whatcyber.com/threatfeed/api/auth?action=callback` +
     `&response_type=code` +
     `&scope=openid%20email%20profile` +
     `&access_type=offline`;
