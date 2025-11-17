@@ -76,13 +76,13 @@ app.use((req, res, next) => {
   
   // Redirect HTTP to HTTPS in production
   if (process.env.NODE_ENV === 'production' && protocol !== 'https') {
-    const redirectUrl = `https://${host || 'threatfeed.whatcyber.com'}${req.url}`;
+    const redirectUrl = `https://${host || 'www.whatcyber.com'}${req.url}`;
     return res.redirect(301, redirectUrl);
   }
   
   // Redirect non-trailing-slash URLs to trailing-slash URLs (except for file extensions and API routes)
   if (path !== '/' && !path.endsWith('/') && !path.includes('.') && !path.startsWith('/api/') && !req.query.noRedirect) {
-    const redirectUrl = `https://${host || 'threatfeed.whatcyber.com'}${path}/${query ? `?${query}` : ''}`;
+    const redirectUrl = `https://${host || 'www.whatcyber.com'}${path}/${query ? `?${query}` : ''}`;
     return res.redirect(301, redirectUrl);
   }
   
@@ -133,7 +133,7 @@ app.use((req, res, next) => {
       // Successful authentication, redirect to frontend
       const frontendUrl = process.env.NODE_ENV === 'development' 
         ? 'http://localhost:3001' 
-        : 'https://threatfeed.whatcyber.com/';
+        : 'https://www.whatcyber.com/threatfeed';
       res.redirect(frontendUrl);
     }
   );
@@ -148,7 +148,7 @@ app.use((req, res, next) => {
         // Successful authentication, redirect to frontend
         const frontendUrl = process.env.NODE_ENV === 'development' 
           ? 'http://localhost:3001' 
-          : 'https://threatfeed.whatcyber.com/';
+          : 'https://www.whatcyber.com/threatfeed';
         res.redirect(frontendUrl);
       });
     } else if (action === 'google') {

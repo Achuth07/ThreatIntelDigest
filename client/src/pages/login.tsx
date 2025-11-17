@@ -74,11 +74,12 @@ export default function LoginPage() {
   }, [toast]);
 
   const handleGoogleLogin = () => {
-    const isProduction = window.location.hostname !== 'localhost' && !window.location.hostname.includes('127.0.0.1');
-    const authUrl = isProduction 
-      ? 'https://threatfeed.whatcyber.com/api/auth?action=google'
-      : '/api/auth?action=google';
-    window.location.href = authUrl;
+    // For production deployment, use the full URL to the Vercel API endpoint
+    const isProduction = process.env.NODE_ENV === 'production';
+    const googleLoginUrl = isProduction 
+      ? 'https://www.whatcyber.com/api/auth?action=google'
+      : 'http://localhost:5001/api/auth?action=google';
+    window.location.href = googleLoginUrl;
   };
 
   const handleEmailLogin = async (e: React.FormEvent) => {

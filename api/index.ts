@@ -411,8 +411,8 @@ async function handleGoogleCallback(req: VercelRequest, res: VercelResponse) {
   // Determine the redirect URI based on environment
   // Use VERCAL_ENV for Vercel deployments, fallback to NODE_ENV
   const isProduction = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
-  const backendUrl = isProduction ? 'https://threatfeed.whatcyber.com' : 'http://localhost:5001';
-  const frontendUrl = isProduction ? 'https://threatfeed.whatcyber.com' : 'http://localhost:5173';
+  const backendUrl = isProduction ? 'https://www.whatcyber.com' : 'http://localhost:5001';
+  const frontendUrl = isProduction ? 'https://www.whatcyber.com/threatfeed' : 'http://localhost:5173';
   const redirectUri = `${backendUrl}/api/auth?action=callback`;
   
   console.log('Environment Detection:');
@@ -517,7 +517,7 @@ async function handleGoogleLogin(req: VercelRequest, res: VercelResponse) {
   // Determine the redirect URI based on environment
   // Use VERCAL_ENV for Vercel deployments, fallback to NODE_ENV
   const isProduction = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
-  const backendUrl = isProduction ? 'https://threatfeed.whatcyber.com' : 'http://localhost:5001';
+  const backendUrl = isProduction ? 'https://www.whatcyber.com' : 'http://localhost:5001';
   const redirectUri = `${backendUrl}/api/auth?action=callback`;
   
   console.log('Google Login - Environment Detection:');
@@ -537,6 +537,7 @@ async function handleGoogleLogin(req: VercelRequest, res: VercelResponse) {
   console.log('Google Login - Final Auth URL:', googleAuthUrl);
   res.redirect(googleAuthUrl);
 }
+
 
 // Handler for checking authentication status
 async function handleAuthStatus(req: VercelRequest, res: VercelResponse) {
@@ -591,7 +592,7 @@ async function handleEmailAuthEndpoints(req: VercelRequest, res: VercelResponse)
   
   // Determine environment for URL construction
   const isProduction = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
-  const baseUrl = isProduction ? 'https://threatfeed.whatcyber.com' : 'http://localhost:5173';
+  const baseUrl = isProduction ? 'https://www.whatcyber.com/threatfeed' : 'http://localhost:5173';
 
   // POST /api/auth/email/register - Register new user with email/password
   if (pathname === '/api/auth/email/register' && req.method === 'POST') {
@@ -668,7 +669,7 @@ async function handleEmailAuthEndpoints(req: VercelRequest, res: VercelResponse)
     }
   }
 
-  // GET /api/auth/email/verify - Verify email with token
+  // Handler for email verification
   if (pathname === '/api/auth/email/verify' && req.method === 'GET') {
     try {
       const token = req.query.token as string;
@@ -676,7 +677,7 @@ async function handleEmailAuthEndpoints(req: VercelRequest, res: VercelResponse)
       if (!token) {
         // Redirect to login with error
         const loginUrl = isProduction 
-          ? 'https://threatfeed.whatcyber.com/login?error=missing_token' 
+          ? 'https://www.whatcyber.com/threatfeed/login?error=missing_token' 
           : 'http://localhost:5173/login?error=missing_token';
         return res.redirect(302, loginUrl);
       }
@@ -686,7 +687,7 @@ async function handleEmailAuthEndpoints(req: VercelRequest, res: VercelResponse)
       if (!user) {
         // Redirect to login with error
         const loginUrl = isProduction 
-          ? 'https://threatfeed.whatcyber.com/login?error=invalid_token' 
+          ? 'https://www.whatcyber.com/threatfeed/login?error=invalid_token' 
           : 'http://localhost:5173/login?error=invalid_token';
         return res.redirect(302, loginUrl);
       }
@@ -696,14 +697,14 @@ async function handleEmailAuthEndpoints(req: VercelRequest, res: VercelResponse)
 
       // Redirect to login with success message
       const loginUrl = isProduction 
-        ? 'https://threatfeed.whatcyber.com/login?verified=true' 
+        ? 'https://www.whatcyber.com/threatfeed/login?verified=true' 
         : 'http://localhost:5173/login?verified=true';
       return res.redirect(302, loginUrl);
     } catch (error) {
       console.error('Email verification error:', error);
       // Redirect to login with error
       const loginUrl = isProduction 
-        ? 'https://threatfeed.whatcyber.com/login?error=verification_failed' 
+        ? 'https://www.whatcyber.com/threatfeed/login?error=verification_failed' 
         : 'http://localhost:5173/login?error=verification_failed';
       return res.redirect(302, loginUrl);
     }

@@ -582,7 +582,7 @@ const HeroSection = () => {
               transition={{ duration: 0.8, delay: 0.6 }}
             >
               <motion.button
-                onClick={() => window.open('https://threatfeed.whatcyber.com/', '_blank')}
+                onClick={() => window.open('https://www.whatcyber.com/threatfeed', '_blank')}
                 className="group relative overflow-hidden bg-gradient-to-r from-[#00d4ff] to-[#00ff88] hover:from-[#0099cc] hover:to-[#00cc66] text-black font-semibold px-8 py-4 text-lg transition-all duration-300 shadow-lg shadow-[#00d4ff]/20 hover:shadow-xl hover:shadow-[#00d4ff]/30 border-0 rounded-full"
                 whileHover={{ 
                   scale: 1.05, 

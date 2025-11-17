@@ -134,10 +134,10 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
   const handleGoogleLogin = () => {
     // For production deployment, use the full URL to the Vercel API endpoint
     const isProduction = process.env.NODE_ENV === 'production';
-    const authUrl = isProduction 
-      ? 'https://threatfeed.whatcyber.com/api/auth?action=google'
-      : '/api/auth?action=google';
-    window.location.href = authUrl;
+    const googleLoginUrl = isProduction 
+      ? 'https://www.whatcyber.com/api/auth?action=google'
+      : 'http://localhost:5001/api/auth?action=google';
+    window.location.href = googleLoginUrl;
   };
 
   const handleLogout = async () => {
@@ -211,7 +211,7 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
               {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </Button>
             
-            <div className="flex items-center space-x-3 cursor-pointer" onClick={() => window.location.href = 'https://threatfeed.whatcyber.com/'}>
+            <div className="flex items-center space-x-3 cursor-pointer" onClick={() => window.location.href = 'https://www.whatcyber.com/'}>
               <img 
                 src={logoImage} 
                 alt="WhatCyber Logo" 
@@ -421,3 +421,5 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
     </header>
   );
 }
+
+export default Header;

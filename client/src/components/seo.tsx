@@ -6,18 +6,21 @@ interface SEOProps {
   description?: string;
   image?: string;
   url?: string;
+  type?: string;
   keywords?: string;
 }
 
-export function SEO({ 
-  title = 'WhatCyber - ThreatFeed', 
-  description = 'Stay updated with the latest cybersecurity threats, vulnerabilities, and intelligence from trusted sources.',
-  image = 'https://threatfeed.whatcyber.com/og-image.jpg',
+export const SEO: React.FC<SEOProps> = ({
+  title = 'WhatCyber - ThreatFeed',
+  description = 'Advanced cybersecurity solutions powered by AI. Protecting your digital assets with next-generation threat intelligence and automated defense systems.',
+  image = 'https://www.whatcyber.com/og-image.jpg',
   url,
-  keywords = 'cybersecurity, threat intelligence, CVE, vulnerabilities, security news, cyber threats'
-}: SEOProps) {
-  const [location] = useLocation();
-  const canonicalUrl = url || `https://threatfeed.whatcyber.com${location === '/' ? '/' : location.endsWith('/') ? location : location + '/'}`;
+  type = 'website',
+  keywords
+}) => {
+  // Get the current location for canonical URL
+  const location = typeof window !== 'undefined' ? window.location.pathname : '';
+  const canonicalUrl = url || `https://www.whatcyber.com${location === '/' ? '/' : location.endsWith('/') ? location : location + '/'}`;
 
   useEffect(() => {
     // Update title
@@ -33,13 +36,15 @@ export function SEO({
     metaDescription.content = description;
     
     // Update or create meta keywords
-    let metaKeywords = document.querySelector('meta[name="keywords"]') as HTMLMetaElement | null;
-    if (!metaKeywords) {
-      metaKeywords = document.createElement('meta') as HTMLMetaElement;
-      metaKeywords.name = 'keywords';
-      document.head.appendChild(metaKeywords);
+    if (keywords) {
+      let metaKeywords = document.querySelector('meta[name="keywords"]') as HTMLMetaElement | null;
+      if (!metaKeywords) {
+        metaKeywords = document.createElement('meta') as HTMLMetaElement;
+        metaKeywords.name = 'keywords';
+        document.head.appendChild(metaKeywords);
+      }
+      metaKeywords.content = keywords;
     }
-    metaKeywords.content = keywords;
     
     // Update or create meta author
     let metaAuthor = document.querySelector('meta[name="author"]') as HTMLMetaElement | null;
@@ -60,7 +65,7 @@ export function SEO({
     metaRobots.content = 'index, follow';
     
     // Update or create Open Graph tags
-    updateMetaTag('og:type', 'website');
+    updateMetaTag('og:type', type);
     updateMetaTag('og:url', canonicalUrl);
     updateMetaTag('og:title', title);
     updateMetaTag('og:description', description);
@@ -85,7 +90,7 @@ export function SEO({
     return () => {
       // Cleanup function - but we don't remove the tags as they might be needed by other components
     };
-  }, [title, description, image, canonicalUrl, keywords]);
+  }, [title, description, image, canonicalUrl, type, keywords]);
   
   const updateMetaTag = (property: string, content: string) => {
     let metaTag = document.querySelector(`meta[property="${property}"]`) || 
@@ -103,4 +108,4 @@ export function SEO({
   };
   
   return null;
-}
+};
