@@ -15,15 +15,9 @@
   },
   "redirects": [
     {
-      "source": "/:path+",
-      "destination": "/:path+/",
-      "permanent": true,
-      "has": [
-        {
-          "type": "host",
-          "value": "www.whatcyber.com"
-        }
-      ]
+      "source": "/threatfeed",
+      "destination": "/threatfeed/",
+      "permanent": true
     }
   ],
   "rewrites": [

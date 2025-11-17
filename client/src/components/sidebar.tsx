@@ -77,7 +77,7 @@ export function Sidebar({
     if (!user) {
       // For unauthenticated users, fetch all active sources
       try {
-        const response = await apiRequest('GET', '/api/sources');
+        const response = await apiRequest('GET', '/api/sources/');
         const sources = await response.json();
         setUserSources(sources);
         setHasLoadedSources(true);
@@ -91,7 +91,7 @@ export function Sidebar({
 
     // For authenticated users, fetch user-specific sources
     try {
-      const response = await apiRequest('GET', '/api/sources');
+      const response = await apiRequest('GET', '/api/sources/');
       const sources = await response.json();
       setUserSources(sources);
       setHasLoadedSources(true);
@@ -99,7 +99,7 @@ export function Sidebar({
       console.error('Error fetching user sources:', error);
       // Fallback to all active sources
       try {
-        const response = await apiRequest('GET', '/api/sources');
+        const response = await apiRequest('GET', '/api/sources/');
         const sources = await response.json();
         setUserSources(sources);
         setHasLoadedSources(true);
@@ -117,9 +117,9 @@ export function Sidebar({
   }, [fetchUserSources]);
 
   const refreshFeedsMutation = useMutation({
-    mutationFn: () => apiRequest('POST', '/api/fetch-feeds'),
+    mutationFn: () => apiRequest('POST', '/api/fetch-feeds/'),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/articles/'] });
       toast({
         title: "Feeds Updated",
         description: "Successfully fetched latest articles from all sources",
@@ -152,7 +152,7 @@ export function Sidebar({
   });
 
   const fetchCVEsMutation = useMutation({
-    mutationFn: () => apiRequest('POST', '/api/fetch-cves'),
+    mutationFn: () => apiRequest('POST', '/api/fetch-cves/'),
     onSuccess: () => {
       toast({
         title: "CVEs Updated",
@@ -170,10 +170,10 @@ export function Sidebar({
 
   const updateUserSourceMutation = useMutation({
     mutationFn: ({ sourceId, isActive }: { sourceId: string; isActive: boolean }) => 
-      apiRequest('POST', '/api/user-source-preferences', { sourceId, isActive }),
+      apiRequest('POST', '/api/user-source-preferences/', { sourceId, isActive }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/sources'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sources/'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/articles/'] });
       // Refetch sources after updating (force refresh)
       fetchUserSources(true);
     },
@@ -188,10 +188,10 @@ export function Sidebar({
 
   const addSourceMutation = useMutation({
     mutationFn: (data: InsertRssSource) => 
-      apiRequest('POST', '/api/sources', data),
+      apiRequest('POST', '/api/sources/', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/sources'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sources/'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/articles/'] });
       // Refetch sources after adding (force refresh)
       fetchUserSources(true);
     },

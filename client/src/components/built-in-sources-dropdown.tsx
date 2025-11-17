@@ -19,13 +19,13 @@ export function BuiltInSourcesDropdown({ className }: BuiltInSourcesDropdownProp
 
   // Get existing sources to check which built-in sources are already added
   const { data: existingSources = [] } = useQuery<RssSource[]>({
-    queryKey: ['/api/sources'],
+    queryKey: ['/api/sources/'],
   });
 
   const addSourceMutation = useMutation({
-    mutationFn: (data: InsertRssSource) => apiRequest('POST', '/api/sources', data),
+    mutationFn: (data: InsertRssSource) => apiRequest('POST', '/api/sources/', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/sources'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sources/'] });
       toast({
         title: "Success",
         description: `${selectedSourceName} added successfully`,

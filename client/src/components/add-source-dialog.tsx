@@ -25,9 +25,9 @@ export function AddSourceDialog({ open, onOpenChange }: AddSourceDialogProps) {
   const queryClient = useQueryClient();
 
   const createSourceMutation = useMutation({
-    mutationFn: (data: InsertRssSource) => apiRequest('POST', '/api/sources', data),
+    mutationFn: (data: InsertRssSource) => apiRequest('POST', '/api/sources/', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/sources'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sources/'] });
       toast({
         title: "Success",
         description: "RSS source added successfully",

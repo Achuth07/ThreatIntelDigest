@@ -35,17 +35,17 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
       
       if (isBookmarked) {
         // Use query parameter instead of path parameter for DELETE request
-        return apiRequest('DELETE', `/api/bookmarks?articleId=${article.id}`);
+        return apiRequest('DELETE', `/api/bookmarks/?articleId=${article.id}`);
       } else {
-        return apiRequest('POST', '/api/bookmarks', { articleId: article.id });
+        return apiRequest('POST', '/api/bookmarks/', { articleId: article.id });
       }
     },
     onSuccess: () => {
       setIsBookmarked(!isBookmarked);
       // Invalidate all queries related to bookmarks to ensure UI updates
-      queryClient.invalidateQueries({ queryKey: ['/api/bookmarks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/bookmarks/'] });
       // Also invalidate articles query to update bookmark status in article list
-      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/articles/'] });
       toast({
         title: isBookmarked ? "Bookmark Removed" : "Article Bookmarked",
         description: isBookmarked ? 

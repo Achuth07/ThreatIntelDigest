@@ -21,10 +21,10 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
   const user = getAuthenticatedUser();
 
   const addSourceMutation = useMutation({
-    mutationFn: (data: InsertRssSource) => apiRequest('POST', '/api/sources', data),
+    mutationFn: (data: InsertRssSource) => apiRequest('POST', '/api/sources/', data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/sources'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sources/'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/articles/'] });
       toast({
         title: "Success",
         description: `${variables.name} added successfully`,
@@ -42,10 +42,10 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
 
   const updateUserSourceMutation = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => 
-      apiRequest('POST', '/api/user-source-preferences', { sourceId: id, isActive }),
+      apiRequest('POST', '/api/user-source-preferences/', { sourceId: id, isActive }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/sources'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sources/'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/articles/'] });
     },
     onError: () => {
       toast({
