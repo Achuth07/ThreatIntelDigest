@@ -594,124 +594,8 @@ async function handleEmailAuthEndpoints(req: VercelRequest, res: VercelResponse)
   const isProduction = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
   const baseUrl = isProduction ? 'https://www.whatcyber.com/threatfeed' : 'http://localhost:5173';
 
-  // POST /api/auth/email/register - Register new user with email/password
-  if (pathname === '/api/auth/email/register' && req.method === 'POST') {
-    try {
-      const { name, email, password } = req.body;
-      
-      // Validate input
-      if (!name || !email || !password) {
-        return res.status(400).json({ error: 'Name, email, and password are required' });
-      }
-
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        return res.status(400).json({ error: 'Invalid email format' });
-      }
-
-      // Validate password strength
-      const passwordValidation = validatePasswordStrength(password);
-      if (!passwordValidation.valid) {
-        return res.status(400).json({ 
-          error: 'Password does not meet requirements',
-          message: passwordValidation.message
-        });
-      }
-
-      // Check if user already exists
-      const existingUser = await storage.getUserByEmail(email);
-      if (existingUser) {
-        // Don't reveal if user exists (prevent email enumeration)
-        return res.status(200).json({ 
-          message: 'If this email is not already registered, you will receive a verification email shortly.' 
-        });
-      }
-
-      // Hash password
-      const passwordHash = await hashPassword(password);
-
-      // Generate verification token (expires in 24 hours)
-      const verificationToken = generateSecureToken();
-      const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-      // Create user
-      const user = await storage.createEmailUser({
-        name,
-        email,
-        passwordHash,
-        verificationToken,
-        verificationTokenExpiry
-      });
-
-      console.log('✅ User created successfully, preparing to send verification email:', {
-        email,
-        name,
-        userId: user?.id,
-        hasToken: !!verificationToken
-      });
-
-      // Send verification email
-      try {
-        await sendVerificationEmail(email, name, verificationToken);
-        console.log('✅ Verification email sent successfully for:', email);
-      } catch (emailError) {
-        console.error('❌ Failed to send verification email:', emailError);
-        // Don't fail registration if email fails - user can request new verification email
-      }
-
-      return res.status(201).json({ 
-        message: 'Registration successful! Please check your email to verify your account.' 
-      });
-    } catch (error) {
-      console.error('❌ Registration error:', error);
-      return res.status(500).json({ error: 'Registration failed' });
-    }
-  }
-
-  // Handler for email verification
-  if (pathname === '/api/auth/email/verify' && req.method === 'GET') {
-    try {
-      const token = req.query.token as string;
-      
-      if (!token) {
-        // Redirect to login with error
-        const loginUrl = isProduction 
-          ? 'https://www.whatcyber.com/threatfeed/login?error=missing_token' 
-          : 'http://localhost:5173/login?error=missing_token';
-        return res.redirect(302, loginUrl);
-      }
-
-      // Find user by verification token (also checks expiry)
-      const user = await storage.getUserByVerificationToken(token);
-      if (!user) {
-        // Redirect to login with error
-        const loginUrl = isProduction 
-          ? 'https://www.whatcyber.com/threatfeed/login?error=invalid_token' 
-          : 'http://localhost:5173/login?error=invalid_token';
-        return res.redirect(302, loginUrl);
-      }
-
-      // Verify the user's email
-      await storage.verifyUserEmail(user.id);
-
-      // Redirect to login with success message
-      const loginUrl = isProduction 
-        ? 'https://www.whatcyber.com/threatfeed/login?verified=true' 
-        : 'http://localhost:5173/login?verified=true';
-      return res.redirect(302, loginUrl);
-    } catch (error) {
-      console.error('Email verification error:', error);
-      // Redirect to login with error
-      const loginUrl = isProduction 
-        ? 'https://www.whatcyber.com/threatfeed/login?error=verification_failed' 
-        : 'http://localhost:5173/login?error=verification_failed';
-      return res.redirect(302, loginUrl);
-    }
-  }
-
   // POST /api/auth/email/login - Login with email/password
-  if (pathname === '/api/auth/email/login' && req.method === 'POST') {
+  if ((pathname === '/api/auth/email/login' || pathname === '/api/auth/email/login/') && req.method === 'POST') {
     try {
       const { email, password } = req.body;
       
@@ -770,8 +654,49 @@ async function handleEmailAuthEndpoints(req: VercelRequest, res: VercelResponse)
     }
   }
 
+  // Handler for email verification
+  if ((pathname === '/api/auth/email/verify' || pathname === '/api/auth/email/verify/') && req.method === 'GET') {
+    try {
+      const token = req.query.token as string;
+      
+      if (!token) {
+        // Redirect to login with error
+        const loginUrl = isProduction 
+          ? 'https://www.whatcyber.com/threatfeed/login?error=missing_token' 
+          : 'http://localhost:5173/login?error=missing_token';
+        return res.redirect(302, loginUrl);
+      }
+
+      // Find user by verification token (also checks expiry)
+      const user = await storage.getUserByVerificationToken(token);
+      if (!user) {
+        // Redirect to login with error
+        const loginUrl = isProduction 
+          ? 'https://www.whatcyber.com/threatfeed/login?error=invalid_token' 
+          : 'http://localhost:5173/login?error=invalid_token';
+        return res.redirect(302, loginUrl);
+      }
+
+      // Verify the user's email
+      await storage.verifyUserEmail(user.id);
+
+      // Redirect to login with success message
+      const loginUrl = isProduction 
+        ? 'https://www.whatcyber.com/threatfeed/login?verified=true' 
+        : 'http://localhost:5173/login?verified=true';
+      return res.redirect(302, loginUrl);
+    } catch (error) {
+      console.error('Email verification error:', error);
+      // Redirect to login with error
+      const loginUrl = isProduction 
+        ? 'https://www.whatcyber.com/threatfeed/login?error=verification_failed' 
+        : 'http://localhost:5173/login?error=verification_failed';
+      return res.redirect(302, loginUrl);
+    }
+  }
+
   // POST /api/auth/email/forgot-password - Request password reset
-  if (pathname === '/api/auth/email/forgot-password' && req.method === 'POST') {
+  if ((pathname === '/api/auth/email/forgot-password' || pathname === '/api/auth/email/forgot-password/') && req.method === 'POST') {
     try {
       const { email } = req.body;
       
@@ -809,7 +734,7 @@ async function handleEmailAuthEndpoints(req: VercelRequest, res: VercelResponse)
   }
 
   // POST /api/auth/email/reset-password - Reset password with token
-  if (pathname === '/api/auth/email/reset-password' && req.method === 'POST') {
+  if ((pathname === '/api/auth/email/reset-password' || pathname === '/api/auth/email/reset-password/') && req.method === 'POST') {
     try {
       const { token, password } = req.body;
       
@@ -849,7 +774,7 @@ async function handleEmailAuthEndpoints(req: VercelRequest, res: VercelResponse)
   }
 
   // POST /api/auth/email/set-password - Allow authenticated users to set/change password
-  if (pathname === '/api/auth/email/set-password' && req.method === 'POST') {
+  if ((pathname === '/api/auth/email/set-password' || pathname === '/api/auth/email/set-password/') && req.method === 'POST') {
     try {
       // Get user ID from JWT token
       const userId = getUserIdFromRequest(req);
@@ -914,6 +839,82 @@ async function handleEmailAuthEndpoints(req: VercelRequest, res: VercelResponse)
     } catch (error) {
       console.error('Set password error:', error);
       return res.status(500).json({ error: 'Failed to set password' });
+    }
+  }
+
+  // POST /api/auth/email/register - Register new user with email/password
+  if ((pathname === '/api/auth/email/register' || pathname === '/api/auth/email/register/') && req.method === 'POST') {
+    try {
+      const { name, email, password } = req.body;
+      
+      // Validate input
+      if (!name || !email || !password) {
+        return res.status(400).json({ error: 'Name, email, and password are required' });
+      }
+
+      // Validate email format
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: 'Invalid email format' });
+      }
+
+      // Validate password strength
+      const passwordValidation = validatePasswordStrength(password);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({ 
+          error: 'Password does not meet requirements',
+          message: passwordValidation.message
+        });
+      }
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        // Don't reveal if user exists (prevent email enumeration)
+        return res.status(200).json({ 
+          message: 'If this email is not already registered, you will receive a verification email shortly.' 
+        });
+      }
+
+      // Hash password
+      const passwordHash = await hashPassword(password);
+
+      // Generate verification token (expires in 24 hours)
+      const verificationToken = generateSecureToken();
+      const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      // Create user
+      const user = await storage.createEmailUser({
+        name,
+        email,
+        passwordHash,
+        verificationToken,
+        verificationTokenExpiry
+      });
+
+      console.log('✅ User created successfully, preparing to send verification email:', {
+        email,
+        name,
+        userId: user?.id,
+        hasToken: !!verificationToken
+      });
+
+      // Send verification email
+      try {
+        await sendVerificationEmail(email, name, verificationToken);
+        console.log('✅ Verification email sent successfully for:', email);
+      } catch (emailError) {
+        console.error('❌ Failed to send verification email:', emailError);
+        // Don't fail registration if email fails - user can request new verification email
+      }
+
+      return res.status(200).json({ 
+        message: 'If this email is not already registered, you will receive a verification email shortly.' 
+      });
+    } catch (error) {
+      console.error('Register error:', error);
+      return res.status(500).json({ error: 'Registration failed' });
     }
   }
 
