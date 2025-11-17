@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Check } from 'lucide-react';
+import { Plus, Check, Minus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { getFaviconUrl } from '@/lib/favicon-utils';
@@ -123,6 +123,29 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
     }
   };
 
+  // Function to handle disabling/removing a source
+  const handleDisableSource = (sourceId: string, sourceName: string) => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please sign in to customize your sources.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Instead of deleting, we toggle the source to inactive
+    updateUserSourceMutation.mutate({ 
+      id: sourceId, 
+      isActive: false 
+    });
+    
+    toast({
+      title: "Source Disabled",
+      description: `${sourceName} has been disabled from your feed`,
+    });
+  };
+
   // Function to check if a source is already added
   const isSourceAdded = (sourceName: string) => {
     return userSources.some(source => 
@@ -130,15 +153,30 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
     );
   };
 
+  // Function to check if a source is added but disabled
+  const isSourceDisabled = (sourceName: string) => {
+    return userSources.some(source => 
+      source.name === sourceName && source.isActive === false
+    );
+  };
+
+  // Get the source ID for a given source name
+  const getSourceId = (sourceName: string) => {
+    const source = userSources.find(s => s.name === sourceName);
+    return source ? source.id : null;
+  };
+
   // Render source card
   const renderSourceCard = (source: any) => {
     const isAdded = isSourceAdded(source.name);
+    const isDisabled = isSourceDisabled(source.name);
+    const sourceId = getSourceId(source.name);
     const faviconUrl = getFaviconUrl(source.url, 24);
     
     return (
       <div 
         key={source.name}
-        className="border border-whatcyber-light-gray/30 rounded-lg p-4 bg-whatcyber-darker hover:bg-whatcyber-gray/50 transition-colors"
+        className="border border-whatcyber-light-gray/30 rounded-lg p-4 bg-whatcyber-darker hover:bg-whatcyber-gray/50 transition-colors relative"
       >
         <div className="flex items-start space-x-3">
           <div className="flex-shrink-0 mt-0.5">
@@ -160,26 +198,55 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
             />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-medium text-slate-100 text-base truncate">{source.name}</h3>
-            <p className="text-sm text-slate-400 mt-1 line-clamp-2">
+            <h3 className={`font-medium text-base truncate ${isDisabled ? 'text-slate-500 line-through' : 'text-slate-100'}`}>
+              {source.name}
+            </h3>
+            <p className={`text-sm mt-1 line-clamp-2 ${isDisabled ? 'text-slate-500' : 'text-slate-400'}`}>
               {source.description || `Follow threat intelligence from ${source.name}`}
             </p>
           </div>
-          <Button
-            size="sm"
-            variant="ghost"
-            className={`h-8 w-8 p-0 ${isAdded ? 'text-green-400 hover:text-green-300' : 'text-whatcyber-teal hover:text-whatcyber-teal'}`}
-            onClick={() => handleAddSource(source)}
-            disabled={isAdded || addSourceMutation.isPending || updateUserSourceMutation.isPending || reactivateSourceMutation.isPending}
-            title={isAdded ? "Already added" : "Add source"}
-          >
-            {isAdded ? (
-              <Check className="w-5 h-5" />
-            ) : (
+          {isAdded ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-900/50"
+              onClick={() => sourceId && handleDisableSource(sourceId, source.name)}
+              disabled={updateUserSourceMutation.isPending}
+              title="Disable source"
+            >
+              <Minus className="w-5 h-5" />
+            </Button>
+          ) : isDisabled ? (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 text-green-400 hover:text-green-300"
+              onClick={() => handleAddSource(source)}
+              disabled={addSourceMutation.isPending || updateUserSourceMutation.isPending || reactivateSourceMutation.isPending}
+              title="Re-enable source"
+            >
               <Plus className="w-5 h-5" />
-            )}
-          </Button>
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 text-whatcyber-teal hover:text-whatcyber-teal"
+              onClick={() => handleAddSource(source)}
+              disabled={addSourceMutation.isPending || updateUserSourceMutation.isPending || reactivateSourceMutation.isPending}
+              title="Add source"
+            >
+              <Plus className="w-5 h-5" />
+            </Button>
+          )}
         </div>
+        {isDisabled && (
+          <div className="absolute top-2 right-2">
+            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-slate-700 text-slate-300">
+              Disabled
+            </span>
+          </div>
+        )}
       </div>
     );
   };
@@ -204,7 +271,8 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
       <div className="space-y-8">
         {/* Vendor & Private Threat Research */}
         <div>
-          <h2 className="text-lg font-semibold text-slate-200 mb-4 border-b border-whatcyber-light-gray/30 pb-2">
+          <h2 className="text-lg font-semibold text-slate-200 mb-4 border-b border-whatcyber-light-gray/30 pb-2 flex items-center">
+            <Plus className="w-5 h-5 text-green-500 mr-2" />
             Vendor & Private Threat Research
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -214,7 +282,8 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
         
         {/* Government & Agency Alerts */}
         <div>
-          <h2 className="text-lg font-semibold text-slate-200 mb-4 border-b border-whatcyber-light-gray/30 pb-2">
+          <h2 className="text-lg font-semibold text-slate-200 mb-4 border-b border-whatcyber-light-gray/30 pb-2 flex items-center">
+            <Plus className="w-5 h-5 text-green-500 mr-2" />
             Government & Agency Alerts
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -224,7 +293,8 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
         
         {/* Specialized & Malware Focus */}
         <div>
-          <h2 className="text-lg font-semibold text-slate-200 mb-4 border-b border-whatcyber-light-gray/30 pb-2">
+          <h2 className="text-lg font-semibold text-slate-200 mb-4 border-b border-whatcyber-light-gray/30 pb-2 flex items-center">
+            <Plus className="w-5 h-5 text-green-500 mr-2" />
             Specialized & Malware Focus
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -234,7 +304,8 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
         
         {/* General Security News */}
         <div>
-          <h2 className="text-lg font-semibold text-slate-200 mb-4 border-b border-whatcyber-light-gray/30 pb-2">
+          <h2 className="text-lg font-semibold text-slate-200 mb-4 border-b border-whatcyber-light-gray/30 pb-2 flex items-center">
+            <Plus className="w-5 h-5 text-green-500 mr-2" />
             General Security News
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
