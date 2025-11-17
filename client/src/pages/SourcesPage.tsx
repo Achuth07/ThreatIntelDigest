@@ -1,16 +1,31 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
 import { getQueryFn } from '@/lib/queryClient';
 import type { RssSource } from '@shared/schema';
 import { VENDOR_THREAT_RESEARCH, GOVERNMENT_ALERTS, MALWARE_RESEARCH, GENERAL_SECURITY_NEWS, LEGACY_SOURCES } from '@/lib/rss-sources';
+import { Link } from 'wouter';
+import { Menu, X } from 'lucide-react';
 
 export default function SourcesPage() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
   const { data: sources = [], isLoading, error } = useQuery<RssSource[]>({
     queryKey: ['/api/sources'],
     queryFn: getQueryFn<RssSource[]>({ on401: "throw" }),
   });
+
+  const navItems = [
+    { name: 'Home', href: '/' },
+    { name: 'Threat Feed', href: '/threatfeed' },
+    { name: 'About', href: '/about' },
+    { name: 'Contact', href: '/contact' }
+  ];
+
+  const handleGetStarted = () => {
+    window.open('https://www.whatcyber.com/threatfeed/', '_blank');
+  };
 
   if (isLoading) {
     return (
@@ -118,7 +133,154 @@ export default function SourcesPage() {
         <link rel="canonical" href="https://whatcyber.com/sources" />
       </Helmet>
       
-      <div className="min-h-screen bg-gray-900">
+      <div className="min-h-screen relative overflow-hidden"
+        style={{
+          background: `
+            radial-gradient(ellipse 120% 100% at 30% 50%, rgba(0, 212, 255, 0.08), transparent),
+            radial-gradient(ellipse 80% 120% at 70% 20%, rgba(0, 255, 136, 0.06), transparent),
+            linear-gradient(135deg, #0a0a0a 0%, #111111 50%, #0a0a0a 100%)
+          `
+        }}
+      >
+        <motion.header
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="fixed inset-x-0 mx-auto w-fit z-50 top-6"
+        >
+          <nav className="relative backdrop-blur-md bg-black/20 border border-white/10 rounded-full px-6 py-3 shadow-2xl">
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[rgba(0,212,255,0.1)] via-transparent to-[rgba(0,255,136,0.1)] opacity-50" />
+            
+            <div className="flex items-center justify-between gap-8 relative z-10">
+              {/* Logo */}
+              <motion.div 
+                className="flex items-center gap-2 cursor-pointer group"
+                whileHover={{ scale: 1.05 }}
+                onClick={() => window.location.href = '/'}
+              >
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center relative overflow-hidden group-hover:shadow-lg group-hover:shadow-[#00d4ff]/25 transition-all duration-300">
+                  <img 
+                    src="/android-chrome-192x192.png" 
+                    alt="WhatCyber Logo" 
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <span className="text-white font-bold text-lg group-hover:text-[#00d4ff] transition-colors duration-300">
+                  WhatCyber
+                </span>
+              </motion.div>
+
+              {/* Desktop Navigation */}
+              <div className="hidden md:flex items-center gap-6">
+                {navItems.map((item, index) => (
+                  <motion.div
+                    key={item.name}
+                    className="text-[#ccc] hover:text-white transition-colors duration-300 relative group px-3 py-2 rounded-full"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 + index * 0.1 }}
+                  >
+                    <Link href={item.href} className="block">
+                      <span className="px-3 py-2 rounded-full hover:bg-white/5 transition-colors duration-300">
+                        {item.name}
+                      </span>
+                      <motion.div 
+                        className="absolute inset-0 bg-white/5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
+                      />
+                      <motion.div 
+                        className="absolute bottom-1 left-1/2 w-0 h-0.5 bg-gradient-to-r from-[#00d4ff] to-[#00ff88] group-hover:w-4 group-hover:left-1/2 group-hover:-translate-x-1/2 transition-all duration-300" 
+                      />
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Get Started Button */}
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.6 }}
+                className="hidden md:block"
+              >
+                <button
+                  onClick={handleGetStarted}
+                  className="group relative overflow-hidden bg-gradient-to-r from-[#00d4ff] to-[#00ff88] hover:from-[#0099cc] hover:to-[#00cc66] text-black font-semibold px-6 py-2 text-sm transition-all duration-300 shadow-lg shadow-[#00d4ff]/20 hover:shadow-xl hover:shadow-[#00d4ff]/30 border-0 rounded-full"
+                >
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                    animate={{ x: ['-100%', '100%'] }}
+                    transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                  />
+                  <span className="relative z-10">Get Started</span>
+                </button>
+              </motion.div>
+
+              {/* Mobile Menu Button */}
+              <motion.button
+                className="md:hidden text-white p-2 rounded-full hover:bg-white/10 transition-colors duration-300"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                whileTap={{ scale: 0.9 }}
+              >
+                {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </motion.button>
+            </div>
+          </nav>
+        </motion.header>
+
+        {/* Mobile Menu */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ 
+            opacity: isMobileMenuOpen ? 1 : 0,
+            scale: isMobileMenuOpen ? 1 : 0.95,
+            pointerEvents: isMobileMenuOpen ? 'auto' : 'none'
+          }}
+          transition={{ duration: 0.2 }}
+          className="fixed top-24 left-1/2 transform -translate-x-1/2 z-40 md:hidden"
+        >
+          <div className="backdrop-blur-md bg-black/40 border border-white/20 rounded-2xl p-6 shadow-2xl min-w-[280px]">
+            <div className="flex flex-col gap-4">
+              {navItems.map((item, index) => (
+                <motion.div
+                  key={item.name}
+                  className="text-[#ccc] hover:text-white transition-colors duration-300 text-left py-2 px-4 rounded-lg hover:bg-white/5"
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: isMobileMenuOpen ? 1 : 0, x: isMobileMenuOpen ? 0 : -10 }}
+                  transition={{ delay: index * 0.1 }}
+                >
+                  <Link href={item.href} className="block w-full" onClick={() => setIsMobileMenuOpen(false)}>
+                    {item.name}
+                  </Link>
+                </motion.div>
+              ))}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: isMobileMenuOpen ? 1 : 0, y: isMobileMenuOpen ? 0 : 10 }}
+                transition={{ delay: 0.3 }}
+                className="pt-4 border-t border-white/10"
+              >
+                <button
+                  onClick={handleGetStarted}
+                  className="w-full bg-gradient-to-r from-[#00d4ff] to-[#00ff88] text-black font-semibold py-2 px-4 rounded-lg transition-all duration-300 hover:shadow-lg border-0"
+                >
+                  Get Started
+                </button>
+              </motion.div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Backdrop for mobile menu */}
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 md:hidden"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+        )}
+
         <main className="pt-24 pb-16">
           <section className="py-16 px-4 sm:px-6 relative overflow-hidden">
             <div 

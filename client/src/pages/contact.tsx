@@ -84,7 +84,15 @@ export default function Contact() {
         image={ogImage}
         url="https://whatcyber.com/contact/"
       />
-      <div className="min-h-screen bg-gray-900">
+      <div className="min-h-screen relative overflow-hidden"
+        style={{
+          background: `
+            radial-gradient(ellipse 120% 100% at 30% 50%, rgba(0, 212, 255, 0.08), transparent),
+            radial-gradient(ellipse 80% 120% at 70% 20%, rgba(0, 255, 136, 0.06), transparent),
+            linear-gradient(135deg, #0a0a0a 0%, #111111 50%, #0a0a0a 100%)
+          `
+        }}
+      >
         <motion.header
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
