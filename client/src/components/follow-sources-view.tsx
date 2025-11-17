@@ -241,18 +241,6 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
             {GENERAL_SECURITY_NEWS.map(renderSourceCard)}
           </div>
         </div>
-        
-        {/* Legacy Sources */}
-        {LEGACY_SOURCES.length > 0 && (
-          <div>
-            <h2 className="text-lg font-semibold text-slate-200 mb-4 border-b border-whatcyber-light-gray/30 pb-2">
-              Legacy Sources
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {LEGACY_SOURCES.map(renderSourceCard)}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

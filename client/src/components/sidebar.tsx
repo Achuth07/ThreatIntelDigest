@@ -583,17 +583,17 @@ export function Sidebar({
               {exportBookmarksMutation.isPending ? 'Exporting...' : 'Export Bookmarks'}
             </Button>
             
-            {/* New Follow Sources Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start p-2 text-base font-medium text-slate-300 hover:text-slate-100 hover:bg-slate-700"
+            {/* Updated Follow Sources Button as heading with green + symbol */}
+            <div 
+              className="w-full flex items-center justify-between p-2 cursor-pointer hover:bg-slate-700 rounded-lg"
               onClick={onFollowSourcesClick}
               data-testid="button-follow-sources"
             >
-              <Plus className="w-4 h-4 mr-2" />
-              Follow Sources
-            </Button>
+              <h3 className="text-lg font-semibold text-slate-100 flex items-center">
+                <Plus className="w-5 h-5 text-green-500 mr-2" />
+                Follow Sources
+              </h3>
+            </div>
           </div>
           
           {/* Callout box for adding new sources */}
@@ -651,7 +651,7 @@ export function Sidebar({
           </div>
         )}
 
-        {/* Collapsible Feed Sources - Removed the + button */}
+        {/* Collapsible Feed Sources - Restore the delete/hide button */}
         <Collapsible open={!isSourcesCollapsed} onOpenChange={(open) => setIsSourcesCollapsed(!open)} className="mb-6">
           <CollapsibleTrigger className="w-full">
             <div className="flex items-center justify-between mb-4 group">
@@ -683,24 +683,38 @@ export function Sidebar({
               </span>
             </button>
 
-            {/* Individual Sources - Removed the delete/hide button */}
+            {/* Individual Sources - Restore the delete/hide button */}
             {activeUserSources.map((source) => (
-              <button
+              <div
                 key={source.id}
-                className={`w-full flex items-center space-x-3 p-3 rounded-lg cursor-pointer transition-colors ${
+                className={`relative w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors group ${
                   selectedSource === source.name ? 'bg-whatcyber-teal/20 border border-whatcyber-teal/30' : 'hover:bg-whatcyber-gray/50'
                 }`}
-                onClick={() => {
-                  onSourceSelect(source.name);
-                  onClose?.(); // Auto-close on mobile after selection
-                }}
                 data-testid={`button-source-${source.name.replace(/\s+/g, '-').toLowerCase()}`}
               >
-                {renderSourceFavicon(source)}
-                <span className="text-slate-300 group-hover:text-slate-100 transition-colors">
-                  {source.name}
-                </span>
-              </button>
+                <button
+                  className="flex-1 flex items-center space-x-3 text-left"
+                  onClick={() => onSourceSelect(source.name)}
+                >
+                  {renderSourceFavicon(source)}
+                  <span className="text-slate-300 group-hover:text-slate-100 transition-colors">
+                    {source.name}
+                  </span>
+                </button>
+                
+                {/* Delete/Hide button - shown on hover */}
+                <button
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-600 rounded text-red-400 hover:text-white"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteSource(source.id, source.name);
+                  }}
+                  title={`Hide ${source.name}`}
+                  disabled={updateUserSourceMutation.isPending}
+                >
+                  <Minus className="w-3 h-3" />
+                </button>
+              </div>
             ))}
           </CollapsibleContent>
         </Collapsible>
