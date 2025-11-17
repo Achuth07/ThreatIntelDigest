@@ -25,6 +25,7 @@ interface SidebarProps {
   onThreatFilterChange: (filters: string[]) => void;
   onClose?: () => void;
   onVulnerabilitiesClick?: () => void;
+  onFollowSourcesClick?: () => void; // Add this new prop
 }
 
 export function Sidebar({
@@ -36,6 +37,7 @@ export function Sidebar({
   onThreatFilterChange,
   onClose,
   onVulnerabilitiesClick,
+  onFollowSourcesClick, // Add this new prop
 }: SidebarProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -592,6 +594,18 @@ export function Sidebar({
               <Plus className="w-4 h-4 mr-2" />
               Add New Source
             </Button>
+            
+            {/* New Follow Sources Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start p-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-700"
+              onClick={onFollowSourcesClick}
+              data-testid="button-follow-sources"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Follow Sources
+            </Button>
           </div>
           
           {/* Callout box for adding new sources */}
@@ -648,66 +662,6 @@ export function Sidebar({
             </div>
           </div>
         )}
-
-        {/* Follow Sources Section */}
-        <Collapsible open={!isFollowSourcesCollapsed} onOpenChange={(open) => setIsFollowSourcesCollapsed(!open)} className="mb-6">
-          <CollapsibleTrigger className="w-full">
-            <div className="flex items-center justify-between mb-4 group">
-              <h2 className="text-lg font-semibold text-slate-100 flex items-center">
-                <Plus className="w-5 h-5 text-whatcyber-teal mr-2" />
-                Follow Sources
-              </h2>
-              <div className="text-slate-400 hover:text-slate-100 transition-colors">
-                {isFollowSourcesCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-              </div>
-            </div>
-          </CollapsibleTrigger>
-          
-          <CollapsibleContent className="space-y-3">
-            {/* Vendor & Private Threat Research */}
-            <div>
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Vendor & Private Threat Research</h3>
-              <div className="grid grid-cols-1 gap-2">
-                {VENDOR_THREAT_RESEARCH.slice(0, 5).map(renderSourceCard)}
-              </div>
-            </div>
-            
-            {/* Government & Agency Alerts */}
-            <div>
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Government & Agency Alerts</h3>
-              <div className="grid grid-cols-1 gap-2">
-                {GOVERNMENT_ALERTS.slice(0, 3).map(renderSourceCard)}
-              </div>
-            </div>
-            
-            {/* Specialized & Malware Focus */}
-            <div>
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Specialized & Malware Focus</h3>
-              <div className="grid grid-cols-1 gap-2">
-                {MALWARE_RESEARCH.map(renderSourceCard)}
-              </div>
-            </div>
-            
-            {/* General Security News */}
-            <div>
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">General Security News</h3>
-              <div className="grid grid-cols-1 gap-2">
-                {GENERAL_SECURITY_NEWS.slice(0, 5).map(renderSourceCard)}
-              </div>
-            </div>
-            
-            {/* Show More Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full text-slate-400 hover:text-slate-100 hover:bg-whatcyber-gray/50"
-              onClick={() => setShowAddSourcesDialog(true)}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Show More Sources
-            </Button>
-          </CollapsibleContent>
-        </Collapsible>
 
         {/* Collapsible Feed Sources */}
         <Collapsible open={!isSourcesCollapsed} onOpenChange={(open) => setIsSourcesCollapsed(!open)} className="mb-6">

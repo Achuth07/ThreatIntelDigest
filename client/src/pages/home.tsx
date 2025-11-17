@@ -5,6 +5,7 @@ import { Sidebar } from '@/components/sidebar';
 import { ArticleCard } from '@/components/article-card';
 import { ArticleViewer } from '@/components/article-viewer';
 import { CVEList } from '@/components/cve-list';
+import { FollowSourcesView } from '@/components/follow-sources-view';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,7 +14,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { SEO } from '@/components/seo';
-import type { Article, Bookmark } from '@shared/schema';
+import type { Article, Bookmark, RssSource } from '@shared/schema';
 
 export default function Home() {
   const { toast } = useToast();
@@ -27,6 +28,7 @@ export default function Home() {
   const [threatFilters, setThreatFilters] = useState(['CRITICAL', 'HIGH', 'MEDIUM']);
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [showVulnerabilities, setShowVulnerabilities] = useState(false);
+  const [showFollowSources, setShowFollowSources] = useState(false);
   const [page, setPage] = useState(0);
   const [selectedArticleUrl, setSelectedArticleUrl] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -35,6 +37,11 @@ export default function Home() {
   // Get authenticated user
   const user = getAuthenticatedUser();
   console.log('Home component - User:', user);
+
+  // Fetch user sources
+  const { data: userSources = [] } = useQuery<RssSource[]>({
+    queryKey: ['/api/sources'],
+  });
 
   // Fetch articles
   const { data: articles = [], isLoading: articlesLoading, refetch: refetchArticles } = useQuery<(Article & { isBookmarked?: boolean })[]>({
@@ -118,6 +125,10 @@ export default function Home() {
     if (showVulnerabilities) {
       setShowVulnerabilities(false);
     }
+    // Exit follow sources page when selecting a source
+    if (showFollowSources) {
+      setShowFollowSources(false);
+    }
     setSelectedSource(source);
     setPage(0); // Reset pagination when changing source
   };
@@ -179,6 +190,15 @@ export default function Home() {
 
   const handleVulnerabilitiesClose = () => {
     setShowVulnerabilities(false);
+  };
+
+  const handleFollowSourcesClick = () => {
+    setShowFollowSources(true);
+    handleSidebarClose(); // Auto-close sidebar on mobile
+  };
+
+  const handleFollowSourcesBack = () => {
+    setShowFollowSources(false);
   };
 
   // Filter articles based on current filters
@@ -290,6 +310,7 @@ export default function Home() {
             onThreatFilterChange={handleThreatFilterChange}
             onClose={handleSidebarClose}
             onVulnerabilitiesClick={handleVulnerabilitiesClick}
+            onFollowSourcesClick={handleFollowSourcesClick}
           />
         </div>
 
@@ -297,6 +318,11 @@ export default function Home() {
         <main className="flex-1 overflow-y-auto bg-whatcyber-darker">
           {showVulnerabilities ? (
             <CVEList onClose={handleVulnerabilitiesClose} />
+          ) : showFollowSources ? (
+            <FollowSourcesView 
+              userSources={userSources}
+              onBack={handleFollowSourcesBack}
+            />
           ) : (
             <div className="max-w-4xl mx-auto p-4 lg:p-6">
               {/* Content Header */}
