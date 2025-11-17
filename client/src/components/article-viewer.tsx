@@ -103,7 +103,11 @@ export function ArticleViewer({ articleUrl, onClose }: ArticleViewerProps) {
                 Failed to Load Article
               </h3>
               <p className="text-slate-400 max-w-md mb-4">
-                {(error as any)?.message || 
+                {articleUrl?.includes('checkpoint.com') 
+                  ? 'Checkpoint Research articles are often protected and cannot be accessed directly. Please read the article on the Checkpoint website.' 
+                  : (error as any)?.message === 'Access denied - the website may be blocking automated requests' 
+                  ? 'This website is blocking automated access to its content. Please read the article directly on the original site.' 
+                  : (error as any)?.message || 
                  'Unable to fetch the article content. The article may be behind a paywall or the website may be blocking automated requests.'}
               </p>
               {articleUrl && (
