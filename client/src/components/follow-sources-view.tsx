@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Check, Minus } from 'lucide-react';
+import { Plus, Minus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { getFaviconUrl } from '@/lib/favicon-utils';
@@ -56,26 +56,6 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
     },
   });
 
-  const reactivateSourceMutation = useMutation({
-    mutationFn: ({ id }: { id: string }) => 
-      apiRequest('PATCH', `/api/sources/${id}`, { isActive: true }),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/sources'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
-      toast({
-        title: "Success",
-        description: "Source reactivated successfully",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to reactivate source. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
   // Function to handle adding a source
   const handleAddSource = (sourceToAdd: any) => {
     if (!user) {
@@ -107,9 +87,10 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
     );
 
     if (inactiveSource) {
-      // Reactivate existing inactive source
-      reactivateSourceMutation.mutate({ 
-        id: inactiveSource.id 
+      // Reactivate existing inactive source using the same mutation as sidebar
+      updateUserSourceMutation.mutate({ 
+        id: inactiveSource.id,
+        isActive: true
       });
     } else {
       // Add new source
@@ -153,24 +134,9 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
     );
   };
 
-  // Function to check if a source is added but disabled
-  const isSourceDisabled = (sourceName: string) => {
-    return userSources.some(source => 
-      source.name === sourceName && source.isActive === false
-    );
-  };
-
-  // Get the source ID for a given source name
-  const getSourceId = (sourceName: string) => {
-    const source = userSources.find(s => s.name === sourceName);
-    return source ? source.id : null;
-  };
-
   // Render source card
   const renderSourceCard = (source: any) => {
     const isAdded = isSourceAdded(source.name);
-    const isDisabled = isSourceDisabled(source.name);
-    const sourceId = getSourceId(source.name);
     const faviconUrl = getFaviconUrl(source.url, 24);
     
     return (
@@ -208,7 +174,12 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
               size="sm"
               variant="ghost"
               className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-900/50"
-              onClick={() => sourceId && handleDisableSource(sourceId, source.name)}
+              onClick={() => {
+                const source = userSources.find((s: RssSource) => s.name === source.name);
+                if (source) {
+                  handleDisableSource(source.id, source.name);
+                }
+              }}
               disabled={updateUserSourceMutation.isPending}
               title="Disable source"
             >
@@ -220,7 +191,7 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
               variant="ghost"
               className="h-8 w-8 p-0 text-whatcyber-teal hover:text-whatcyber-teal"
               onClick={() => handleAddSource(source)}
-              disabled={addSourceMutation.isPending || updateUserSourceMutation.isPending || reactivateSourceMutation.isPending}
+              disabled={addSourceMutation.isPending || updateUserSourceMutation.isPending}
               title="Add source"
             >
               <Plus className="w-5 h-5" />
