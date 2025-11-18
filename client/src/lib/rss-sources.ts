@@ -2,7 +2,7 @@
 export const VENDOR_THREAT_RESEARCH = [
   {
     name: "Google Mandiant Threat Intelligence",
-    url: "https://cloud.google.com/blog/topics/threat-intelligence/rss",
+    url: "https://cloud.google.com/blog/topics/threat-intelligence/rss.xml",
     icon: "fas fa-shield-alt",
     color: "#4285f4",
   },
@@ -56,7 +56,7 @@ export const VENDOR_THREAT_RESEARCH = [
   },
   {
     name: "FortiGuard Labs",
-    url: "https://www.fortinet.com/rss/fortiguard-labs-threat-research.xml",
+    url: "https://www.fortinet.com/feeds/fortiguard-labs-threat-research.xml",
     icon: "fas fa-fortress",
     color: "#ee3124",
   },

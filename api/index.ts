@@ -3239,7 +3239,7 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
         
         // Add timeout and handle SSL certificate issues by using fetch with custom options
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
         
         let fetchErrorHandled = false;
         let response;
@@ -3294,7 +3294,11 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
           throw new Error('Response is undefined');
         }
         
-        const xmlText = await response.text();
+        let xmlText = await response.text();
+        
+        // Sanitize XML text to handle common parsing issues
+        xmlText = xmlText.replace(/&(?![a-zA-Z0-9#]{1,10};)/g, '&amp;');
+        
         const feed = await parser.parseString(xmlText);
         console.log(`Feed parsed successfully. Found ${feed.items.length} items`);
         
@@ -3366,7 +3370,13 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
         console.error(`Error fetching feed for ${source.name}:`, feedError);
         console.error('Feed URL:', source.url);
         console.error('Error details:', feedError instanceof Error ? feedError.message : feedError);
-        sourceResult.errors.push(feedError instanceof Error ? feedError.message : 'Unknown error');
+        
+        // Handle specific XML parsing errors
+        if (feedError instanceof Error && feedError.message.includes('Invalid character in entity name')) {
+          sourceResult.errors.push(`XML parsing error: Invalid character in feed. This is often caused by unescaped ampersands (&) in the XML. Error at column: ${feedError.message.match(/Column: (\d+)/)?.[1] || 'unknown'}`);
+        } else {
+          sourceResult.errors.push(feedError instanceof Error ? feedError.message : 'Unknown error');
+        }
       }
       
       feedResults.push(sourceResult);
