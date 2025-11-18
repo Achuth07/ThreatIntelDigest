@@ -5,7 +5,7 @@ import { Plus, Minus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
 import { getFaviconUrl } from '@/lib/favicon-utils';
-import { VENDOR_THREAT_RESEARCH, GOVERNMENT_ALERTS, MALWARE_RESEARCH, GENERAL_SECURITY_NEWS, LEGACY_SOURCES } from '@/lib/rss-sources';
+import { VENDOR_THREAT_RESEARCH, GOVERNMENT_ALERTS, MALWARE_RESEARCH, GENERAL_SECURITY_NEWS } from '@/lib/rss-sources';
 import type { RssSource, InsertRssSource } from '@shared/schema';
 import { getAuthenticatedUser } from '@/lib/auth';
 
@@ -23,8 +23,8 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
   const addSourceMutation = useMutation({
     mutationFn: (data: InsertRssSource) => apiRequest('POST', '/api/sources/', data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/sources/'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/articles/'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sources'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
       toast({
         title: "Success",
         description: `${variables.name} added successfully`,
@@ -44,8 +44,9 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => 
       apiRequest('POST', '/api/user-source-preferences/', { sourceId: id, isActive }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/sources/'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/articles/'] });
+      // Force refetch of sources to ensure UI updates immediately
+      queryClient.invalidateQueries({ queryKey: ['/api/sources'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
     },
     onError: () => {
       toast({
@@ -175,9 +176,9 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
               variant="ghost"
               className="h-8 w-8 p-0 text-red-400 hover:text-red-300 hover:bg-red-900/50"
               onClick={() => {
-                const source = userSources.find((s: RssSource) => s.name === source.name);
-                if (source) {
-                  handleDisableSource(source.id, source.name);
+                const sourceItem = userSources.find((s: RssSource) => s.name === source.name);
+                if (sourceItem) {
+                  handleDisableSource(sourceItem.id, sourceItem.name);
                 }
               }}
               disabled={updateUserSourceMutation.isPending}
