@@ -42,6 +42,8 @@ export default function Home() {
   // Fetch user sources
   const { data: userSources = [] } = useQuery<RssSource[]>({
     queryKey: ['/api/sources'],
+    // Ensure cache is invalidated when sources change
+    staleTime: 0,
   });
 
   // Fetch articles

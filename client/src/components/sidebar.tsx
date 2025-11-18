@@ -172,8 +172,8 @@ export function Sidebar({
     mutationFn: ({ sourceId, isActive }: { sourceId: string; isActive: boolean }) => 
       apiRequest('POST', '/api/user-source-preferences/', { sourceId, isActive }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/sources/'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/articles/'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sources'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
       // Refetch sources after updating (force refresh)
       fetchUserSources(true);
     },
@@ -190,8 +190,8 @@ export function Sidebar({
     mutationFn: (data: InsertRssSource) => 
       apiRequest('POST', '/api/sources/', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/sources/'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/articles/'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/sources'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
       // Refetch sources after adding (force refresh)
       fetchUserSources(true);
     },
