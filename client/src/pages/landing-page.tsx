@@ -256,7 +256,7 @@ const Header = () => {
     // For anchor links on the homepage
     if (href.startsWith('/#')) {
       // If we're on the homepage, scroll to the section
-      const element = document.querySelector(href.substring(1)); // Remove the '/' prefix
+      const element = document.getElementById(href.substring(2)); // Remove the '/#' prefix
       if (element) {
         element.scrollIntoView({ behavior: 'smooth' });
       }
@@ -325,17 +325,34 @@ const Header = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 + index * 0.1 }}
                 >
-                  <Link href={item.href} className="block">
-                    <span className="px-3 py-2 rounded-full hover:bg-white/5 transition-colors duration-300">
-                      {item.name}
-                    </span>
-                    <motion.div 
-                      className="absolute inset-0 bg-white/5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
-                    />
-                    <motion.div 
-                      className="absolute bottom-1 left-1/2 w-0 h-0.5 bg-gradient-to-r from-[#00d4ff] to-[#00ff88] group-hover:w-4 group-hover:left-1/2 group-hover:-translate-x-1/2 transition-all duration-300" 
-                    />
-                  </Link>
+                  {item.name === 'Features' ? (
+                    <button 
+                      onClick={() => handleNavigation(item.href)}
+                      className="block w-full text-left"
+                    >
+                      <span className="px-3 py-2 rounded-full hover:bg-white/5 transition-colors duration-300">
+                        {item.name}
+                      </span>
+                      <motion.div 
+                        className="absolute inset-0 bg-white/5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
+                      />
+                      <motion.div 
+                        className="absolute bottom-1 left-1/2 w-0 h-0.5 bg-gradient-to-r from-[#00d4ff] to-[#00ff88] group-hover:w-4 group-hover:left-1/2 group-hover:-translate-x-1/2 transition-all duration-300" 
+                      />
+                    </button>
+                  ) : (
+                    <Link href={item.href} className="block">
+                      <span className="px-3 py-2 rounded-full hover:bg-white/5 transition-colors duration-300">
+                        {item.name}
+                      </span>
+                      <motion.div 
+                        className="absolute inset-0 bg-white/5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
+                      />
+                      <motion.div 
+                        className="absolute bottom-1 left-1/2 w-0 h-0.5 bg-gradient-to-r from-[#00d4ff] to-[#00ff88] group-hover:w-4 group-hover:left-1/2 group-hover:-translate-x-1/2 transition-all duration-300" 
+                      />
+                    </Link>
+                  )}
                 </motion.div>
               ))}
             </div>
@@ -393,9 +410,18 @@ const Header = () => {
                 animate={{ opacity: isMobileMenuOpen ? 1 : 0, x: isMobileMenuOpen ? 0 : -10 }}
                 transition={{ delay: index * 0.1 }}
               >
-                <Link href={item.href} className="block w-full">
-                  {item.name}
-                </Link>
+                {item.name === 'Features' ? (
+                  <button 
+                    onClick={() => handleNavigation(item.href)}
+                    className="block w-full text-left"
+                  >
+                    {item.name}
+                  </button>
+                ) : (
+                  <Link href={item.href} className="block w-full">
+                    {item.name}
+                  </Link>
+                )}
               </motion.div>
             ))}
             <motion.div
