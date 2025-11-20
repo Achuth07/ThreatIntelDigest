@@ -186,24 +186,6 @@ export function Sidebar({
     },
   });
 
-  const addSourceMutation = useMutation({
-    mutationFn: (data: InsertRssSource) => 
-      apiRequest('POST', '/api/sources/', data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/sources'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
-      // Refetch sources after adding (force refresh)
-      fetchUserSources(true);
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to add source. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
   const handleThreatFilterChange = (threatLevel: string, checked: boolean) => {
     if (checked) {
       onThreatFilterChange([...threatFilters, threatLevel]);
@@ -339,7 +321,7 @@ export function Sidebar({
     const sourceToAdd = allSources.find(source => source.name === sourceName);
     if (!sourceToAdd) return;
     
-    // Check if source already exists and is active
+    // Check if source already exists in the user's sources and is active
     const activeSourceExists = userSources.some(existing => 
       existing.isActive && (existing.name === sourceToAdd.name || existing.url === sourceToAdd.url)
     );
@@ -365,14 +347,25 @@ export function Sidebar({
         isActive: true 
       });
     } else {
-      // Add new source
-      addSourceMutation.mutate({
-        name: sourceToAdd.name,
-        url: sourceToAdd.url,
-        icon: sourceToAdd.icon,
-        color: sourceToAdd.color,
-        isActive: true,
-      });
+      // Check if the source exists globally
+      const globalSource = userSources.find(source => 
+        source.name === sourceToAdd.name || source.url === sourceToAdd.url
+      );
+      
+      if (globalSource) {
+        // If source exists globally, just enable it for this user
+        updateUserSourceMutation.mutate({ 
+          sourceId: globalSource.id, 
+          isActive: true 
+        });
+      } else {
+        // If source doesn't exist globally, show a message
+        toast({
+          title: "Source Not Available",
+          description: "This source is not currently available in the system.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -423,7 +416,7 @@ export function Sidebar({
             variant="ghost"
             className={`h-6 w-6 p-0 ${isAdded ? 'text-green-400 hover:text-green-300' : 'text-whatcyber-teal hover:text-whatcyber-teal'}`}
             onClick={() => handleAddSource(source.name)}
-            disabled={isAdded || addSourceMutation.isPending || updateUserSourceMutation.isPending}
+            disabled={isAdded || updateUserSourceMutation.isPending}
             title={isAdded ? "Already added" : "Add source"}
           >
             {isAdded ? (

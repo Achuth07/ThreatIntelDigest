@@ -20,29 +20,9 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
   const queryClient = useQueryClient();
   const user = getAuthenticatedUser();
 
-  const addSourceMutation = useMutation({
-    mutationFn: (data: InsertRssSource) => apiRequest('POST', '/api/sources/', data),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/sources'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
-      toast({
-        title: "Success",
-        description: `${variables.name} added successfully`,
-      });
-      onSourceAdded?.();
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to add source. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
   const updateUserSourceMutation = useMutation({
-    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) => 
-      apiRequest('POST', '/api/user-source-preferences/', { sourceId: id, isActive }),
+    mutationFn: ({ sourceId, isActive }: { sourceId: string; isActive: boolean }) => 
+      apiRequest('POST', '/api/user-source-preferences/', { sourceId, isActive }),
     onSuccess: () => {
       // Force refetch of sources to ensure UI updates immediately
       queryClient.invalidateQueries({ queryKey: ['/api/sources'] });
@@ -57,7 +37,7 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
     },
   });
 
-  // Function to handle adding a source
+  // Function to handle adding a source (enabling it for the user)
   const handleAddSource = (sourceToAdd: any) => {
     if (!user) {
       toast({
@@ -68,44 +48,29 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
       return;
     }
     
-    // Check if source already exists and is active
-    const activeSourceExists = userSources.some(existing => 
-      existing.isActive && (existing.name === sourceToAdd.name || existing.url === sourceToAdd.url)
+    // Find the source in the user's existing sources
+    const existingSource = userSources.find(source => 
+      source.name === sourceToAdd.name || source.url === sourceToAdd.url
     );
-
-    if (activeSourceExists) {
-      toast({
-        title: "Source Already Added",
-        description: `${sourceToAdd.name} is already active in your sources list`,
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Check if inactive source exists that we can reactivate
-    const inactiveSource = userSources.find(existing => 
-      !existing.isActive && (existing.name === sourceToAdd.name || existing.url === sourceToAdd.url)
-    );
-
-    if (inactiveSource) {
-      // Reactivate existing inactive source using the same mutation as sidebar
+    
+    if (existingSource) {
+      // If source exists in user's sources, just enable it for this user
       updateUserSourceMutation.mutate({ 
-        id: inactiveSource.id,
+        sourceId: existingSource.id,
         isActive: true
       });
     } else {
-      // Add new source
-      addSourceMutation.mutate({
-        name: sourceToAdd.name,
-        url: sourceToAdd.url,
-        icon: sourceToAdd.icon,
-        color: sourceToAdd.color,
-        isActive: true,
+      // If source doesn't exist in user's sources, we need to check if it exists globally
+      // For now, we'll show a message that the source is not available
+      toast({
+        title: "Source Not Available",
+        description: "This source is not currently available in the system.",
+        variant: "destructive",
       });
     }
   };
 
-  // Function to handle disabling/removing a source
+  // Function to handle disabling/removing a source (disabling it for the user)
   const handleDisableSource = (sourceId: string, sourceName: string) => {
     if (!user) {
       toast({
@@ -116,9 +81,9 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
       return;
     }
     
-    // Instead of deleting, we toggle the source to inactive
+    // Instead of deleting, we toggle the source to inactive for this user only
     updateUserSourceMutation.mutate({ 
-      id: sourceId, 
+      sourceId: sourceId, 
       isActive: false 
     });
     
@@ -128,16 +93,21 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
     });
   };
 
-  // Function to check if a source is already added
+  // Function to check if a source is already added (enabled) for this user
   const isSourceAdded = (sourceName: string) => {
-    return userSources.some(source => 
-      source.name === sourceName && source.isActive
-    );
+    const source = userSources.find(source => source.name === sourceName);
+    return source ? source.isActive : false;
+  };
+
+  // Function to check if a source exists in the system
+  const isSourceAvailable = (sourceName: string) => {
+    return userSources.some(source => source.name === sourceName);
   };
 
   // Render source card
   const renderSourceCard = (source: any) => {
     const isAdded = isSourceAdded(source.name);
+    const isAvailable = isSourceAvailable(source.name);
     const faviconUrl = getFaviconUrl(source.url, 24);
     
     return (
@@ -192,8 +162,8 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
               variant="ghost"
               className="h-8 w-8 p-0 text-whatcyber-teal hover:text-whatcyber-teal"
               onClick={() => handleAddSource(source)}
-              disabled={addSourceMutation.isPending || updateUserSourceMutation.isPending}
-              title="Add source"
+              disabled={!isAvailable || updateUserSourceMutation.isPending}
+              title={isAvailable ? "Add source" : "Source not available"}
             >
               <Plus className="w-5 h-5" />
             </Button>
@@ -203,67 +173,48 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
     );
   };
 
+  // Group sources by category
+  const allSources = [
+    ...VENDOR_THREAT_RESEARCH,
+    ...GOVERNMENT_ALERTS,
+    ...MALWARE_RESEARCH,
+    ...GENERAL_SECURITY_NEWS
+  ];
+
+  // Group sources by category for display
+  const categorizedSources = {
+    'Vendor Threat Research': VENDOR_THREAT_RESEARCH,
+    'Government Alerts': GOVERNMENT_ALERTS,
+    'Malware Research': MALWARE_RESEARCH,
+    'General Security News': GENERAL_SECURITY_NEWS
+  };
+
   return (
-    <div className="max-w-6xl mx-auto p-4 lg:p-6">
+    <div className="p-4 lg:p-6">
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-100">Follow Threat Intel Sources</h1>
-          <p className="text-slate-400 mt-1">Discover and follow cybersecurity sources to customize your feed</p>
-        </div>
-        <Button 
-          variant="outline" 
-          onClick={onBack}
-          className="bg-slate-700 hover:bg-slate-600 text-slate-100 border-slate-600"
-        >
-          Back to Feed
+        <h2 className="text-xl font-bold text-slate-100">Follow Sources</h2>
+        <Button variant="outline" onClick={onBack}>
+          Back
         </Button>
       </div>
-
-      {/* Categorized Sources */}
+      
+      <p className="text-slate-400 mb-6">
+        Select sources to follow for personalized threat intelligence feeds. 
+        Your selections are private and only affect your view.
+      </p>
+      
       <div className="space-y-8">
-        {/* Vendor & Private Threat Research */}
-        <div>
-          <h2 className="text-lg font-semibold text-slate-200 mb-4 border-b border-whatcyber-light-gray/30 pb-2 flex items-center">
-            <Plus className="w-5 h-5 text-green-500 mr-2" />
-            Vendor & Private Threat Research
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {VENDOR_THREAT_RESEARCH.map(renderSourceCard)}
+        {Object.entries(categorizedSources).map(([category, sources]) => (
+          <div key={category}>
+            <h3 className="text-lg font-semibold text-slate-200 mb-4 flex items-center">
+              <span className="bg-whatcyber-teal w-2 h-2 rounded-full mr-2"></span>
+              {category}
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {sources.map(renderSourceCard)}
+            </div>
           </div>
-        </div>
-        
-        {/* Government & Agency Alerts */}
-        <div>
-          <h2 className="text-lg font-semibold text-slate-200 mb-4 border-b border-whatcyber-light-gray/30 pb-2 flex items-center">
-            <Plus className="w-5 h-5 text-green-500 mr-2" />
-            Government & Agency Alerts
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {GOVERNMENT_ALERTS.map(renderSourceCard)}
-          </div>
-        </div>
-        
-        {/* Specialized & Malware Focus */}
-        <div>
-          <h2 className="text-lg font-semibold text-slate-200 mb-4 border-b border-whatcyber-light-gray/30 pb-2 flex items-center">
-            <Plus className="w-5 h-5 text-green-500 mr-2" />
-            Specialized & Malware Focus
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {MALWARE_RESEARCH.map(renderSourceCard)}
-          </div>
-        </div>
-        
-        {/* General Security News */}
-        <div>
-          <h2 className="text-lg font-semibold text-slate-200 mb-4 border-b border-whatcyber-light-gray/30 pb-2 flex items-center">
-            <Plus className="w-5 h-5 text-green-500 mr-2" />
-            General Security News
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {GENERAL_SECURITY_NEWS.map(renderSourceCard)}
-          </div>
-        </div>
+        ))}
       </div>
     </div>
   );
