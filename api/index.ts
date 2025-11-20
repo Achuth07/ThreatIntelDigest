@@ -3393,148 +3393,189 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
         itemsProcessed: 0,
         errors: [] as string[]
       };
-      try {
-        console.log(`Fetching feed from ${source.name} (${source.url})...`);
-        
-        // Add timeout and handle SSL certificate issues by using fetch with custom options
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-        
-        let fetchErrorHandled = false;
-        let response;
+      
+      // Retry mechanism for failed feeds
+      let retryCount = 0;
+      const maxRetries = 2;
+      let success = false;
+      
+      while (retryCount <= maxRetries && !success) {
         try {
-          response = await fetch(source.url as string, {
-            signal: controller.signal,
-            headers: {
-              'User-Agent': process.env.RSS_USER_AGENT || 'ThreatIntelDigest/1.0 (+https://www.whatcyber.com/threatfeed)'
-            }
-          });
-          clearTimeout(timeoutId);
-        } catch (fetchError) {
-          clearTimeout(timeoutId);
-          // Handle SSL certificate errors specifically
-          if (fetchError instanceof Error && (fetchError.message.includes('unable to verify') || fetchError.message.includes('certificate'))) {
-            console.error(`SSL Certificate error for ${source.name}:`, fetchError.message);
-            sourceResult.errors.push(`SSL Certificate error: ${fetchError.message}`);
-            // Skip to next source instead of failing completely
-            feedResults.push(sourceResult);
-            fetchErrorHandled = true;
-          } 
-          // Handle timeout errors
-          else if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-            console.error(`Timeout error for ${source.name}: Request timed out`);
-            sourceResult.errors.push(`Timeout error: Request timed out`);
-            feedResults.push(sourceResult);
-            fetchErrorHandled = true;
-          } else {
-            throw fetchError;
-          }
-        }
-        
-        // If we handled an error, skip to the next source
-        if (fetchErrorHandled) {
-          continue;
-        }
-        
-        // At this point, response should be defined
-        if (response && !response.ok) {
-          const errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-          console.error(`HTTP error for ${source.name}:`, errorMessage);
-          // Handle 404 errors specifically
-          if (response.status === 404) {
-            sourceResult.errors.push(`Feed URL not found (404): The feed URL may be invalid or the source may have moved`);
-            feedResults.push(sourceResult);
-            continue;
-          }
-          throw new Error(errorMessage);
-        }
-        
-        if (!response) {
-          throw new Error('Response is undefined');
-        }
-        
-        let xmlText = await response.text();
-        
-        // Sanitize XML text to handle common parsing issues
-        xmlText = xmlText.replace(/&(?![a-zA-Z0-9#]{1,10};)/g, '&amp;');
-        
-        const feed = await parser.parseString(xmlText);
-        console.log(`Feed parsed successfully. Found ${feed.items.length} items`);
-        
-        sourceResult.itemsFound = feed.items.length;
-        
-        let processedCount = 0;
-        for (const item of feed.items.slice(0, 10)) { // Limit to 10 latest items per source
-          if (!item.title || !item.link) {
-            console.log('Skipping item: missing title or link');
-            continue;
-          }
-
-          // Check if article already exists
-          const existingResult = await db.execute(sql`
-            SELECT id FROM articles WHERE url = ${item.link}
-          `);
+          console.log(`Fetching feed from ${source.name} (${source.url})${retryCount > 0 ? ` (retry ${retryCount})` : ''}...`);
           
-          if (existingResult.rows.length === 0) {
-            const threatLevel = determineThreatLevel(item.title || "", item.contentSnippet || "");
-            const tags = extractTags(item.title || "", item.contentSnippet || "");
-            const readTime = estimateReadTime(item.contentSnippet || item.content || "");
-            const summary = (item.contentSnippet || item.content?.substring(0, 300) || "") + ((item.content && item.content.length > 300) ? "..." : "");
+          // Add timeout and handle SSL certificate issues by using fetch with custom options
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+          
+          let fetchErrorHandled = false;
+          let response;
+          try {
+            response = await fetch(source.url as string, {
+              signal: controller.signal,
+              headers: {
+                'User-Agent': process.env.RSS_USER_AGENT || 'ThreatIntelDigest/1.0 (+https://www.whatcyber.com/threatfeed)'
+              }
+            });
+            clearTimeout(timeoutId);
+          } catch (fetchError) {
+            clearTimeout(timeoutId);
+            // Handle SSL certificate errors specifically
+            if (fetchError instanceof Error && (fetchError.message.includes('unable to verify') || fetchError.message.includes('certificate'))) {
+              console.error(`SSL Certificate error for ${source.name}:`, fetchError.message);
+              sourceResult.errors.push(`SSL Certificate error: ${fetchError.message}`);
+              // Skip to next source instead of failing completely
+              break;
+            } 
+            // Handle timeout errors
+            else if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+              console.error(`Timeout error for ${source.name}: Request timed out`);
+              sourceResult.errors.push(`Timeout error: Request timed out`);
+              break;
+            } else {
+              throw fetchError;
+            }
+          }
+          
+          // If we handled an error, skip to the next source
+          if (fetchErrorHandled) {
+            break;
+          }
+          
+          // At this point, response should be defined
+          if (response && !response.ok) {
+            const errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+            console.error(`HTTP error for ${source.name}:`, errorMessage);
+            // Handle 404 errors specifically
+            if (response.status === 404) {
+              sourceResult.errors.push(`Feed URL not found (404): The feed URL may be invalid or the source may have moved`);
+              break;
+            }
+            // Handle 500 errors with retry
+            else if (response.status >= 500 && retryCount < maxRetries) {
+              retryCount++;
+              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
+              continue;
+            }
+            throw new Error(errorMessage);
+          }
+          
+          if (!response) {
+            throw new Error('Response is undefined');
+          }
+          
+          let xmlText = await response.text();
+          
+          // Sanitize XML text to handle common parsing issues
+          // Handle unescaped ampersands
+          xmlText = xmlText.replace(/&(?![a-zA-Z0-9#]{1,10};)/g, '&amp;');
+          
+          // Handle other common XML issues
+          xmlText = xmlText.replace(/<(?![a-zA-Z/?!])/g, '&lt;');
+          
+          // Handle attributes without values
+          xmlText = xmlText.replace(/<([^>]+)([a-zA-Z]+=)([^"'][^>\s]*)/g, '<$1$2"$3"');
+          
+          // Handle self-closing tags that might be malformed
+          xmlText = xmlText.replace(/<([^>]+)\/>/g, '<$1 />');
+          
+          const feed = await parser.parseString(xmlText);
+          console.log(`Feed parsed successfully. Found ${feed.items.length} items`);
+          
+          sourceResult.itemsFound = feed.items.length;
+          
+          let processedCount = 0;
+          for (const item of feed.items.slice(0, 10)) { // Limit to 10 latest items per source
+            if (!item.title || !item.link) {
+              console.log('Skipping item: missing title or link');
+              continue;
+            }
+
+            // Check if article already exists
+            const existingResult = await db.execute(sql`
+              SELECT id FROM articles WHERE url = ${item.link}
+            `);
             
-            // Handle published date - use current time if parsing fails
-            let publishedAt: Date;
-            try {
-              publishedAt = item.pubDate ? new Date(item.pubDate) : new Date();
-              // Validate the date
-              if (isNaN(publishedAt.getTime())) {
+            if (existingResult.rows.length === 0) {
+              const threatLevel = determineThreatLevel(item.title || "", item.contentSnippet || "");
+              const tags = extractTags(item.title || "", item.contentSnippet || "");
+              const readTime = estimateReadTime(item.contentSnippet || item.content || "");
+              const summary = (item.contentSnippet || item.content?.substring(0, 300) || "") + ((item.content && item.content.length > 300) ? "..." : "");
+              
+              // Handle published date - use current time if parsing fails
+              let publishedAt: Date;
+              try {
+                publishedAt = item.pubDate ? new Date(item.pubDate) : new Date();
+                // Validate the date
+                if (isNaN(publishedAt.getTime())) {
+                  publishedAt = new Date();
+                }
+              } catch {
                 publishedAt = new Date();
               }
-            } catch {
-              publishedAt = new Date();
+              
+              try {
+                console.log(`Inserting article: ${item.title}`);
+                console.log(`Published At:`, publishedAt);
+                
+                // Temporarily skip tags field to get basic insertion working
+                await db.execute(sql`
+                  INSERT INTO articles (title, summary, url, source, threat_level, read_time, published_at)
+                  VALUES (${item.title}, ${summary}, ${item.link}, ${source.name}, ${threatLevel}, ${readTime}, ${publishedAt})
+                `);
+                
+                totalFetched++;
+                processedCount++;
+                sourceResult.itemsProcessed++;
+                console.log(`Saved article: ${item.title}`);
+              } catch (insertError) {
+                console.error(`Failed to insert article "${item.title}":`, insertError);
+                sourceResult.errors.push(`Insert failed: ${insertError instanceof Error ? insertError.message : 'Unknown error'}`);
+              }
+            } else {
+              console.log(`Article already exists: ${item.title}`);
             }
-            
-            try {
-              console.log(`Inserting article: ${item.title}`);
-              console.log(`Published At:`, publishedAt);
-              
-              // Temporarily skip tags field to get basic insertion working
-              await db.execute(sql`
-                INSERT INTO articles (title, summary, url, source, threat_level, read_time, published_at)
-                VALUES (${item.title}, ${summary}, ${item.link}, ${source.name}, ${threatLevel}, ${readTime}, ${publishedAt})
-              `);
-              
-              totalFetched++;
-              processedCount++;
-              sourceResult.itemsProcessed++;
-              console.log(`Saved article: ${item.title}`);
-            } catch (insertError) {
-              console.error(`Failed to insert article "${item.title}":`, insertError);
-              sourceResult.errors.push(`Insert failed: ${insertError instanceof Error ? insertError.message : 'Unknown error'}`);
+          }
+
+          // Update last fetched timestamp for the source
+          await db.execute(sql`
+            UPDATE rss_sources 
+            SET last_fetched = NOW() 
+            WHERE id = ${source.id}
+          `);
+          
+          console.log(`Processed ${processedCount} new articles from ${source.name}`);
+          success = true; // Mark as successful
+          
+        } catch (feedError) {
+          console.error(`Error fetching feed for ${source.name}:`, feedError);
+          console.error('Feed URL:', source.url);
+          console.error('Error details:', feedError instanceof Error ? feedError.message : feedError);
+          
+          // Handle specific XML parsing errors
+          if (feedError instanceof Error) {
+            if (feedError.message.includes('Invalid character in entity name')) {
+              sourceResult.errors.push(`XML parsing error: Invalid character in feed. This is often caused by unescaped ampersands (&) in the XML. Error at column: ${feedError.message.match(/Column: (\d+)/)?.[1] || 'unknown'}`);
+            } else if (feedError.message.includes('Attribute without value')) {
+              sourceResult.errors.push(`XML parsing error: Attribute without value. This feed contains malformed XML attributes. Error at line: ${feedError.message.match(/Line: (\d+)/)?.[1] || 'unknown'}, column: ${feedError.message.match(/Column: (\d+)/)?.[1] || 'unknown'}`);
+            } else if (feedError.message.includes('Feed not recognized as RSS')) {
+              sourceResult.errors.push(`RSS format error: Feed not recognized as RSS 1 or 2. The URL may not point to a valid RSS feed.`);
+            } else {
+              sourceResult.errors.push(feedError.message);
             }
           } else {
-            console.log(`Article already exists: ${item.title}`);
+            sourceResult.errors.push('Unknown error');
           }
-        }
-
-        // Update last fetched timestamp for the source
-        await db.execute(sql`
-          UPDATE rss_sources 
-          SET last_fetched = NOW() 
-          WHERE id = ${source.id}
-        `);
-        
-        console.log(`Processed ${processedCount} new articles from ${source.name}`);
-        
-      } catch (feedError) {
-        console.error(`Error fetching feed for ${source.name}:`, feedError);
-        console.error('Feed URL:', source.url);
-        console.error('Error details:', feedError instanceof Error ? feedError.message : feedError);
-        
-        // Handle specific XML parsing errors
-        if (feedError instanceof Error && feedError.message.includes('Invalid character in entity name')) {
-          sourceResult.errors.push(`XML parsing error: Invalid character in feed. This is often caused by unescaped ampersands (&) in the XML. Error at column: ${feedError.message.match(/Column: (\d+)/)?.[1] || 'unknown'}`);
-        } else {
-          sourceResult.errors.push(feedError instanceof Error ? feedError.message : 'Unknown error');
+          
+          // Retry on certain errors
+          if (retryCount < maxRetries && feedError instanceof Error && 
+              (feedError.message.includes('timeout') || feedError.message.includes('network') || feedError.message.includes('500'))) {
+            retryCount++;
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
+            continue;
+          } else {
+            // Don't retry, break out of retry loop
+            break;
+          }
         }
       }
       

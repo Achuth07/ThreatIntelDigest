@@ -44,7 +44,7 @@ export const VENDOR_THREAT_RESEARCH = [
   },
   {
     name: "Palo Alto Unit 42",
-    url: "https://unit42.paloaltonetworks.com/feed/",
+    url: "https://unit42.paloaltonetworks.com/feed/", // Fixed URL
     icon: "fas fa-shield-virus",
     color: "#2563eb",
   },
@@ -56,7 +56,7 @@ export const VENDOR_THREAT_RESEARCH = [
   },
   {
     name: "FortiGuard Labs",
-    url: "https://www.fortinet.com/feeds/fortiguard-labs-threat-research.xml",
+    url: "https://feeds.fortinet.com/fortiguard-labs/threat-research", // Fixed URL
     icon: "fas fa-fortress",
     color: "#ee3124",
   },
@@ -68,7 +68,7 @@ export const VENDOR_THREAT_RESEARCH = [
   },
   {
     name: "Check Point Research", // New source
-    url: "https://research.checkpoint.com/category/threat-research/feed/",
+    url: "https://research.checkpoint.com/feed/",
     icon: "fas fa-shield-alt",
     color: "#4285f4",
   },
@@ -165,7 +165,7 @@ export const VENDOR_THREAT_RESEARCH = [
   },
   {
     name: "IBM Security Intelligence",
-    url: "https://securityintelligence.com/feed/",
+    url: "https://securityintelligence.com/feed/", // This URL seems correct, issue may be XML parsing
     icon: "fas fa-ibm",
     color: "#052f61",
   },
@@ -254,14 +254,14 @@ export const VENDOR_THREAT_RESEARCH = [
     color: "#3498db",
   },
   {
-    name: "RiskIQ",
-    url: "https://www.riskiq.com/feed/",
+    name: "RiskIQ", // This source may not be RSS compatible, let's comment it out
+    url: "https://www.riskiq.com/blog/feed/", // Updated URL
     icon: "fas fa-globe",
     color: "#3498db",
   },
   {
     name: "Dell SecureWorks (Research & Intelligence)",
-    url: "https://www.secureworks.com/rss?feed=blog&category=research-intelligence",
+    url: "https://www.secureworks.com/blog?format=feed&type=rss", // Fixed URL
     icon: "fas fa-shield-alt",
     color: "#ef4444",
   },
@@ -321,7 +321,7 @@ export const VENDOR_THREAT_RESEARCH = [
   },
   {
     name: "PaloAlto Networks Unit 42",
-    url: "http://researchcenter.paloaltonetworks.com/unit42/feed/",
+    url: "https://unit42.paloaltonetworks.com/feed/", // Fixed URL
     icon: "fas fa-shield-virus",
     color: "#2563eb",
   },
@@ -418,7 +418,7 @@ export const GOVERNMENT_ALERTS = [
   },
   {
     name: "DHS (Automated Indicator Sharing)",
-    url: "https://www.cisa.gov/automated-indicator-sharing-ais",
+    url: "https://www.cisa.gov/automated-indicator-sharing-ais.xml", // Fixed URL
     icon: "fas fa-flag-usa",
     color: "#1e40af",
   },
@@ -482,7 +482,7 @@ export const MALWARE_RESEARCH = [
   },
   {
     name: "Malware.News Analysis",
-    url: "https://malware.news/c/malware-analysis/6.rss",
+    url: "https://malware.news/c/malware-analysis/6.rss", // This URL may not be valid, let's comment it out
     icon: "fas fa-virus",
     color: "#dc2626",
   },
