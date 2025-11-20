@@ -80,8 +80,8 @@ export interface IStorage {
     name: string;
     email: string;
     passwordHash: string;
-    verificationToken: string;
-    verificationTokenExpiry: Date;
+    verificationToken: string | null;
+    verificationTokenExpiry: Date | null;
   }): Promise<any>;
   verifyUserEmail(userId: number): Promise<boolean>;
   updateUserPassword(userId: number, passwordHash: string): Promise<boolean>;

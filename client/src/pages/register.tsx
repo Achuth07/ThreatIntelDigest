@@ -9,6 +9,7 @@ import logoImage from '@/assets/logo/android-chrome-512x512.png';
 import { SEO } from '@/components/seo';
 import { Mail, Lock, User, Eye, EyeOff, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { setAuthToken } from '@/lib/auth';
 
 export default function RegisterPage() {
   const [, navigate] = useLocation();
@@ -16,7 +17,6 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -112,11 +112,21 @@ export default function RegisterPage() {
         throw new Error(data.message || 'Registration failed');
       }
 
-      setRegistrationSuccess(true);
-      toast({
-        title: 'Registration Successful!',
-        description: 'Please check your email to verify your account.',
-      });
+      // Store the auth token directly from registration response
+      if (data.token) {
+        setAuthToken(data.token);
+        
+        toast({
+          title: 'Registration Successful!',
+          description: 'Welcome to WhatCyber ThreatFeed!',
+        });
+
+        // Redirect to threatfeed page
+        navigate('/threatfeed/');
+        window.location.reload(); // Refresh to update auth state
+      } else {
+        throw new Error('No token received');
+      }
     } catch (error) {
       toast({
         title: 'Registration Failed',
@@ -127,51 +137,6 @@ export default function RegisterPage() {
       setIsLoading(false);
     }
   };
-
-  if (registrationSuccess) {
-    return (
-      <div className="min-h-screen bg-whatcyber-dark flex items-center justify-center p-4">
-        <SEO 
-          title="Registration Successful - WhatCyber ThreatFeed"
-          description="Your account registration was successful. Please check your email to verify your account."
-          keywords="registration, success, cybersecurity, threat intelligence, CVE, vulnerabilities"
-        />
-        <Card className="w-full max-w-md bg-whatcyber-dark border-whatcyber-light-gray">
-          <CardHeader className="text-center">
-            <div className="flex justify-center mb-4">
-              <CheckCircle2 className="w-16 h-16 text-green-500" />
-            </div>
-            <CardTitle className="text-2xl font-bold text-slate-100">Check Your Email</CardTitle>
-            <CardDescription className="text-slate-400">
-              We've sent a verification link to <strong className="text-slate-300">{formData.email}</strong>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-slate-300 text-sm text-center">
-              Click the link in the email to verify your account and complete the registration process.
-            </p>
-            <p className="text-slate-400 text-xs text-center">
-              Didn't receive the email? Check your spam folder or{' '}
-              <button
-                className="text-whatcyber-teal hover:underline"
-                onClick={() => setRegistrationSuccess(false)}
-              >
-                try again
-              </button>
-            </p>
-          </CardContent>
-          <CardFooter>
-            <Button
-              className="w-full bg-whatcyber-teal hover:bg-whatcyber-teal/80"
-              onClick={() => navigate('/login/')}
-            >
-              Go to Login
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-whatcyber-dark flex items-center justify-center p-4">

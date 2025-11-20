@@ -659,14 +659,10 @@ async function handleEmailAuthEndpoints(req: VercelRequest, res: VercelResponse)
   // POST /api/auth/email/register - Register a new account with email/password
   if ((pathname === '/api/auth/email/register' || pathname === '/api/auth/email/register/') && req.method === 'POST') {
     try {
-      const { email, password, passwordConfirm, captchaResponse } = req.body;
+      const { name, email, password } = req.body;
       
-      if (!email || !password || !passwordConfirm || !captchaResponse) {
+      if (!name || !email || !password) {
         return res.status(400).json({ error: 'All fields are required' });
-      }
-
-      if (password !== passwordConfirm) {
-        return res.status(400).json({ error: 'Passwords do not match' });
       }
 
       if (!validatePasswordStrength(password)) {
@@ -676,8 +672,6 @@ async function handleEmailAuthEndpoints(req: VercelRequest, res: VercelResponse)
         });
       }
 
-      // Verify reCaptcha token here using a recaptcha token verification library/API
-      
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
         return res.status(409).json({ error: 'Email already exists', message: 'Please use another email to create a new account or use "login instead". Also consider clearing cache before doing a password recovery or resetting credentials for already signed in email id if password changed before re-check' });
@@ -685,24 +679,38 @@ async function handleEmailAuthEndpoints(req: VercelRequest, res: VercelResponse)
 
       const passwordHash = await hashPassword(password);
 
+      // Create user with email already verified for auto-login
       const newUser = await storage.createEmailUser({
-        name: email.split('@')[0],
+        name,
         email,
         passwordHash,
-        verificationToken: crypto.randomUUID(),
-        verificationTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+        verificationToken: null,
+        verificationTokenExpiry: null,
       });
 
-      // Generate verification token
-      const verificationToken = generateSecureToken();
-      await db.update(usersTable)
-        .set({ verificationToken })
-        .where(eq(usersTable.id, newUser.id));
+      // Auto-verify the user during registration
+      await storage.verifyUserEmail(newUser.id);
 
-      // Send verification email
-      await sendVerificationEmail(newUser.email, newUser.name, verificationToken);
+      // Generate JWT token for immediate login
+      const tokenPayload = {
+        userId: newUser.id,
+        email: newUser.email,
+        name: newUser.name,
+        isAdmin: newUser.email === ADMIN_EMAIL,
+      };
+      const token = generateToken(tokenPayload);
 
-      return res.status(200).json({ message: 'Registration successful. Please check your email to verify your account.' });
+      return res.status(200).json({ 
+        message: 'Registration successful. Welcome to WhatCyber ThreatFeed!',
+        token,
+        user: {
+          id: newUser.id,
+          name: newUser.name,
+          email: newUser.email,
+          avatar: newUser.avatar,
+          isAdmin: newUser.email === ADMIN_EMAIL
+        }
+      });
 
     } catch (error) {
       console.error('Email Registration Error:', error);

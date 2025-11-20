@@ -680,8 +680,8 @@ export class PostgresStorage implements IStorage {
     name: string;
     email: string;
     passwordHash: string;
-    verificationToken: string;
-    verificationTokenExpiry: Date;
+    verificationToken: string | null;
+    verificationTokenExpiry: Date | null;
   }): Promise<User> {
     try {
       const result = await this.db.insert(users).values({
