@@ -36,6 +36,13 @@ export function LoginPopup({ onLogin }: LoginPopupProps) {
     window.location.href = googleLoginUrl;
   };
 
+  const handleGuestLogin = () => {
+    // Set a guest token in localStorage
+    localStorage.setItem('guestToken', 'true');
+    setShowPopup(false);
+    onLogin();
+  };
+
   if (!showPopup) {
     return null;
   }
@@ -86,6 +93,13 @@ export function LoginPopup({ onLogin }: LoginPopupProps) {
           >
             <Mail className="w-4 h-4 mr-2" />
             Sign in with Email
+          </Button>
+          <Button 
+            onClick={handleGuestLogin}
+            variant="outline"
+            className="w-full bg-whatcyber-gray border-whatcyber-light-gray text-slate-100 hover:bg-whatcyber-light-gray"
+          >
+            Continue as Guest
           </Button>
         </CardFooter>
       </Card>

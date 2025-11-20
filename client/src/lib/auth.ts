@@ -9,6 +9,7 @@ interface User {
   avatar: string;
   isAdmin?: boolean;
   token?: string;
+  isGuest?: boolean;
 }
 
 /**
@@ -17,6 +18,18 @@ interface User {
  */
 export function getAuthenticatedUser(): User | null {
   try {
+    // Check for guest user first
+    const isGuest = localStorage.getItem('guestToken');
+    if (isGuest === 'true') {
+      return {
+        id: 'guest',
+        name: 'Guest User',
+        email: 'guest@whatcyber.com',
+        avatar: '',
+        isGuest: true
+      };
+    }
+
     const storedUser = localStorage.getItem('cyberfeed_user');
     if (!storedUser) {
       return null;
@@ -88,6 +101,7 @@ export function setAuthToken(token: string): void {
  */
 export function removeAuthData(): void {
   localStorage.removeItem('cyberfeed_user');
+  localStorage.removeItem('guestToken');
 }
 
 /**

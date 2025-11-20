@@ -616,13 +616,14 @@ async function handleEmailAuthEndpoints(req: VercelRequest, res: VercelResponse)
         return res.status(401).json({ error: 'Invalid email or password' });
       }
 
+      // Temporarily disable email verification requirement
       // Check if email is verified
-      if (!user.emailVerified) {
-        return res.status(403).json({ 
-          error: 'Email not verified',
-          message: 'Please verify your email before logging in. Check your inbox for the verification link.' 
-        });
-      }
+      // if (!user.emailVerified) {
+      //   return res.status(403).json({ 
+      //     error: 'Email not verified',
+      //     message: 'Please verify your email before logging in. Check your inbox for the verification link.' 
+      //   });
+      // }
 
       // Update last login
       await db.update(usersTable)
@@ -645,12 +646,162 @@ async function handleEmailAuthEndpoints(req: VercelRequest, res: VercelResponse)
           name: user.name,
           email: user.email,
           avatar: user.avatar,
-          isAdmin: user.email === ADMIN_EMAIL
+          isAdmin: user.email === ADMIN_EMAIL,
         }
       });
+
     } catch (error) {
-      console.error('Login error:', error);
-      return res.status(500).json({ error: 'Login failed' });
+      console.error('Email Login Error:', error);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+  
+  // POST /api/auth/email/register - Register a new account with email/password
+  if ((pathname === '/api/auth/email/register' || pathname === '/api/auth/email/register/') && req.method === 'POST') {
+    try {
+      const { email, password, passwordConfirm, captchaResponse } = req.body;
+      
+      if (!email || !password || !passwordConfirm || !captchaResponse) {
+        return res.status(400).json({ error: 'All fields are required' });
+      }
+
+      if (password !== passwordConfirm) {
+        return res.status(400).json({ error: 'Passwords do not match' });
+      }
+
+      if (!validatePasswordStrength(password)) {
+        return res.status(400).json({ 
+          error: 'Password too weak', 
+          message: 'Password must be at least 8 characters long, and contain uppercase letters, numbers and symbols'
+        });
+      }
+
+      // Verify reCaptcha token here using a recaptcha token verification library/API
+      
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(409).json({ error: 'Email already exists', message: 'Please use another email to create a new account or use "login instead". Also consider clearing cache before doing a password recovery or resetting credentials for already signed in email id if password changed before re-check' });
+      }
+
+      const passwordHash = await hashPassword(password);
+
+      const newUser = await storage.createEmailUser({
+        name: email.split('@')[0],
+        email,
+        passwordHash,
+        verificationToken: crypto.randomUUID(),
+        verificationTokenExpiry: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+      });
+
+      // Generate verification token
+      const verificationToken = generateSecureToken();
+      await db.update(usersTable)
+        .set({ verificationToken })
+        .where(eq(usersTable.id, newUser.id));
+
+      // Send verification email
+      await sendVerificationEmail(newUser.email, newUser.name, verificationToken);
+
+      return res.status(200).json({ message: 'Registration successful. Please check your email to verify your account.' });
+
+    } catch (error) {
+      console.error('Email Registration Error:', error);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+  
+  // POST /api/auth/email/verify - Verify email with token
+  if ((pathname === '/api/auth/email/verify' || pathname === '/api/auth/email/verify/') && req.method === 'POST') {
+    try {
+      const { token } = req.body;
+      
+      if (!token) {
+        return res.status(400).json({ error: 'Verification token is required' });
+      }
+
+      const user = await storage.getUserByVerificationToken(token);
+      if (!user) {
+        return res.status(404).json({ error: 'Invalid verification token' });
+      }
+
+      await db.update(usersTable)
+        .set({ emailVerified: true })
+        .where(eq(usersTable.id, user.id));
+
+      return res.status(200).json({ message: 'Email verified successfully. Please log in to continue.' });
+
+    } catch (error) {
+      console.error('Email Verification Error:', error);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+  
+  // POST /api/auth/email/forgot-password - Request password reset
+  if ((pathname === '/api/auth/email/forgot-password' || pathname === '/api/auth/email/forgot-password/') && req.method === 'POST') {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(404).json({ error: 'Email not found' });
+      }
+
+      // Generate password reset token
+      const resetToken = generateSecureToken();
+      await db.update(usersTable)
+        .set({ resetToken })
+        .where(eq(usersTable.id, user.id));
+
+      // Send password reset email
+      await sendPasswordResetEmail(user.email, user.name, resetToken);
+
+      return res.status(200).json({ message: 'Password reset email sent. Please check your inbox to reset your password.' });
+
+    } catch (error) {
+      console.error('Password Reset Request Error:', error);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  }
+  
+  // POST /api/auth/email/reset-password - Reset password with token
+  if ((pathname === '/api/auth/email/reset-password' || pathname === '/api/auth/email/reset-password/') && req.method === 'POST') {
+    try {
+      const { token, password, passwordConfirm } = req.body;
+      
+      if (!token || !password || !passwordConfirm) {
+        return res.status(400).json({ error: 'All fields are required' });
+      }
+
+      if (password !== passwordConfirm) {
+        return res.status(400).json({ error: 'Passwords do not match' });
+      }
+
+      if (!validatePasswordStrength(password)) {
+        return res.status(400).json({ 
+          error: 'Password too weak', 
+          message: 'Password must be at least 8 characters long, and contain uppercase letters, numbers and symbols'
+        });
+      }
+
+      const user = await storage.getUserByResetToken(token);
+      if (!user) {
+        return res.status(404).json({ error: 'Invalid reset token' });
+      }
+
+      const passwordHash = await hashPassword(password);
+      await db.update(usersTable)
+        .set({ passwordHash })
+        .where(eq(usersTable.id, user.id));
+
+      return res.status(200).json({ message: 'Password reset successfully. Please log in with your new password.' });
+
+    } catch (error) {
+      console.error('Password reset error:', error);
+      return res.status(500).json({ error: 'Internal server error' });
     }
   }
 
