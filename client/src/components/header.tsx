@@ -14,6 +14,7 @@ interface User {
   avatar: string;
   isAdmin?: boolean;
   token?: string;
+  isGuest?: boolean;
 }
 
 interface HeaderProps {
@@ -361,17 +362,37 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
                   <div className="flex items-center space-x-1">
                     <span className="text-sm text-slate-300 hidden md:inline" data-testid="text-user-name">
                       {displayName || user.name}
+                      {user.isGuest && " (Guest)"}
                     </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="p-2 text-slate-400 hover:text-slate-100 flex items-center space-x-1"
-                      onClick={handleLogout}
-                      title="Logout"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      <span className="hidden md:inline text-sm">Logout</span>
-                    </Button>
+                    {user.isGuest ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="p-2 text-slate-400 hover:text-slate-100 flex items-center space-x-1"
+                        onClick={() => {
+                          // Remove guest token and show login popup
+                          localStorage.removeItem('guestToken');
+                          showLoginPopup();
+                          // Reload to update UI
+                          window.location.reload();
+                        }}
+                        title="Login to full account"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span className="hidden md:inline text-sm">Login</span>
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="p-2 text-slate-400 hover:text-slate-100 flex items-center space-x-1"
+                        onClick={handleLogout}
+                        title="Logout"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span className="hidden md:inline text-sm">Logout</span>
+                      </Button>
+                    )}
                   </div>
                 </div>
               ) : (
