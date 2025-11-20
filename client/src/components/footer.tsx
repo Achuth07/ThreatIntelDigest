@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'wouter';
 
 export function Footer() {
   const [visitorCount, setVisitorCount] = useState<number | null>(null);
@@ -35,6 +36,11 @@ export function Footer() {
           <p className="text-center text-sm leading-loose text-muted-foreground md:text-left">
             © 2025 WhatCyber.com. All rights reserved.
           </p>
+          <nav className="flex gap-4 sm:gap-6">
+            <Link className="text-sm text-muted-foreground hover:text-foreground transition-colors" href="/contact">
+              Contact
+            </Link>
+          </nav>
         </div>
         {visitorCount !== null && (
           <div className="flex items-center space-x-2">

@@ -6,6 +6,7 @@ import { getAuthenticatedUser, updateAuthToken, isAdmin } from '@/lib/auth';
 import { useToast } from '@/hooks/use-toast';
 import { SEO } from '@/components/seo';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Link } from 'wouter';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,6 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { ArrowLeft } from 'lucide-react';
 
 interface User {
   id: number;
@@ -208,7 +210,15 @@ export function AdminDashboard() {
       />
       <Card>
         <CardHeader>
-          <CardTitle>Admin Dashboard</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Admin Dashboard</CardTitle>
+            <Link href="/threatfeed/">
+              <Button variant="outline" size="sm">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to ThreatFeed
+              </Button>
+            </Link>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
