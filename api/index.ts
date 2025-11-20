@@ -3386,6 +3386,12 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
     let feedResults: any[] = [];
     
     for (const source of activeSources) {
+      // Skip disabled sources
+      if (source.disabled) {
+        console.log(`Skipping disabled source: ${source.name}`);
+        continue;
+      }
+
       let sourceResult: any = {
         name: source.name,
         url: source.url,
@@ -3472,11 +3478,20 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
           // Handle other common XML issues
           xmlText = xmlText.replace(/<(?![a-zA-Z/?!])/g, '&lt;');
           
-          // Handle attributes without values
-          xmlText = xmlText.replace(/<([^>]+)([a-zA-Z]+=)([^"'][^>\s]*)/g, '<$1$2"$3"');
+          // Handle attributes without values - more comprehensive approach
+          xmlText = xmlText.replace(/([a-zA-Z]+=)([^"'][^>\s]*)/g, '$1"$2"');
+          
+          // Handle missing whitespace between attributes
+          xmlText = xmlText.replace(/([a-zA-Z]+="[^"]*")([a-zA-Z]+=)/g, '$1 $2');
           
           // Handle self-closing tags that might be malformed
           xmlText = xmlText.replace(/<([^>]+)\/>/g, '<$1 />');
+          
+          // Handle invalid characters in attribute names
+          xmlText = xmlText.replace(/<([^>]+[a-zA-Z]+=)([^"'][^>\s]*)/g, '<$1"$2"');
+          
+          // Remove any null bytes that might cause issues
+          xmlText = xmlText.replace(/\0/g, '');
           
           const feed = await parser.parseString(xmlText);
           console.log(`Feed parsed successfully. Found ${feed.items.length} items`);
@@ -3557,6 +3572,10 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
               sourceResult.errors.push(`XML parsing error: Invalid character in feed. This is often caused by unescaped ampersands (&) in the XML. Error at column: ${feedError.message.match(/Column: (\d+)/)?.[1] || 'unknown'}`);
             } else if (feedError.message.includes('Attribute without value')) {
               sourceResult.errors.push(`XML parsing error: Attribute without value. This feed contains malformed XML attributes. Error at line: ${feedError.message.match(/Line: (\d+)/)?.[1] || 'unknown'}, column: ${feedError.message.match(/Column: (\d+)/)?.[1] || 'unknown'}`);
+            } else if (feedError.message.includes('No whitespace between attributes')) {
+              sourceResult.errors.push(`XML parsing error: No whitespace between attributes. This feed contains malformed XML. Error at line: ${feedError.message.match(/Line: (\d+)/)?.[1] || 'unknown'}, column: ${feedError.message.match(/Column: (\d+)/)?.[1] || 'unknown'}`);
+            } else if (feedError.message.includes('Invalid attribute name')) {
+              sourceResult.errors.push(`XML parsing error: Invalid attribute name. This feed contains malformed XML. Error at line: ${feedError.message.match(/Line: (\d+)/)?.[1] || 'unknown'}, column: ${feedError.message.match(/Column: (\d+)/)?.[1] || 'unknown'}`);
             } else if (feedError.message.includes('Feed not recognized as RSS')) {
               sourceResult.errors.push(`RSS format error: Feed not recognized as RSS 1 or 2. The URL may not point to a valid RSS feed.`);
             } else {

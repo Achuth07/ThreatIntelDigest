@@ -40,10 +40,23 @@ export const useLoginPopup = () => {
   return context;
 };
 
+// ScrollToTop component to handle automatic scrolling on route changes
+const ScrollToTop = () => {
+  const [location] = useLocation();
+
+  useEffect(() => {
+    // Scroll to top of page when location changes
+    window.scrollTo(0, 0);
+  }, [location]);
+
+  return null;
+};
+
 function Router() {
   return (
     <>
       <SEO />
+      <ScrollToTop />
       <Switch>
         <Route path="/" component={LandingPage} />
         <Route path="/threatfeed" component={Home} />

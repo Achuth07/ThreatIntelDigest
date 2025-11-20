@@ -253,12 +253,13 @@ export const VENDOR_THREAT_RESEARCH = [
     icon: "fas fa-globe",
     color: "#3498db",
   },
-  {
-    name: "RiskIQ", // This source may not be RSS compatible, let's comment it out
-    url: "https://www.riskiq.com/blog/feed/", // Updated URL
-    icon: "fas fa-globe",
-    color: "#3498db",
-  },
+  // Commenting out RiskIQ as it's not providing a valid RSS feed
+  // {
+  //   name: "RiskIQ",
+  //   url: "https://www.riskiq.com/blog/feed/",
+  //   icon: "fas fa-globe",
+  //   color: "#3498db",
+  // },
   {
     name: "Dell SecureWorks (Research & Intelligence)",
     url: "https://www.secureworks.com/blog?format=feed&type=rss", // Fixed URL
@@ -480,12 +481,13 @@ export const MALWARE_RESEARCH = [
     icon: "fas fa-code",
     color: "#6b7280",
   },
-  {
-    name: "Malware.News Analysis",
-    url: "https://malware.news/c/malware-analysis/6.rss", // This URL may not be valid, let's comment it out
-    icon: "fas fa-virus",
-    color: "#dc2626",
-  },
+  // Commenting out Malware.News Analysis as the URL is not valid
+  // {
+  //   name: "Malware.News Analysis",
+  //   url: "https://malware.news/c/malware-analysis/6.rss",
+  //   icon: "fas fa-virus",
+  //   color: "#dc2626",
+  // },
   // Additional Malware/Analysis sources
   {
     name: "Infosec Institute (malware analysis)",
