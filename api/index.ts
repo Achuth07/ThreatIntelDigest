@@ -3490,8 +3490,24 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
           // Handle invalid characters in attribute names
           xmlText = xmlText.replace(/<([^>]+[a-zA-Z]+=)([^"'][^>\s]*)/g, '<$1"$2"');
           
+          // Handle invalid closing tags
+          xmlText = xmlText.replace(/<\/([^>]+)\/>/g, '</$1>');
+          
+          // Handle invalid tag names in closing tags
+          xmlText = xmlText.replace(/<\/([a-zA-Z0-9_\-]+)([^>]+)>/g, '</$1>');
+          
           // Remove any null bytes that might cause issues
           xmlText = xmlText.replace(/\0/g, '');
+          
+          // Additional sanitization for specific error patterns from logs
+          // Handle forward-slash in opening tag not followed by >
+          xmlText = xmlText.replace(/<([^>]+)\/([^>]*")/g, '<$1/$2');
+          
+          // Handle invalid attribute names with special characters
+          xmlText = xmlText.replace(/([a-zA-Z0-9_\-]+=)([^"'][^>\s]*)/g, '$1"$2"');
+          
+          // Handle malformed closing tags with quotes
+          xmlText = xmlText.replace(/<\/([a-zA-Z0-9_\-]+)([^>]+)"/g, '</$1>');
           
           const feed = await parser.parseString(xmlText);
           console.log(`Feed parsed successfully. Found ${feed.items.length} items`);
