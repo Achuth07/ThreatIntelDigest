@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
-import { 
-  User, Shield, Settings as SettingsIcon, Key, CreditCard, Bell, 
+import {
+  User, Shield, Settings as SettingsIcon, Key, CreditCard, Bell,
   ChevronRight, Monitor, LogOut, Save, AlertCircle, Eye, EyeOff,
   RefreshCw, Trash2, Check, X
 } from 'lucide-react';
@@ -33,7 +33,7 @@ export default function Settings() {
   const { toast } = useToast();
   const [location, navigate] = useLocation();
   const user = getAuthenticatedUser();
-  
+
   const [settings, setSettings] = useState<UserSettings>({
     displayName: '',
     watchlistKeywords: '',
@@ -43,7 +43,7 @@ export default function Settings() {
     emailWeeklyDigest: false,
     emailWatchlistAlerts: false,
   });
-  
+
   const [apiKey, setApiKey] = useState('');
   const [apiKeyVisible, setApiKeyVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -51,7 +51,7 @@ export default function Settings() {
   const [displayNameError, setDisplayNameError] = useState('');
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
-  
+
   // Available IOC types to hide
   const iocTypes = ['MD5', 'SHA1', 'SHA256', 'SHA512', 'IPv4', 'IPv6', 'Domain', 'URL', 'Email'];
 
@@ -60,14 +60,14 @@ export default function Settings() {
     if (!user || user.isGuest) {
       return;
     }
-    
+
     setIsLoadingPreferences(true);
     try {
       const response = await apiRequest('GET', '/api/user-preferences');
       // If we get a 401, the token is invalid
       if (response.status === 401) {
         localStorage.removeItem('cyberfeed_user');
-        window.location.reload();
+        navigate('/');
         return;
       }
       const prefs = await response.json();
@@ -94,17 +94,17 @@ export default function Settings() {
       navigate('/');
       return;
     }
-    
+
     // Don't load preferences for guest users
     if (user.isGuest) {
       return;
     }
-    
+
     // Load user preferences from API (only once on mount) for authenticated users
     if (!hasLoadedOnce && !isLoadingPreferences) {
       loadUserPreferences();
     }
-    
+
     // Load API key from localStorage
     const savedApiKey = localStorage.getItem('user_api_key');
     if (savedApiKey) {
@@ -117,17 +117,17 @@ export default function Settings() {
       setDisplayNameError('');
       return true;
     }
-    
+
     if (name.length > 50) {
       setDisplayNameError('Display name must be 50 characters or less');
       return false;
     }
-    
+
     if (!/^[a-zA-Z0-9\s]+$/.test(name)) {
       setDisplayNameError('Display name must contain only letters, numbers, and spaces');
       return false;
     }
-    
+
     setDisplayNameError('');
     return true;
   };
@@ -147,14 +147,14 @@ export default function Settings() {
       const response = await apiRequest('POST', '/api/user-preferences', {
         displayName: settings.displayName || null,
       });
-      
+
       // If we get a 401, the token is invalid
       if (response.status === 401) {
         localStorage.removeItem('cyberfeed_user');
-        window.location.reload();
+        navigate('/');
         return;
       }
-      
+
       setIsEditingDisplayName(false);
       toast({
         title: "Display Name Saved",
@@ -189,14 +189,14 @@ export default function Settings() {
         emailWeeklyDigest: settings.emailWeeklyDigest,
         emailWatchlistAlerts: settings.emailWatchlistAlerts,
       });
-      
+
       // If we get a 401, the token is invalid
       if (response.status === 401) {
         localStorage.removeItem('cyberfeed_user');
-        window.location.reload();
+        navigate('/');
         return;
       }
-      
+
       toast({
         title: "Settings Saved",
         description: "Your preferences have been updated successfully.",
@@ -217,7 +217,7 @@ export default function Settings() {
     const newKey = `tk_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
     setApiKey(newKey);
     localStorage.setItem('user_api_key', newKey);
-    
+
     toast({
       title: "API Key Generated",
       description: "Your new API key has been created. Keep it secure!",
@@ -227,7 +227,7 @@ export default function Settings() {
   const handleRevokeApiKey = () => {
     setApiKey('');
     localStorage.removeItem('user_api_key');
-    
+
     toast({
       title: "API Key Revoked",
       description: "Your API key has been deleted successfully.",
@@ -256,19 +256,19 @@ export default function Settings() {
 
   return (
     <div className="min-h-screen bg-whatcyber-dark">
-      <SEO 
+      <SEO
         title="Settings - WhatCyber ThreatFeed"
         description="Manage your WhatCyber ThreatFeed account settings, preferences, and integrations for cybersecurity threat intelligence."
         keywords="settings, cybersecurity, threat intelligence, CVE, vulnerabilities, security news, preferences"
       />
-      <Header 
-        onSearch={() => {}}
+      <Header
+        onSearch={() => { }}
         bookmarkCount={0}
-        onBookmarksClick={() => {}}
-        onSidebarToggle={() => {}}
+        onBookmarksClick={() => { }}
+        onSidebarToggle={() => { }}
         isSidebarOpen={false}
       />
-      
+
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
         <div className="mb-8">
@@ -291,9 +291,9 @@ export default function Settings() {
             <CardContent className="space-y-4">
               <div className="flex items-center space-x-4">
                 {user.avatar && (
-                  <img 
-                    src={user.avatar} 
-                    alt={user.name} 
+                  <img
+                    src={user.avatar}
+                    alt={user.name}
                     className="w-16 h-16 rounded-full border-2 border-whatcyber-light-gray"
                   />
                 )}
@@ -311,8 +311,8 @@ export default function Settings() {
                           disabled={!isEditingDisplayName}
                         />
                         {!isEditingDisplayName ? (
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
                             onClick={() => setIsEditingDisplayName(true)}
                             className="border-whatcyber-light-gray text-slate-300 hover:bg-whatcyber-dark"
@@ -321,8 +321,8 @@ export default function Settings() {
                           </Button>
                         ) : (
                           <>
-                            <Button 
-                              variant="outline" 
+                            <Button
+                              variant="outline"
                               size="sm"
                               onClick={handleSaveDisplayName}
                               disabled={isSaving || !!displayNameError}
@@ -330,8 +330,8 @@ export default function Settings() {
                             >
                               <Check className="h-4 w-4" />
                             </Button>
-                            <Button 
-                              variant="outline" 
+                            <Button
+                              variant="outline"
                               size="sm"
                               onClick={handleCancelDisplayName}
                               disabled={isSaving}
@@ -402,9 +402,9 @@ export default function Settings() {
                         <p className="text-sm font-medium text-slate-300">Current Session</p>
                         <p className="text-xs text-slate-500">
                           {navigator.userAgent.includes('Chrome') ? 'Chrome' : 'Browser'} on {
-                            navigator.platform.includes('Mac') ? 'macOS' : 
-                            navigator.platform.includes('Win') ? 'Windows' : 
-                            navigator.platform.includes('Linux') ? 'Linux' : 'Device'
+                            navigator.platform.includes('Mac') ? 'macOS' :
+                              navigator.platform.includes('Win') ? 'Windows' :
+                                navigator.platform.includes('Linux') ? 'Linux' : 'Device'
                           }
                         </p>
                       </div>
@@ -417,9 +417,9 @@ export default function Settings() {
                   Multi-session management coming in a future update
                 </p>
               </div>
-              
+
               <Separator className="bg-whatcyber-light-gray" />
-              
+
               <div>
                 <h4 className="text-sm font-medium text-slate-300 mb-3">Password</h4>
                 <Button
@@ -434,9 +434,9 @@ export default function Settings() {
                   Set or update your account password to enable email/password login
                 </p>
               </div>
-              
+
               <Separator className="bg-whatcyber-light-gray" />
-              
+
               <div>
                 <Button
                   variant="outline"
@@ -520,7 +520,7 @@ export default function Settings() {
                       onCheckedChange={(checked) => setSettings({ ...settings, autoExtractIOCs: checked })}
                     />
                   </div>
-                  
+
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
                       <Label className="text-slate-300">Auto-enrich IOCs</Label>
@@ -729,9 +729,9 @@ export default function Settings() {
                   onCheckedChange={(checked) => setSettings({ ...settings, emailWeeklyDigest: checked })}
                 />
               </div>
-              
+
               <Separator className="bg-whatcyber-light-gray" />
-              
+
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label className="text-slate-300">Watchlist Alerts</Label>
