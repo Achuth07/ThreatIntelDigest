@@ -191,9 +191,11 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
   const handleSettingsClick = () => {
     if (!user && shouldShowLoginPopup) {
       showLoginPopup();
-    } else {
+    } else if (user && !user.isGuest) {
+      // Only allow non-guest authenticated users to access settings
       setIsSettingsOpen(!isSettingsOpen);
     }
+    // For guest users, do nothing (disable settings access)
   };
 
   return (
@@ -283,12 +285,14 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
                 onClick={handleSettingsClick}
                 data-testid="button-settings"
                 title="Settings"
+                // Disable settings button for guest users
+                disabled={!!(user && user.isGuest)}
               >
                 <Settings className="w-5 h-5" />
               </Button>
               
               {/* Dropdown Menu */}
-              {isSettingsOpen && (
+              {isSettingsOpen && user && !user.isGuest && (
                 <div className="absolute right-0 mt-2 w-48 bg-whatcyber-dark border border-whatcyber-light-gray rounded-md shadow-lg z-50">
                   <div className="py-1">
                     {user && user.isAdmin && (
@@ -307,8 +311,7 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
                         </button>
                       </Link>
                     )}
-                    {user ? (
-                      <Link href="/settings/">
+                    <Link href="/settings/">
                         <button
                           className="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-whatcyber-gray hover:text-slate-100"
                           onClick={() => setIsSettingsOpen(false)}
@@ -319,22 +322,6 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
                           </div>
                         </button>
                       </Link>
-                    ) : (
-                      <button
-                        className="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-whatcyber-gray hover:text-slate-100"
-                        onClick={() => {
-                          setIsSettingsOpen(false);
-                          if (shouldShowLoginPopup) {
-                            showLoginPopup();
-                          }
-                        }}
-                      >
-                        <div className="flex items-center">
-                          <Settings className="w-4 h-4 mr-2" />
-                          Settings
-                        </div>
-                      </button>
-                    )}
                   </div>
                 </div>
               )}

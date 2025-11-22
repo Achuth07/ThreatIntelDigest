@@ -29,34 +29,9 @@ interface UserSettings {
   emailWatchlistAlerts?: boolean;
 }
 
-// Create a simple component that shows the login popup for guest users
-const GuestSettingsRedirect = () => {
-  const { showLoginPopup } = useLoginPopup();
-  const [, navigate] = useLocation();
-  
-  useEffect(() => {
-    // Show login popup for guest users
-    showLoginPopup();
-    // Redirect to home page after a short delay to allow popup to show
-    const timer = setTimeout(() => {
-      navigate('/');
-    }, 100);
-    
-    // Cleanup timer
-    return () => clearTimeout(timer);
-  }, [showLoginPopup, navigate]);
-  
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-whatcyber-dark">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-whatcyber-teal"></div>
-    </div>
-  );
-};
-
 export default function Settings() {
   const { toast } = useToast();
   const [location, navigate] = useLocation();
-  const { showLoginPopup } = useLoginPopup();
   const user = getAuthenticatedUser();
   
   const [settings, setSettings] = useState<UserSettings>({
@@ -108,17 +83,9 @@ export default function Settings() {
   }, [user]);
 
   useEffect(() => {
-    // Show login popup for guest users or redirect unauthenticated users
+    // Redirect unauthenticated users to home
     if (!user) {
-      // Redirect unauthenticated users to home
       navigate('/');
-      return;
-    } else if (user.isGuest) {
-      // Show login popup for guest users
-      // Use setTimeout to ensure the popup is shown after the component is mounted
-      setTimeout(() => {
-        showLoginPopup();
-      }, 0);
       return;
     }
     
@@ -132,7 +99,7 @@ export default function Settings() {
     if (savedApiKey) {
       setApiKey(savedApiKey);
     }
-  }, [user, navigate, hasLoadedOnce, isLoadingPreferences, loadUserPreferences, showLoginPopup]);
+  }, [user, navigate, hasLoadedOnce, isLoadingPreferences, loadUserPreferences]);
 
   const validateDisplayName = (name: string): boolean => {
     if (!name || name.trim() === '') {
@@ -260,9 +227,6 @@ export default function Settings() {
 
   if (!user) {
     return null;
-  } else if (user.isGuest) {
-    // For guest users, show the redirect component that triggers the login popup
-    return <GuestSettingsRedirect />;
   }
 
   return (
