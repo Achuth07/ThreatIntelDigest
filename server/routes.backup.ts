@@ -325,18 +325,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Invalid URL format' });
       }
 
-      // Fetch the article HTML with a realistic User-Agent
+      // Import required modules dynamically
+      const { default: axios } = await import('axios');
+      const { JSDOM } = await import('jsdom');
+      const { Readability } = await import('@mozilla/readability');
+
+      // Fetch the article HTML with more realistic browser headers
       const response = await axios.get(url, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.5',
-          'Accept-Encoding': 'gzip, deflate',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept-Encoding': 'gzip, deflate, br, zstd',
           'Connection': 'keep-alive',
           'Upgrade-Insecure-Requests': '1',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Cache-Control': 'max-age=0',
+          'Referer': 'https://www.google.com/',
         },
         timeout: 15000, // 15 second timeout
         maxRedirects: 5,
+        // Add response type to handle different content encodings
+        responseType: 'text',
+        decompress: true,
       });
 
       if (!response.data) {
@@ -376,7 +390,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     } catch (error) {
       console.error('Error fetching article:', error);
-
+      
+      // Import axios dynamically to check for axios errors
+      const { default: axios } = await import('axios');
+      
       // Handle specific error types
       if (axios.isAxiosError(error)) {
         if (error.code === 'ENOTFOUND') {
@@ -386,7 +403,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(408).json({ message: 'Request timeout - the article took too long to load' });
         }
         if (error.response?.status === 403) {
-          return res.status(403).json({ message: 'Access denied - the website may be blocking automated requests' });
+          return res.status(403).json({ 
+            message: 'Access denied - the website may be blocking automated requests. Try reading the article directly on the source website.',
+            url: url
+          });
         }
         if (error.response?.status === 404) {
           return res.status(404).json({ message: 'Article not found at the provided URL' });
