@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useContext } from 'react';
 import { useLocation } from 'wouter';
 import { 
   User, Shield, Settings as SettingsIcon, Key, CreditCard, Bell, 
@@ -17,6 +17,7 @@ import { getAuthenticatedUser } from '@/lib/auth';
 import { apiRequest } from '@/lib/queryClient';
 import { Header } from '@/components/header';
 import { SEO } from '@/components/seo';
+import { LoginPopupContext } from '@/App';
 
 interface UserSettings {
   displayName?: string;
@@ -29,8 +30,9 @@ interface UserSettings {
 }
 
 export default function Settings() {
-  const [, navigate] = useLocation();
   const { toast } = useToast();
+  const [location, navigate] = useLocation();
+  const loginPopupContext = useContext(LoginPopupContext);
   const user = getAuthenticatedUser();
   
   const [settings, setSettings] = useState<UserSettings>({
@@ -82,13 +84,20 @@ export default function Settings() {
   }, [user]);
 
   useEffect(() => {
-    // Redirect to home if not authenticated or if user is a guest
-    if (!user || user.isGuest) {
+    // Show login popup for guest users or redirect unauthenticated users
+    if (!user) {
+      // Redirect unauthenticated users to home
       navigate('/');
+      return;
+    } else if (user.isGuest) {
+      // Show login popup for guest users
+      if (loginPopupContext) {
+        loginPopupContext.showLoginPopup();
+      }
       return;
     }
     
-    // Load user preferences from API (only once on mount)
+    // Load user preferences from API (only once on mount) for authenticated users
     if (!hasLoadedOnce && !isLoadingPreferences) {
       loadUserPreferences();
     }
@@ -98,7 +107,7 @@ export default function Settings() {
     if (savedApiKey) {
       setApiKey(savedApiKey);
     }
-  }, [user, navigate, hasLoadedOnce, isLoadingPreferences, loadUserPreferences]);
+  }, [user, navigate, hasLoadedOnce, isLoadingPreferences, loadUserPreferences, loginPopupContext]);
 
   const validateDisplayName = (name: string): boolean => {
     if (!name || name.trim() === '') {
@@ -225,6 +234,10 @@ export default function Settings() {
   };
 
   if (!user) {
+    return null;
+  } else if (user.isGuest) {
+    // For guest users, don't render the settings content
+    // The login popup should be shown by the effect above
     return null;
   }
 
