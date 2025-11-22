@@ -64,6 +64,12 @@ export default function Settings() {
     setIsLoadingPreferences(true);
     try {
       const response = await apiRequest('GET', '/api/user-preferences');
+      // If we get a 401, the token is invalid
+      if (response.status === 401) {
+        localStorage.removeItem('cyberfeed_user');
+        window.location.reload();
+        return;
+      }
       const prefs = await response.json();
       setSettings({
         displayName: prefs.displayName || '',
@@ -138,9 +144,16 @@ export default function Settings() {
 
     setIsSaving(true);
     try {
-      await apiRequest('POST', '/api/user-preferences', {
+      const response = await apiRequest('POST', '/api/user-preferences', {
         displayName: settings.displayName || null,
       });
+      
+      // If we get a 401, the token is invalid
+      if (response.status === 401) {
+        localStorage.removeItem('cyberfeed_user');
+        window.location.reload();
+        return;
+      }
       
       setIsEditingDisplayName(false);
       toast({
@@ -168,7 +181,7 @@ export default function Settings() {
   const handleSaveSettings = async () => {
     setIsSaving(true);
     try {
-      await apiRequest('POST', '/api/user-preferences', {
+      const response = await apiRequest('POST', '/api/user-preferences', {
         watchlistKeywords: settings.watchlistKeywords || null,
         autoExtractIOCs: settings.autoExtractIOCs,
         autoEnrichIOCs: settings.autoEnrichIOCs,
@@ -176,6 +189,13 @@ export default function Settings() {
         emailWeeklyDigest: settings.emailWeeklyDigest,
         emailWatchlistAlerts: settings.emailWatchlistAlerts,
       });
+      
+      // If we get a 401, the token is invalid
+      if (response.status === 401) {
+        localStorage.removeItem('cyberfeed_user');
+        window.location.reload();
+        return;
+      }
       
       toast({
         title: "Settings Saved",

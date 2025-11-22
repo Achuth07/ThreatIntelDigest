@@ -205,8 +205,6 @@ class SimpleUserSourcePreferenceStorage {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  console.log(`User Source Preferences API ${req.method} ${req.url}`);
-  
   // Get user ID from request (for authenticated endpoints)
   const userId = getUserIdFromRequest(req);
   

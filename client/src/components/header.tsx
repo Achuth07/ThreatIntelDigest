@@ -103,6 +103,9 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
       } else if (userData) {
         // Set user data for guest users but don't fetch preferences
         setUser(userData);
+      } else {
+        // No user data, ensure we're in a clean state
+        setUser(null);
       }
     } catch (error) {
       console.error('Failed to check auth status:', error);
@@ -129,6 +132,12 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
           'Authorization': `Bearer ${token}`
         }
       });
+      
+      // If we get a 401, the token is invalid, so clear user data
+      if (response.status === 401) {
+        localStorage.removeItem('cyberfeed_user');
+        return;
+      }
       
       if (response.ok) {
         const prefs = await response.json();
