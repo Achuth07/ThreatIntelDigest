@@ -30,7 +30,7 @@ interface LoginPopupContextType {
   showLoginPopup: () => void;
 }
 
-const LoginPopupContext = createContext<LoginPopupContextType | null>(null);
+export const LoginPopupContext = createContext<LoginPopupContextType | null>(null);
 
 export const useLoginPopup = () => {
   const context = useContext(LoginPopupContext);

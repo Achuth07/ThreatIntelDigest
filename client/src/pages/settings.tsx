@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useContext } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { 
   User, Shield, Settings as SettingsIcon, Key, CreditCard, Bell, 
@@ -17,7 +17,7 @@ import { getAuthenticatedUser } from '@/lib/auth';
 import { apiRequest } from '@/lib/queryClient';
 import { Header } from '@/components/header';
 import { SEO } from '@/components/seo';
-import { LoginPopupContext } from '@/App';
+import { useLoginPopup } from '@/App';
 
 interface UserSettings {
   displayName?: string;
@@ -32,7 +32,7 @@ interface UserSettings {
 export default function Settings() {
   const { toast } = useToast();
   const [location, navigate] = useLocation();
-  const loginPopupContext = useContext(LoginPopupContext);
+  const { showLoginPopup } = useLoginPopup();
   const user = getAuthenticatedUser();
   
   const [settings, setSettings] = useState<UserSettings>({
@@ -91,9 +91,7 @@ export default function Settings() {
       return;
     } else if (user.isGuest) {
       // Show login popup for guest users
-      if (loginPopupContext) {
-        loginPopupContext.showLoginPopup();
-      }
+      showLoginPopup();
       return;
     }
     
@@ -107,7 +105,7 @@ export default function Settings() {
     if (savedApiKey) {
       setApiKey(savedApiKey);
     }
-  }, [user, navigate, hasLoadedOnce, isLoadingPreferences, loadUserPreferences, loginPopupContext]);
+  }, [user, navigate, hasLoadedOnce, isLoadingPreferences, loadUserPreferences, showLoginPopup]);
 
   const validateDisplayName = (name: string): boolean => {
     if (!name || name.trim() === '') {
