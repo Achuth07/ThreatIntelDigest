@@ -55,6 +55,11 @@ export default function Settings() {
   const iocTypes = ['MD5', 'SHA1', 'SHA256', 'SHA512', 'IPv4', 'IPv6', 'Domain', 'URL', 'Email'];
 
   const loadUserPreferences = useCallback(async () => {
+    // Don't load preferences for guest users or when there's no authenticated user
+    if (!user || user.isGuest) {
+      return;
+    }
+    
     setIsLoadingPreferences(true);
     try {
       const response = await apiRequest('GET', '/api/user-preferences');
@@ -74,11 +79,11 @@ export default function Settings() {
     } finally {
       setIsLoadingPreferences(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
-    // Redirect to home if not authenticated
-    if (!user) {
+    // Redirect to home if not authenticated or if user is a guest
+    if (!user || user.isGuest) {
       navigate('/');
       return;
     }
