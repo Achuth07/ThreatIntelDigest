@@ -96,10 +96,13 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
     try {
       // Use our authentication utility
       const userData = getAuthenticatedUser();
-      if (userData) {
+      if (userData && !userData.isGuest) {
         setUser(userData);
         // Fetch user preferences to get display name
         fetchDisplayName(userData.token);
+      } else if (userData) {
+        // Set user data for guest users but don't fetch preferences
+        setUser(userData);
       }
     } catch (error) {
       console.error('Failed to check auth status:', error);
@@ -113,6 +116,12 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
 
   const fetchDisplayName = async (token?: string) => {
     if (!token) return;
+    
+    // Don't fetch display name for guest users
+    const user = getAuthenticatedUser();
+    if (user && user.isGuest) {
+      return;
+    }
     
     try {
       const response = await fetch('/api/user-preferences', {

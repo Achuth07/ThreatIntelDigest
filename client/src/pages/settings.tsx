@@ -89,6 +89,11 @@ export default function Settings() {
       return;
     }
     
+    // Don't load preferences for guest users
+    if (user.isGuest) {
+      return;
+    }
+    
     // Load user preferences from API (only once on mount) for authenticated users
     if (!hasLoadedOnce && !isLoadingPreferences) {
       loadUserPreferences();
