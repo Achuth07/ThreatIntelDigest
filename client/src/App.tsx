@@ -73,7 +73,8 @@ function Router() {
               window.location.href = '/';
               return null;
             }
-            // Allow guest users to access settings page (they'll see login popup there)
+            // Allow all users (including guests) to access settings page
+            // The settings component will handle showing the login popup for guests
             return <Settings />;
           }}
         </Route>
