@@ -65,8 +65,28 @@ function Router() {
         <Route path="/forgot-password" component={ForgotPasswordPage} />
         <Route path="/reset-password" component={ResetPasswordPage} />
         <Route path="/set-password" component={SetPasswordPage} />
-        <Route path="/settings" component={Settings} />
-        <Route path="/admin" component={AdminDashboard} />
+        <Route path="/settings">
+          {() => {
+            const user = getAuthenticatedUser();
+            if (!user) {
+              // Redirect to home page if not authenticated
+              window.location.href = '/';
+              return null;
+            }
+            return <Settings />;
+          }}
+        </Route>
+        <Route path="/admin">
+          {() => {
+            const user = getAuthenticatedUser();
+            if (!user || !user.isAdmin) {
+              // Redirect to home page if not authenticated or not admin
+              window.location.href = '/';
+              return null;
+            }
+            return <AdminDashboard />;
+          }}
+        </Route>
         <Route path="/about" component={AboutPage} />
         <Route path="/sources" component={SourcesPage} />
         <Route path="/contact" component={ContactPage} />
