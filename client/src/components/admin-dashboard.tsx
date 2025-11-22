@@ -41,8 +41,13 @@ interface UserStats {
   token?: string;
 }
 
+// Add visitor count to the interface
+interface AdminStats extends UserStats {
+  visitorCount: number;
+}
+
 export function AdminDashboard() {
-  const [stats, setStats] = useState<UserStats | null>(null);
+  const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteUserId, setDeleteUserId] = useState<number | null>(null);
@@ -67,30 +72,51 @@ export function AdminDashboard() {
           return;
         }
 
-        // Fetch data with authorization header
+        // Fetch user stats with authorization header
         const headers = {
           'Authorization': `Bearer ${userData.token}`
         };
 
-        const response = await fetch('/api/user-management?stats=true', { headers });
+        const userStatsResponse = await fetch('/api/user-management?stats=true', { headers });
 
-        if (response.ok) {
-          const data = await response.json();
-          console.log('API Response:', data); // Debug log
+        if (userStatsResponse.ok) {
+          const userStats = await userStatsResponse.json();
           
           // Update token if provided in response
-          if (data.token) {
-            const updatedUser = { ...userData, token: data.token };
+          if (userStats.token) {
+            const updatedUser = { ...userData, token: userStats.token };
             updateAuthToken(updatedUser);
           }
           
-          setStats(data);
-        } else if (response.status === 401) {
+          // Fetch visitor count
+          try {
+            const visitorCountResponse = await fetch('/api/visitor-count');
+            let visitorCount = 0;
+            
+            if (visitorCountResponse.ok) {
+              const visitorData = await visitorCountResponse.json();
+              visitorCount = visitorData.count || 0;
+            }
+            
+            // Combine user stats with visitor count
+            setStats({
+              ...userStats,
+              visitorCount
+            });
+          } catch (visitorError) {
+            console.error('Error fetching visitor count:', visitorError);
+            // Set stats without visitor count if there's an error
+            setStats({
+              ...userStats,
+              visitorCount: 0
+            });
+          }
+        } else if (userStatsResponse.status === 401) {
           // Token expired, redirect to login
           localStorage.removeItem('cyberfeed_user');
           window.location.href = '/';
         } else {
-          const errorData = await response.json();
+          const errorData = await userStatsResponse.json();
           throw new Error(errorData.message || 'Failed to fetch data');
         }
       } catch (err) {
@@ -229,7 +255,7 @@ export function AdminDashboard() {
           ) : stats ? (
             <div>
               {/* Statistics Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
                 <Card>
                   <CardContent className="pt-6">
                     <div className="text-2xl font-bold">{stats.totalUsers}</div>
@@ -252,6 +278,12 @@ export function AdminDashboard() {
                   <CardContent className="pt-6">
                     <div className="text-2xl font-bold">{stats.activeUsersWeek}</div>
                     <div className="text-sm text-slate-400">Active Users (7d)</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-2xl font-bold">{stats.visitorCount}</div>
+                    <div className="text-sm text-slate-400">Total Visitors</div>
                   </CardContent>
                 </Card>
               </div>

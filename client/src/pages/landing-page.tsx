@@ -1095,19 +1095,6 @@ const FooterSection = () => {
         >
           <div className="flex items-center space-x-2 text-[#666] text-sm">
             <span>© {currentYear} WhatCyber. All rights reserved.</span>
-            <span className="text-[#444]">•</span>
-            <span>Made with</span>
-            <Heart className="h-4 w-4 text-red-500 fill-current" />
-            <span>by</span>
-            <motion.a
-              href="https://www.achuthchandra.me"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[#00d4ff] hover:text-[#00ff88] transition-colors"
-              whileHover={{ scale: 1.05 }}
-            >
-              Achuth Chandra
-            </motion.a>
           </div>
         </motion.div>
       </div>
