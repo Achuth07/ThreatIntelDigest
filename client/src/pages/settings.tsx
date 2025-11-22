@@ -5,14 +5,14 @@ import {
   ChevronRight, Monitor, LogOut, Save, AlertCircle, Eye, EyeOff,
   RefreshCw, Trash2, Check, X
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { apiRequest } from '@/lib/queryClient';
 import { Header } from '@/components/header';
@@ -56,6 +56,7 @@ const GuestSettingsRedirect = () => {
 export default function Settings() {
   const { toast } = useToast();
   const [location, navigate] = useLocation();
+  const { showLoginPopup } = useLoginPopup();
   const user = getAuthenticatedUser();
   
   const [settings, setSettings] = useState<UserSettings>({
