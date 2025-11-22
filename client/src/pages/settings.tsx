@@ -91,7 +91,10 @@ export default function Settings() {
       return;
     } else if (user.isGuest) {
       // Show login popup for guest users
-      showLoginPopup();
+      // Use setTimeout to ensure the popup is shown after the component is mounted
+      setTimeout(() => {
+        showLoginPopup();
+      }, 0);
       return;
     }
     
