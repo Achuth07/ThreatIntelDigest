@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useLocation } from "wouter";
-import { Check, ChevronRight, Shield, User, Briefcase, GraduationCap, Lock, Globe, Server, Wifi, Eye, CheckCircle2 } from "lucide-react";
+import { getFaviconUrl } from "@/lib/favicon-utils";
+import { Check, ChevronRight, Shield, User, Briefcase, GraduationCap, Lock, Globe, Server, Wifi, Eye, CheckCircle2, ChevronDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getAuthenticatedUser } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
@@ -53,6 +54,7 @@ export default function OnboardingFlow() {
     const { toast } = useToast();
 
     const [sources, setSources] = useState<any[]>([]);
+    const [showAllSources, setShowAllSources] = useState(false);
 
     // Fetch sources on mount
     useState(() => {
@@ -272,32 +274,71 @@ export default function OnboardingFlow() {
                                 </CardHeader>
                                 <CardContent>
                                     <div className="space-y-4">
-                                        {sources.map((source) => {
+                                        {(showAllSources ? sources : sources.slice(0, 10)).map((source) => {
                                             const sourceIdStr = String(source.id);
                                             const isFollowed = followedSources.includes(sourceIdStr);
                                             return (
                                                 <div key={source.id} className="flex items-center justify-between p-3 rounded-lg border bg-card">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-                                                            {source.icon && source.icon.startsWith('http') ? (
-                                                                <img src={source.icon} alt={source.name} className="h-full w-full object-cover" />
-                                                            ) : (
-                                                                <Globe className="h-5 w-5 text-muted-foreground" />
-                                                            )}
+                                                        <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                                                            <img
+                                                                src={getFaviconUrl(source.url)}
+                                                                alt={source.name}
+                                                                className="h-6 w-6 object-contain"
+                                                                onError={(e) => {
+                                                                    (e.target as HTMLImageElement).src = getFaviconUrl(null);
+                                                                }}
+                                                            />
                                                         </div>
                                                         <div>
                                                             <p className="font-medium">{source.name}</p>
-                                                            <p className="text-xs text-muted-foreground">{source.url}</p>
                                                         </div>
                                                     </div>
-                                                    <Switch
-                                                        checked={isFollowed}
-                                                        onCheckedChange={() => toggleSource(sourceIdStr)}
-                                                    />
+                                                    <Button
+                                                        variant={isFollowed ? "secondary" : "outline"}
+                                                        size="sm"
+                                                        onClick={() => toggleSource(sourceIdStr)}
+                                                        className={cn(
+                                                            "min-w-[100px] transition-all",
+                                                            isFollowed ? "bg-primary/10 hover:bg-primary/20 text-primary border-primary/20" : ""
+                                                        )}
+                                                    >
+                                                        {isFollowed ? (
+                                                            <>
+                                                                <Check className="mr-2 h-3 w-3" />
+                                                                Following
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Plus className="mr-2 h-3 w-3" />
+                                                                Follow
+                                                            </>
+                                                        )}
+                                                    </Button>
                                                 </div>
                                             )
                                         })}
                                     </div>
+
+                                    {!showAllSources && sources.length > 10 && (
+                                        <div className="mt-4 flex justify-center">
+                                            <Button
+                                                variant="ghost"
+                                                onClick={() => setShowAllSources(true)}
+                                                className="text-muted-foreground hover:text-foreground"
+                                            >
+                                                Show more <ChevronDown className="ml-2 h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    )}
+
+                                    {(showAllSources || sources.length <= 10) && (
+                                        <div className="mt-6 text-center">
+                                            <p className="text-sm text-muted-foreground">
+                                                You will be able to make changes later and follow more sources in the application.
+                                            </p>
+                                        </div>
+                                    )}
                                     <div className="mt-6 flex justify-end">
                                         <Button onClick={nextStep} disabled={followedSources.length === 0}>
                                             Next <ChevronRight className="ml-2 h-4 w-4" />
