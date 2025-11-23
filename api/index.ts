@@ -625,13 +625,13 @@ async function handleEmailAuthEndpoints(req: VercelRequest, res: VercelResponse)
       const user = await storage.getUserByEmail(email);
       if (!user || !user.passwordHash) {
         // Don't reveal if user exists
-        return res.status(401).json({ error: 'Invalid email or password' });
+        return res.status(401).json({ message: 'Email or password is wrong' });
       }
 
       // Verify password
       const isPasswordValid = await verifyPassword(password, user.passwordHash);
       if (!isPasswordValid) {
-        return res.status(401).json({ error: 'Invalid email or password' });
+        return res.status(401).json({ message: 'Email or password is wrong' });
       }
 
       // Temporarily disable email verification requirement
