@@ -78,7 +78,7 @@ export default function LoginPage() {
     const isProduction = process.env.NODE_ENV === 'production';
     const googleLoginUrl = isProduction
       ? 'https://www.whatcyber.com/api/auth?action=google'
-      : 'http://localhost:5001/api/auth?action=google';
+      : 'http://localhost:3000/api/auth?action=google';
     window.location.href = googleLoginUrl;
   };
 

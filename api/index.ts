@@ -429,7 +429,7 @@ async function handleGoogleCallback(req: VercelRequest, res: VercelResponse) {
   // Use VERCAL_ENV for Vercel deployments, fallback to NODE_ENV
   const isProduction = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
   const backendUrl = isProduction ? 'https://www.whatcyber.com' : 'http://localhost:5001';
-  const frontendUrl = isProduction ? 'https://www.whatcyber.com/threatfeed' : 'http://localhost:5173';
+  const frontendUrl = isProduction ? 'https://www.whatcyber.com/login' : 'http://localhost:5173/login';
   const redirectUri = `${backendUrl}/api/auth?action=callback`;
 
   console.log('Environment Detection:');
