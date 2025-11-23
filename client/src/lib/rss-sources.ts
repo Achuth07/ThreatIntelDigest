@@ -226,12 +226,6 @@ export const VENDOR_THREAT_RESEARCH = [
     color: "#2563eb",
   },
   {
-    name: "PaloAlto Networks Unit 42",
-    url: "https://unit42.paloaltonetworks.com/feed/", // Fixed URL
-    icon: "fas fa-shield-virus",
-    color: "#2563eb",
-  },
-  {
     name: "UpGuard Blog (news)",
     url: "https://www.upguard.com/news/rss.xml",
     icon: "fas fa-newspaper",
@@ -290,12 +284,6 @@ export const GOVERNMENT_ALERTS = [
     url: "https://www.ncsc.gov.uk/collection/threat-reports/rss",
     icon: "fas fa-crown",
     color: "#dc2626",
-  },
-  {
-    name: "SANS Internet Storm Center",
-    url: "https://isc.sans.edu/rssfeed.xml",
-    icon: "fas fa-cloud-rain",
-    color: "#f59e0b",
   },
   // Additional Government sources
   {
@@ -517,12 +505,6 @@ export const GENERAL_SECURITY_NEWS = [
 
 // Legacy Sources
 export const LEGACY_SOURCES = [
-  {
-    name: "The DFIR Report",
-    url: "https://thedfirreport.com/feed/",
-    icon: "fas fa-search",
-    color: "#16a34a",
-  },
 ];
 
 // Combined RSS sources for easy access
