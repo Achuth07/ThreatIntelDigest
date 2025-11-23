@@ -1256,10 +1256,34 @@ async function handleSourcesEndpoints(req: VercelRequest, res: VercelResponse, a
     if (req.method === 'GET') {
       console.log('Fetching RSS sources...');
 
+      // Check if 'all' parameter is set to fetch all sources
+      const fetchAll = req.query.all === 'true';
+
       // Get user ID from request for user-specific sources
       const userId = getUserIdFromRequest(req);
 
-      if (userId) {
+      if (fetchAll || !userId) {
+        // Fetch all active sources (for unauthenticated users or when explicitly requested)
+        const result = await db.execute(sql`
+          SELECT id, name, url, icon, color, is_active, last_fetched
+          FROM rss_sources 
+          WHERE is_active = true
+          ORDER BY name ASC
+        `);
+
+        const sources = result.rows.map((row: any) => ({
+          id: row.id,
+          name: row.name,
+          url: row.url,
+          icon: row.icon,
+          color: row.color,
+          isActive: row.is_active,
+          lastFetched: row.last_fetched
+        }));
+
+        console.log(`Successfully fetched ${sources.length} sources (all sources mode)`);
+        res.json(sources);
+      } else if (userId) {
         // First, check if user has any source preferences
         const prefsCheck = await db.execute(sql`
           SELECT COUNT(*) as count 
@@ -1314,27 +1338,6 @@ async function handleSourcesEndpoints(req: VercelRequest, res: VercelResponse, a
           console.log(`Successfully fetched ${sources.length} sources (no user preferences)`);
           res.json(sources);
         }
-      } else {
-        // Fetch all active sources for unauthenticated users
-        const result = await db.execute(sql`
-          SELECT id, name, url, icon, color, is_active, last_fetched
-          FROM rss_sources 
-          WHERE is_active = true
-          ORDER BY name ASC
-        `);
-
-        const sources = result.rows.map((row: any) => ({
-          id: row.id,
-          name: row.name,
-          url: row.url,
-          icon: row.icon,
-          color: row.color,
-          isActive: row.is_active,
-          lastFetched: row.last_fetched
-        }));
-
-        console.log(`Successfully fetched ${sources.length} sources`);
-        res.json(sources);
       }
 
     } else if (req.method === 'POST') {
@@ -1592,18 +1595,14 @@ async function handleArticlesEndpoints(req: VercelRequest, res: VercelResponse, 
         console.log('User has preferences:', userHasAnyPreferences);
 
         if (userHasAnyPreferences) {
-          // User has explicit preferences - get sources they haven't disabled
-          // If a source is NOT in their preferences OR is marked as active=true, include it
+          // User has explicit preferences - get ONLY sources they have enabled
           const userPrefsResult = await db.execute(sql`
             SELECT rs.name 
             FROM rss_sources rs
+            INNER JOIN user_source_preferences usp ON rs.id = usp.source_id
             WHERE rs.is_active = true
-              AND NOT EXISTS (
-                SELECT 1 FROM user_source_preferences usp 
-                WHERE usp.source_id = rs.id 
-                  AND usp.user_id = ${userId} 
-                  AND usp.is_active = false
-              )
+              AND usp.user_id = ${userId}
+              AND usp.is_active = true
           `);
           userActiveSourceNames = userPrefsResult.rows.map((row: any) => row.name);
         } else {

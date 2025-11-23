@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { Plus, Minus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
@@ -20,8 +20,18 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
   const queryClient = useQueryClient();
   const user = getAuthenticatedUser();
 
+  // Fetch ALL available sources from the system (not filtered by user preferences)
+  const { data: allAvailableSources = [] } = useQuery<RssSource[]>({
+    queryKey: ['/api/sources', { all: 'true' }],
+    queryFn: async () => {
+      // Fetch all sources using the all=true parameter
+      const response = await apiRequest('GET', '/api/sources?all=true');
+      return response.json();
+    },
+  });
+
   const updateUserSourceMutation = useMutation({
-    mutationFn: ({ sourceId, isActive }: { sourceId: string; isActive: boolean }) => 
+    mutationFn: ({ sourceId, isActive }: { sourceId: string; isActive: boolean }) =>
       apiRequest('POST', '/api/user-source-preferences/', { sourceId, isActive }),
     onSuccess: () => {
       // Force refetch of sources to ensure UI updates immediately
@@ -47,21 +57,25 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
       });
       return;
     }
-    
-    // Find the source in the user's existing sources
-    const existingSource = userSources.find(source => 
+
+    // Find the source in ALL available sources (not just user's current sources)
+    const existingSource = allAvailableSources.find(source =>
       source.name === sourceToAdd.name || source.url === sourceToAdd.url
     );
-    
+
     if (existingSource) {
-      // If source exists in user's sources, just enable it for this user
-      updateUserSourceMutation.mutate({ 
+      // Source exists in the system, enable it for this user
+      updateUserSourceMutation.mutate({
         sourceId: existingSource.id,
         isActive: true
       });
+
+      toast({
+        title: "Source Added",
+        description: `${sourceToAdd.name} has been added to your feed`,
+      });
     } else {
-      // If source doesn't exist in user's sources, we need to check if it exists globally
-      // For now, we'll show a message that the source is not available
+      // Source doesn't exist in the system at all
       toast({
         title: "Source Not Available",
         description: "This source is not currently available in the system.",
@@ -80,13 +94,13 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
       });
       return;
     }
-    
+
     // Instead of deleting, we toggle the source to inactive for this user only
-    updateUserSourceMutation.mutate({ 
-      sourceId: sourceId, 
-      isActive: false 
+    updateUserSourceMutation.mutate({
+      sourceId: sourceId,
+      isActive: false
     });
-    
+
     toast({
       title: "Source Disabled",
       description: `${sourceName} has been disabled from your feed`,
@@ -101,7 +115,7 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
 
   // Function to check if a source exists in the system
   const isSourceAvailable = (sourceName: string) => {
-    return userSources.some(source => source.name === sourceName);
+    return allAvailableSources.some(source => source.name === sourceName);
   };
 
   // Render source card
@@ -109,16 +123,16 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
     const isAdded = isSourceAdded(source.name);
     const isAvailable = isSourceAvailable(source.name);
     const faviconUrl = getFaviconUrl(source.url, 24);
-    
+
     return (
-      <div 
+      <div
         key={source.name}
         className="border border-whatcyber-light-gray/30 rounded-lg p-4 bg-whatcyber-darker hover:bg-whatcyber-gray/50 transition-colors"
       >
         <div className="flex items-start space-x-3">
           <div className="flex-shrink-0 mt-0.5">
-            <img 
-              src={faviconUrl} 
+            <img
+              src={faviconUrl}
               alt={`${source.name} icon`}
               className="w-6 h-6 rounded-sm"
               onError={(e) => {
@@ -197,12 +211,12 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
           Back
         </Button>
       </div>
-      
+
       <p className="text-slate-400 mb-6">
-        Select sources to follow for personalized threat intelligence feeds. 
+        Select sources to follow for personalized threat intelligence feeds.
         Your selections are private and only affect your view.
       </p>
-      
+
       <div className="space-y-8">
         {Object.entries(categorizedSources).map(([category, sources]) => (
           <div key={category}>
