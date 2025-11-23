@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { useLocation } from "wouter";
 import { Check, ChevronRight, Shield, User, Briefcase, GraduationCap, Lock, Globe, Server, Wifi, Eye, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getAuthenticatedUser } from "@/lib/auth";
+import { useToast } from "@/hooks/use-toast";
 
 // Step 1 Options
 const ROLES = [
@@ -48,6 +50,25 @@ export default function OnboardingFlow() {
     const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
     const [followedSources, setFollowedSources] = useState<string[]>([]);
     const [, setLocation] = useLocation();
+    const { toast } = useToast();
+
+    const [sources, setSources] = useState<any[]>([]);
+
+    // Fetch sources on mount
+    useState(() => {
+        const fetchSources = async () => {
+            try {
+                const response = await fetch('/api/sources');
+                if (response.ok) {
+                    const data = await response.json();
+                    setSources(data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch sources", error);
+            }
+        };
+        fetchSources();
+    });
 
     const nextStep = () => setStep((prev) => Math.min(prev + 1, 4));
     // const prevStep = () => setStep((prev) => Math.max(prev - 1, 1)); // Optional: Back button
@@ -65,8 +86,55 @@ export default function OnboardingFlow() {
     };
 
     const handleFinish = async () => {
-        // TODO: Submit data to API
-        console.log({ role, selectedTopics, followedSources });
+        const user = getAuthenticatedUser();
+
+        // Save role and topics to localStorage for client-side personalization
+        localStorage.setItem("user_role", role || "");
+        localStorage.setItem("user_topics", JSON.stringify(selectedTopics));
+
+        if (user && user.token) {
+            try {
+                // Submit onboarding data to API
+                const response = await fetch("/api/user/onboarding", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${user.token}`
+                    },
+                    body: JSON.stringify({
+                        role,
+                        topics: selectedTopics,
+                        sourceIds: followedSources // IDs are already strings (UUIDs)
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error("Failed to submit onboarding data");
+                }
+
+                const data = await response.json();
+
+                // Update local user data if returned
+                if (data.user) {
+                    // We might need to update the stored user token/data here if the backend returns updated user object
+                    // But for now, just proceeding is fine as the backend updated the DB
+                }
+
+                toast({
+                    title: "Onboarding Complete",
+                    description: "Your feed has been personalized.",
+                });
+            } catch (error) {
+                console.error("Failed to save onboarding data", error);
+                toast({
+                    title: "Error",
+                    description: "Failed to save your preferences. Please try again.",
+                    variant: "destructive"
+                });
+                return; // Don't redirect if failed
+            }
+        }
+
         setLocation("/threatfeed");
     };
 
@@ -190,13 +258,18 @@ export default function OnboardingFlow() {
                                 </CardHeader>
                                 <CardContent>
                                     <div className="space-y-4">
-                                        {RECOMMENDED_SOURCES.map((source) => {
-                                            const isFollowed = followedSources.includes(source.id);
+                                        {sources.map((source) => {
+                                            const sourceIdStr = String(source.id);
+                                            const isFollowed = followedSources.includes(sourceIdStr);
                                             return (
                                                 <div key={source.id} className="flex items-center justify-between p-3 rounded-lg border bg-card">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                                                            <Globe className="h-5 w-5 text-muted-foreground" />
+                                                        <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+                                                            {source.icon && source.icon.startsWith('http') ? (
+                                                                <img src={source.icon} alt={source.name} className="h-full w-full object-cover" />
+                                                            ) : (
+                                                                <Globe className="h-5 w-5 text-muted-foreground" />
+                                                            )}
                                                         </div>
                                                         <div>
                                                             <p className="font-medium">{source.name}</p>
@@ -205,7 +278,7 @@ export default function OnboardingFlow() {
                                                     </div>
                                                     <Switch
                                                         checked={isFollowed}
-                                                        onCheckedChange={() => toggleSource(source.id)}
+                                                        onCheckedChange={() => toggleSource(sourceIdStr)}
                                                     />
                                                 </div>
                                             )

@@ -9,7 +9,7 @@ import { SEO } from '@/components/seo';
 // CyberSphere Component
 const CyberSphere = () => {
   const mountRef = React.useRef<HTMLDivElement>(null);
-  
+
   // Refs for interaction state
   const isDragging = React.useRef(false);
   const previousMousePosition = React.useRef({ x: 0, y: 0 });
@@ -51,13 +51,13 @@ const CyberSphere = () => {
       positions[i3] = x;
       positions[i3 + 1] = y;
       positions[i3 + 2] = z;
-      
+
       // Calculate original color
       const mixedColor = color1.clone().lerp(color2, (y + radius) / (2 * radius));
       colors[i3] = mixedColor.r;
       colors[i3 + 1] = mixedColor.g;
       colors[i3 + 2] = mixedColor.b;
-      
+
       // Store original colors
       originalColors[i3] = mixedColor.r;
       originalColors[i3 + 1] = mixedColor.g;
@@ -93,7 +93,7 @@ const CyberSphere = () => {
       if (!isDragging.current) return;
       const deltaX = event.clientX - previousMousePosition.current.x;
       const deltaY = event.clientY - previousMousePosition.current.y;
-      
+
       particles.rotation.y += deltaX * 0.005;
       particles.rotation.x += deltaY * 0.005;
 
@@ -112,8 +112,8 @@ const CyberSphere = () => {
       if (distance < 10 && duration < 200 && !colorWaveState.current.active) {
         // Pick a random point on the sphere as the wave center
         const randomIndex = Math.floor(Math.random() * particleCount) * 3;
-        colorWaveState.current = { 
-          active: true, 
+        colorWaveState.current = {
+          active: true,
           progress: 0,
           centerX: positions[randomIndex],
           centerY: positions[randomIndex + 1],
@@ -121,7 +121,7 @@ const CyberSphere = () => {
         };
       }
     };
-    
+
     const handleMouseLeave = () => {
       isDragging.current = false;
       mount.style.cursor = 'grab';
@@ -136,7 +136,7 @@ const CyberSphere = () => {
     let requestId: number;
     const animate = () => {
       requestId = requestAnimationFrame(animate);
-      
+
       // Auto-rotation when not being dragged
       if (!isDragging.current) {
         particles.rotation.y += 0.0005;
@@ -147,33 +147,33 @@ const CyberSphere = () => {
         colorWaveState.current.progress += 0.03;
         const waveRadius = colorWaveState.current.progress * 8; // Wave expansion speed
         const waveWidth = 1.5; // Width of the color wave
-        
+
         const colors = geometry.attributes.color.array;
         const originalColors = geometry.userData.originalColors;
         const { centerX, centerY, centerZ } = colorWaveState.current;
-        
+
         for (let i = 0; i < particleCount; i++) {
           const i3 = i * 3;
           const x = positions[i3];
           const y = positions[i3 + 1];
           const z = positions[i3 + 2];
-          
+
           // Calculate distance from wave center
           const distanceFromCenter = Math.sqrt(
-            Math.pow(x - centerX, 2) + 
-            Math.pow(y - centerY, 2) + 
+            Math.pow(x - centerX, 2) +
+            Math.pow(y - centerY, 2) +
             Math.pow(z - centerZ, 2)
           );
-          
+
           // Create wave effect
           const waveIntensity = Math.max(0, 1 - Math.abs(distanceFromCenter - waveRadius) / waveWidth);
-          
+
           if (waveIntensity > 0) {
             // Blend original color with wave color
             const originalR = originalColors[i3];
             const originalG = originalColors[i3 + 1];
             const originalB = originalColors[i3 + 2];
-            
+
             colors[i3] = originalR + (waveColor.r - originalR) * waveIntensity;
             colors[i3 + 1] = originalG + (waveColor.g - originalG) * waveIntensity;
             colors[i3 + 2] = originalB + (waveColor.b - originalB) * waveIntensity;
@@ -184,9 +184,9 @@ const CyberSphere = () => {
             colors[i3 + 2] = originalColors[i3 + 2];
           }
         }
-        
+
         geometry.attributes.color.needsUpdate = true;
-        
+
         // Reset after wave has traveled across the entire sphere
         if (colorWaveState.current.progress > 2) {
           colorWaveState.current.active = false;
@@ -215,7 +215,7 @@ const CyberSphere = () => {
   }, []);
 
   return (
-    <motion.div 
+    <motion.div
       className="w-full h-full"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -235,13 +235,13 @@ const Header = () => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
-    
+
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const handleGetStarted = () => {
-    window.location.href = '/threatfeed';
+    window.location.href = '/login';
   };
 
   const navItems = [
@@ -252,7 +252,7 @@ const Header = () => {
 
   const handleNavigation = (href: string) => {
     setIsMobileMenuOpen(false);
-    
+
     // For anchor links on the homepage
     if (href.startsWith('/#')) {
       // If we're on the homepage, scroll to the section
@@ -260,7 +260,7 @@ const Header = () => {
       if (element) {
         element.scrollIntoView({ behavior: 'smooth' });
       }
-    } 
+    }
     // For internal pages, we'll let the Link component handle navigation
     // For external links
     else if (!href.startsWith('/')) {
@@ -272,7 +272,7 @@ const Header = () => {
     // If we're on the homepage, scroll to top
     if (window.location.pathname === '/') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    } 
+    }
     // If we're on another page, navigate to homepage
     else {
       window.location.href = '/';
@@ -285,28 +285,26 @@ const Header = () => {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.2 }}
-        className={`fixed inset-x-0 mx-auto w-fit z-50 transition-all duration-300 ${
-          isScrolled ? 'top-4' : 'top-6'
-        }`}
+        className={`fixed inset-x-0 mx-auto w-fit z-50 transition-all duration-300 ${isScrolled ? 'top-4' : 'top-6'
+          }`}
       >
-        <nav className={`relative backdrop-blur-md bg-black/20 border border-white/10 rounded-full px-6 py-3 shadow-2xl transition-all duration-300 ${
-          isScrolled ? 'bg-black/30' : ''
-        }`}>
-          
+        <nav className={`relative backdrop-blur-md bg-black/20 border border-white/10 rounded-full px-6 py-3 shadow-2xl transition-all duration-300 ${isScrolled ? 'bg-black/30' : ''
+          }`}>
+
           <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[rgba(0,212,255,0.1)] via-transparent to-[rgba(0,255,136,0.1)] opacity-50" />
-          
+
           <div className="flex items-center justify-between gap-8 relative z-10">
-            
+
             {/* Logo */}
-            <motion.div 
+            <motion.div
               className="flex items-center gap-2 cursor-pointer group"
               whileHover={{ scale: 1.05 }}
               onClick={handleLogoClick}
             >
               <div className="w-8 h-8 rounded-lg flex items-center justify-center relative overflow-hidden group-hover:shadow-lg group-hover:shadow-[#00d4ff]/25 transition-all duration-300">
-                <img 
-                  src="/android-chrome-192x192.png" 
-                  alt="WhatCyber Logo" 
+                <img
+                  src="/android-chrome-192x192.png"
+                  alt="WhatCyber Logo"
                   className="w-full h-full object-contain"
                 />
               </div>
@@ -326,18 +324,18 @@ const Header = () => {
                   transition={{ delay: 0.3 + index * 0.1 }}
                 >
                   {item.name === 'Features' ? (
-                    <button 
+                    <button
                       onClick={() => handleNavigation(item.href)}
                       className="block w-full text-left"
                     >
                       <span className="px-3 py-2 rounded-full hover:bg-white/5 transition-colors duration-300">
                         {item.name}
                       </span>
-                      <motion.div 
-                        className="absolute inset-0 bg-white/5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
+                      <motion.div
+                        className="absolute inset-0 bg-white/5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                       />
-                      <motion.div 
-                        className="absolute bottom-1 left-1/2 w-0 h-0.5 bg-gradient-to-r from-[#00d4ff] to-[#00ff88] group-hover:w-4 group-hover:left-1/2 group-hover:-translate-x-1/2 transition-all duration-300" 
+                      <motion.div
+                        className="absolute bottom-1 left-1/2 w-0 h-0.5 bg-gradient-to-r from-[#00d4ff] to-[#00ff88] group-hover:w-4 group-hover:left-1/2 group-hover:-translate-x-1/2 transition-all duration-300"
                       />
                     </button>
                   ) : (
@@ -345,11 +343,11 @@ const Header = () => {
                       <span className="px-3 py-2 rounded-full hover:bg-white/5 transition-colors duration-300">
                         {item.name}
                       </span>
-                      <motion.div 
-                        className="absolute inset-0 bg-white/5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300" 
+                      <motion.div
+                        className="absolute inset-0 bg-white/5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                       />
-                      <motion.div 
-                        className="absolute bottom-1 left-1/2 w-0 h-0.5 bg-gradient-to-r from-[#00d4ff] to-[#00ff88] group-hover:w-4 group-hover:left-1/2 group-hover:-translate-x-1/2 transition-all duration-300" 
+                      <motion.div
+                        className="absolute bottom-1 left-1/2 w-0 h-0.5 bg-gradient-to-r from-[#00d4ff] to-[#00ff88] group-hover:w-4 group-hover:left-1/2 group-hover:-translate-x-1/2 transition-all duration-300"
                       />
                     </Link>
                   )}
@@ -392,7 +390,7 @@ const Header = () => {
       {/* Mobile Menu */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ 
+        animate={{
           opacity: isMobileMenuOpen ? 1 : 0,
           scale: isMobileMenuOpen ? 1 : 0.95,
           pointerEvents: isMobileMenuOpen ? 'auto' : 'none'
@@ -411,7 +409,7 @@ const Header = () => {
                 transition={{ delay: index * 0.1 }}
               >
                 {item.name === 'Features' ? (
-                  <button 
+                  <button
                     onClick={() => handleNavigation(item.href)}
                     className="block w-full text-left"
                   >
@@ -486,8 +484,8 @@ const HeroSection = () => {
   };
 
   return (
-    <section 
-      id="home" 
+    <section
+      id="home"
       className="min-h-screen relative overflow-hidden flex items-center"
       style={{
         background: `
@@ -500,19 +498,19 @@ const HeroSection = () => {
       {/* Background Elements */}
       <div className="absolute inset-0 -z-10">
         {/* Parallax background elements with blur */}
-        <motion.div 
+        <motion.div
           className="absolute top-20 right-20 w-32 h-32 border border-[#00ff88]/10 rotate-12 backdrop-blur-xs"
           style={{ y: scrollY * -0.2 }}
         />
-        <motion.div 
+        <motion.div
           className="absolute bottom-32 left-20 w-24 h-24 border border-[#00d4ff]/15 rounded-full backdrop-blur-xs"
           style={{ y: scrollY * -0.3 }}
         />
-        <motion.div 
+        <motion.div
           className="absolute top-1/3 right-1/3 w-16 h-16 border border-[#00ff88]/8 rotate-45 backdrop-blur-xs"
           style={{ y: scrollY * -0.4 }}
         />
-        
+
         <motion.div
           className="absolute top-1/4 left-1/4 w-72 h-72 bg-[rgba(0,255,136,0.05)] rounded-full blur-3xl"
           animate={{
@@ -573,14 +571,14 @@ const HeroSection = () => {
                   key={currentText}
                   className="bg-gradient-to-r from-[#00d4ff] via-[#00ff88] to-[#00d4ff] bg-clip-text text-transparent"
                   style={{ backgroundSize: '200% 100%' }}
-                  animate={{ 
+                  animate={{
                     backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
-                    opacity: 1, 
-                    y: 0 
+                    opacity: 1,
+                    y: 0
                   }}
                   initial={{ opacity: 0, y: 20 }}
                   exit={{ opacity: 0, y: -20 }}
-                  transition={{ 
+                  transition={{
                     backgroundPosition: { duration: 5, repeat: Infinity },
                     opacity: { duration: 0.5 },
                     y: { duration: 0.5 }
@@ -598,7 +596,7 @@ const HeroSection = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
             >
-              Your centralized hub for cybersecurity news, latest CVE vulnerabilities, and threat intelligence. 
+              Your centralized hub for cybersecurity news, latest CVE vulnerabilities, and threat intelligence.
               Stay informed with real-time updates from trusted security sources.
             </motion.p>
 
@@ -612,9 +610,9 @@ const HeroSection = () => {
               <motion.button
                 onClick={() => window.open('https://www.whatcyber.com/threatfeed', '_blank')}
                 className="group relative overflow-hidden bg-gradient-to-r from-[#00d4ff] to-[#00ff88] hover:from-[#0099cc] hover:to-[#00cc66] text-black font-semibold px-8 py-4 text-lg transition-all duration-300 shadow-lg shadow-[#00d4ff]/20 hover:shadow-xl hover:shadow-[#00d4ff]/30 border-0 rounded-full"
-                whileHover={{ 
-                  scale: 1.05, 
-                  boxShadow: "0 0 30px rgba(0, 212, 255, 0.4)" 
+                whileHover={{
+                  scale: 1.05,
+                  boxShadow: "0 0 30px rgba(0, 212, 255, 0.4)"
                 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -696,7 +694,7 @@ const FeaturesSection = () => {
   ];
 
   return (
-    <section 
+    <section
       id="features"
       className="py-16 sm:py-20 lg:py-24 px-4 sm:px-6 relative overflow-hidden"
       style={{
@@ -708,11 +706,11 @@ const FeaturesSection = () => {
       }}
     >
       {/* Parallax background elements with blur */}
-      <motion.div 
+      <motion.div
         className="absolute top-10 right-10 w-32 h-32 border border-[#00ff88]/10 rotate-12 backdrop-blur-xs"
         style={{ y: scrollY * -0.3 }}
       />
-      <motion.div 
+      <motion.div
         className="absolute bottom-20 left-10 w-24 h-24 border border-[#00d4ff]/15 rounded-full backdrop-blur-xs"
         style={{ y: scrollY * -0.4 }}
       />
@@ -727,7 +725,7 @@ const FeaturesSection = () => {
         >
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6">
             <span className="text-[#666]">Key</span>{' '}
-            <motion.span 
+            <motion.span
               className="bg-gradient-to-r from-[#00d4ff] via-[#00ff88] to-[#00d4ff] bg-clip-text text-transparent"
               style={{ backgroundSize: '200% 100%' }}
               animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
@@ -755,14 +753,14 @@ const FeaturesSection = () => {
               {/* Card with backdrop blur */}
               <div className="bg-white/5 backdrop-blur-lg p-6 sm:p-8 rounded-2xl border border-white/10 hover:border-[#00d4ff] transition-all duration-500 shadow-2xl shadow-black/20 hover:shadow-[0_20px_40px_rgba(0,212,255,0.15)] relative overflow-hidden h-full">
                 {/* Animated background gradient */}
-                <motion.div 
+                <motion.div
                   className="absolute -inset-2 bg-gradient-to-br from-transparent via-[rgba(0,212,255,0.1)] to-transparent opacity-0 group-hover:opacity-100"
                   animate={{
                     x: ['-100%', '100%'],
                   }}
                   transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
                 />
-                
+
                 <div className="relative z-10">
                   {/* Animated icon container */}
                   <motion.div
@@ -783,7 +781,7 @@ const FeaturesSection = () => {
                   <h3 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-white group-hover:text-[#00d4ff] transition-colors duration-300">
                     {feature.title}
                   </h3>
-                  
+
                   <p className="text-[#ccc] leading-relaxed text-sm sm:text-base mb-4">
                     {feature.description}
                   </p>
@@ -830,7 +828,7 @@ const TimelineSection = () => {
   ];
 
   return (
-    <section 
+    <section
       id="timeline"
       className="py-16 sm:py-20 lg:py-24 px-4 sm:px-6 relative overflow-hidden"
       style={{
@@ -851,7 +849,7 @@ const TimelineSection = () => {
         >
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6">
             <span className="text-[#666]">How It</span>{' '}
-            <motion.span 
+            <motion.span
               className="bg-gradient-to-r from-[#00d4ff] via-[#00ff88] to-[#00d4ff] bg-clip-text text-transparent"
               style={{ backgroundSize: '200% 100%' }}
               animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
@@ -885,26 +883,25 @@ const TimelineSection = () => {
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.8, delay: index * 0.2 }}
-                className={`flex flex-col lg:flex-row items-center gap-6 sm:gap-8 ${
-                  index % 2 === 1 ? 'lg:flex-row-reverse' : ''
-                }`}
+                className={`flex flex-col lg:flex-row items-center gap-6 sm:gap-8 ${index % 2 === 1 ? 'lg:flex-row-reverse' : ''
+                  }`}
               >
                 {/* Content with glassmorphism */}
-                <motion.div 
+                <motion.div
                   className="flex-1 text-center lg:text-left w-full"
                 >
                   <div className="bg-white/5 backdrop-blur-lg p-6 sm:p-8 rounded-2xl border border-white/10 shadow-2xl shadow-black/20 relative overflow-hidden group hover:border-[#00d4ff] transition-all duration-500">
-                    <motion.div 
+                    <motion.div
                       className="absolute -inset-2 bg-gradient-to-br from-transparent via-[rgba(0,212,255,0.1)] to-transparent opacity-0 group-hover:opacity-100"
                       animate={{ x: ['-100%', '100%'] }}
                       transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
                     />
-                    
+
                     <div className="relative z-10">
                       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3 sm:gap-4 mb-3 sm:mb-4">
-                        <motion.span 
+                        <motion.span
                           className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-[#00d4ff] to-[#00ff88] bg-clip-text text-transparent opacity-30 group-hover:opacity-50 transition-opacity duration-300"
-                          animate={{ 
+                          animate={{
                             textShadow: [
                               '0 0 10px rgba(0,212,255,0.3)',
                               '0 0 20px rgba(0,255,136,0.3)',
@@ -922,7 +919,7 @@ const TimelineSection = () => {
                       <p className="text-[#ccc] text-base sm:text-lg leading-relaxed mb-4">
                         {step.description}
                       </p>
-                      <motion.div 
+                      <motion.div
                         className="h-1 bg-gradient-to-r from-[#00d4ff] to-[#00ff88] rounded-full"
                         initial={{ scaleX: 0 }}
                         whileInView={{ scaleX: 1 }}
@@ -946,16 +943,16 @@ const TimelineSection = () => {
                     />
                     <step.icon className="w-8 h-8 sm:w-10 sm:h-10 text-black relative z-10" />
                   </div>
-                  <motion.div 
+                  <motion.div
                     className="absolute inset-0 rounded-full border-2 border-[#00d4ff] animate-ping opacity-20"
-                    style={{ 
+                    style={{
                       background: 'conic-gradient(from 0deg, transparent, rgba(0,212,255,0.1), transparent)',
                       filter: 'blur(2px)'
                     }}
                   />
-                  <motion.div 
-                    className="absolute inset-0 rounded-full border-2 border-[#00ff88] animate-ping opacity-20" 
-                    style={{ 
+                  <motion.div
+                    className="absolute inset-0 rounded-full border-2 border-[#00ff88] animate-ping opacity-20"
+                    style={{
                       animationDelay: '0.5s',
                       background: 'conic-gradient(from 180deg, transparent, rgba(0,255,136,0.1), transparent)',
                       filter: 'blur(2px)'
@@ -984,7 +981,7 @@ const FooterSection = () => {
   ];
 
   return (
-    <footer 
+    <footer
       className="border-t border-white/10 relative overflow-hidden"
       style={{
         background: `
@@ -995,13 +992,13 @@ const FooterSection = () => {
       }}
     >
       {/* Parallax background elements */}
-      <motion.div 
+      <motion.div
         className="absolute top-10 left-10 w-24 h-24 border border-[#00ff88]/8 rotate-45 backdrop-blur-xs"
       />
-      <motion.div 
+      <motion.div
         className="absolute bottom-10 right-10 w-16 h-16 border border-[#00d4ff]/10 rounded-full backdrop-blur-xs"
       />
-      
+
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
         <div className="py-12 grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Brand Section */}
@@ -1014,9 +1011,9 @@ const FooterSection = () => {
               viewport={{ once: true }}
             >
               <div className="w-8 h-8 rounded-lg flex items-center justify-center relative overflow-hidden group-hover:shadow-lg group-hover:shadow-[#00d4ff]/25 transition-all duration-300">
-                <img 
-                  src="/android-chrome-192x192.png" 
-                  alt="WhatCyber Logo" 
+                <img
+                  src="/android-chrome-192x192.png"
+                  alt="WhatCyber Logo"
                   className="w-full h-full object-contain"
                 />
               </div>
@@ -1024,7 +1021,7 @@ const FooterSection = () => {
                 <span className="text-white">WhatCyber</span>
               </div>
             </motion.div>
-            
+
             <motion.p
               className="text-[#888] mb-6 leading-relaxed"
               initial={{ opacity: 0, y: 20 }}
@@ -1032,10 +1029,10 @@ const FooterSection = () => {
               transition={{ duration: 0.6, delay: 0.1 }}
               viewport={{ once: true }}
             >
-              Advanced cybersecurity solutions powered by AI. Protecting your digital assets 
+              Advanced cybersecurity solutions powered by AI. Protecting your digital assets
               with next-generation threat intelligence and automated defense systems.
             </motion.p>
-            
+
             <motion.div
               className="flex space-x-4"
               initial={{ opacity: 0, y: 20 }}
@@ -1074,7 +1071,7 @@ const FooterSection = () => {
                 <li><Link href="/contact" className="hover:text-[#00d4ff] transition-colors">Contact</Link></li>
               </ul>
             </div>
-            
+
             <div>
               <h3 className="text-white font-semibold mb-4">Legal</h3>
               <ul className="space-y-2 text-[#888]">
@@ -1113,7 +1110,7 @@ const ChevronDownIcon = ({ className }: { className?: string }) => (
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-gray-900">
-      <SEO 
+      <SEO
         title="WhatCyber: The Cybersecurity News Aggregator"
         description="Get your real-time cybersecurity news feed from WhatCyber. We aggregate the latest threat intelligence, vulnerabilities, and cyber news from top sources."
         keywords="cybersecurity, threat intelligence, news aggregator, vulnerability tracking, cyber news, security alerts"

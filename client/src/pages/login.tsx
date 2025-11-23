@@ -42,7 +42,7 @@ export default function LoginPage() {
       } else if (error) {
         let errorMessage = 'An error occurred during verification.';
         let errorTitle = 'Verification Error';
-        
+
         if (error === 'invalid_token') {
           errorTitle = '❌ Verification Failed';
           errorMessage = 'Invalid or expired verification link. Please request a new one.';
@@ -53,7 +53,7 @@ export default function LoginPage() {
           errorTitle = '❌ Verification Failed';
           errorMessage = 'Email verification failed. Please try again or contact support.';
         }
-        
+
         console.log('Showing verification error toast:', { errorTitle, errorMessage });
         toast({
           title: errorTitle,
@@ -76,15 +76,60 @@ export default function LoginPage() {
   const handleGoogleLogin = () => {
     // For production deployment, use the full URL to the Vercel API endpoint
     const isProduction = process.env.NODE_ENV === 'production';
-    const googleLoginUrl = isProduction 
+    const googleLoginUrl = isProduction
       ? 'https://www.whatcyber.com/api/auth?action=google'
       : 'http://localhost:5001/api/auth?action=google';
     window.location.href = googleLoginUrl;
   };
 
+  // Check for user data from Google login
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const userStr = params.get('user');
+
+    if (userStr) {
+      try {
+        const userData = JSON.parse(decodeURIComponent(userStr));
+        if (userData.token) {
+          setAuthToken(userData.token);
+          toast({
+            title: 'Login Successful',
+            description: `Welcome back, ${userData.name}!`,
+          });
+
+          // Check if user has onboarded
+          if (userData.hasOnboarded) {
+            navigate('/threatfeed/');
+          } else {
+            navigate('/onboarding');
+          }
+        }
+      } catch (e) {
+        console.error('Failed to parse user data', e);
+      }
+    }
+  }, [navigate, toast]);
+
+  const handleGuestLogin = () => {
+    // For guest login, we can just redirect to onboarding directly
+    // Or if we want to track them as a guest user, we might need a backend endpoint
+    // For now, let's just redirect to onboarding which will handle guest state locally if needed
+    // But wait, the onboarding requires a user ID to save preferences.
+    // If we want "Continue as Guest", maybe we should create a temporary guest account?
+    // Or just let them browse without saving?
+    // The requirement says "modify the landing page to redirect users to the login page, offering Google, email, or guest sign-in options."
+    // And "Implement a new backend API endpoint ... that accepts onboarding data".
+    // If they are a guest, they probably won't have a user ID to save to.
+    // Let's assume "Continue as Guest" means just going to the feed without logging in.
+    // But the feed might need sources.
+    // If they are guest, they have no persistent preferences.
+    // Maybe we just redirect to /threatfeed and let the frontend handle "no user" state (which shows all sources).
+    navigate('/threatfeed/');
+  };
+
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.email || !formData.password) {
       toast({
         title: 'Validation Error',
@@ -114,15 +159,20 @@ export default function LoginPage() {
       // Store the auth token
       if (data.token) {
         setAuthToken(data.token);
-        
+
         toast({
           title: 'Login Successful',
           description: 'Welcome back!',
         });
 
-        // Redirect to threatfeed page
-        navigate('/threatfeed/');
-        window.location.reload(); // Refresh to update auth state
+        // Redirect based on onboarding status
+        if (data.user.hasOnboarded) {
+          navigate('/threatfeed/');
+        } else {
+          navigate('/onboarding');
+        }
+        // We don't reload here to preserve state, but we might need to if auth state isn't reactive
+        // window.location.reload(); 
       } else {
         throw new Error('No token received');
       }
@@ -139,7 +189,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-whatcyber-dark flex items-center justify-center p-4">
-      <SEO 
+      <SEO
         title="Login - WhatCyber ThreatFeed"
         description="Sign in to your WhatCyber ThreatFeed account to access cybersecurity threat intelligence and vulnerability tracking."
         keywords="login, cybersecurity, threat intelligence, CVE, vulnerabilities, security news"
@@ -155,9 +205,9 @@ export default function LoginPage() {
             Back
           </Button>
           <div className="flex justify-center mb-4">
-            <img 
-              src={logoImage} 
-              alt="WhatCyber Logo" 
+            <img
+              src={logoImage}
+              alt="WhatCyber Logo"
               className="w-16 h-16 rounded-lg cursor-pointer"
               onClick={() => navigate('/')}
             />
@@ -169,17 +219,17 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Google Sign In */}
-          <Button 
+          <Button
             onClick={handleGoogleLogin}
             className="w-full bg-white text-gray-900 hover:bg-gray-100 border border-gray-300"
             disabled={isLoading}
           >
             <div className="flex items-center justify-center space-x-2">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
               </svg>
               <span>Sign in with Google</span>
             </div>
@@ -248,14 +298,31 @@ export default function LoginPage() {
               </Button>
             </div>
 
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full bg-whatcyber-teal hover:bg-whatcyber-teal/80 text-white"
               disabled={isLoading}
             >
               {isLoading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-whatcyber-light-gray" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-whatcyber-dark px-2 text-slate-400">Or</span>
+            </div>
+          </div>
+
+          <Button
+            onClick={handleGuestLogin}
+            variant="outline"
+            className="w-full border-whatcyber-teal text-whatcyber-teal hover:bg-whatcyber-teal hover:text-white"
+          >
+            Continue as Guest
+          </Button>
         </CardContent>
         <CardFooter className="flex flex-col space-y-2">
           <div className="text-center text-sm text-slate-400">

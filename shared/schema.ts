@@ -1,12 +1,12 @@
 import { sql } from "drizzle-orm";
-import { 
-  pgTable, 
-  serial, 
-  text, 
-  timestamp, 
-  varchar, 
-  integer, 
-  boolean as pgBoolean, 
+import {
+  pgTable,
+  serial,
+  text,
+  timestamp,
+  varchar,
+  integer,
+  boolean as pgBoolean,
   decimal,
   jsonb
 } from 'drizzle-orm/pg-core';
@@ -56,7 +56,7 @@ export const vulnerabilities = pgTable("vulnerabilities", {
   cvssV2Severity: text("cvss_v2_severity"),
   weaknesses: jsonb("weaknesses").$type<string[]>().default([]), // CWE IDs
   configurations: jsonb("configurations").$type<any[]>().default([]), // CPE configurations
-  referenceUrls: jsonb("reference_urls").$type<{url: string; source: string; tags?: string[]}[]>().default([]),
+  referenceUrls: jsonb("reference_urls").$type<{ url: string; source: string; tags?: string[] }[]>().default([]),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
@@ -74,6 +74,9 @@ export const users = pgTable('users', {
   resetTokenExpiry: timestamp('reset_token_expiry'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   lastLoginAt: timestamp('last_login_at').defaultNow().notNull(),
+  role: text('role'),
+  topics: jsonb('topics').$type<string[]>().default([]),
+  hasOnboarded: pgBoolean('has_onboarded').default(false),
 });
 
 export const userSourcePreferences = pgTable('user_source_preferences', {
@@ -151,6 +154,9 @@ export const insertUserSchema = createInsertSchema(users, {
   googleId: z.string().min(1),
   name: z.string().min(1),
   email: z.string().email(),
+  role: z.string().optional(),
+  topics: z.array(z.string()).optional(),
+  hasOnboarded: z.boolean().optional(),
 }).omit({
   id: true,
   createdAt: true,

@@ -66,26 +66,26 @@ app.use((req, res, next) => {
   const protocol = req.protocol;
   const path = req.path;
   const query = req.url.includes('?') ? req.url.split('?')[1] : '';
-  
+
   // Redirect www to non-www
   if (host && host.startsWith('www.')) {
     const newHost = host.replace('www.', '');
     const redirectUrl = `https://${newHost}${req.url}`;
     return res.redirect(301, redirectUrl);
   }
-  
+
   // Redirect HTTP to HTTPS in production
   if (process.env.NODE_ENV === 'production' && protocol !== 'https') {
     const redirectUrl = `https://${host || 'www.whatcyber.com'}${req.url}`;
     return res.redirect(301, redirectUrl);
   }
-  
+
   // Redirect non-trailing-slash URLs to trailing-slash URLs (except for file extensions and API routes)
   if (path !== '/' && !path.endsWith('/') && !path.includes('.') && !path.startsWith('/api/') && !req.query.noRedirect) {
     const redirectUrl = `https://${host || 'www.whatcyber.com'}${path}/${query ? `?${query}` : ''}`;
     return res.redirect(301, redirectUrl);
   }
-  
+
   next();
 });
 
@@ -121,7 +121,7 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(app);
-  
+
   // Google OAuth routes
   app.get('/api/auth/google',
     passport.authenticate('google', { scope: ['profile', 'email'] })
@@ -131,8 +131,8 @@ app.use((req, res, next) => {
     passport.authenticate('google', { failureRedirect: '/' }),
     (req, res) => {
       // Successful authentication, redirect to frontend
-      const frontendUrl = process.env.NODE_ENV === 'development' 
-        ? 'http://localhost:3001' 
+      const frontendUrl = process.env.NODE_ENV === 'development'
+        ? 'http://localhost:3001'
         : 'https://www.whatcyber.com/threatfeed';
       res.redirect(frontendUrl);
     }
@@ -141,13 +141,13 @@ app.use((req, res, next) => {
   // Handle the new consolidated auth endpoint for local development
   app.get('/api/auth', (req, res, next) => {
     const { action } = req.query;
-    
+
     if (action === 'callback') {
       // Handle Google OAuth callback
       passport.authenticate('google', { failureRedirect: '/' })(req, res, () => {
         // Successful authentication, redirect to frontend
-        const frontendUrl = process.env.NODE_ENV === 'development' 
-          ? 'http://localhost:3001' 
+        const frontendUrl = process.env.NODE_ENV === 'development'
+          ? 'http://localhost:3001'
           : 'https://www.whatcyber.com/threatfeed';
         res.redirect(frontendUrl);
       });
@@ -167,7 +167,7 @@ app.use((req, res, next) => {
         console.error('Logout error:', err);
         return res.status(500).json({ error: 'Failed to logout' });
       }
-      req.session?.destroy(() => {});
+      req.session?.destroy(() => { });
       res.json({ message: 'Logged out successfully' });
     });
   });
@@ -317,7 +317,14 @@ app.use((req, res, next) => {
     }
   });
 
-  const port = process.env.PORT || 5000;
+  // Setup Vite or static serving
+  if (process.env.NODE_ENV === "development" && !process.env.NO_VITE) {
+    await setupVite(app, server);
+  } else if (!process.env.NO_VITE) {
+    serveStatic(app);
+  }
+
+  const port = process.env.PORT || 3000;
   server.listen(port, () => {
     console.log(`Server running on port ${port}`);
   });

@@ -1,4 +1,4 @@
-import { type Article, type InsertArticle, type Bookmark, type InsertBookmark, type RssSource, type InsertRssSource, type UserSourcePreference, type InsertUserSourcePreference, type UserPreferences, type InsertUserPreferences } from "@shared/schema.js";
+import { type Article, type InsertArticle, type Bookmark, type InsertBookmark, type RssSource, type InsertRssSource, type UserSourcePreference, type InsertUserSourcePreference, type UserPreferences, type InsertUserPreferences, type User } from "@shared/schema.js";
 import { randomUUID } from "crypto";
 
 // Define CVE types for in-memory storage
@@ -40,38 +40,38 @@ export interface IStorage {
   getArticle(id: string): Promise<Article | undefined>;
   createArticle(article: InsertArticle): Promise<Article>;
   deleteArticle(id: string): Promise<boolean>;
-  
+
   // Bookmarks
   getBookmarks(userId?: number): Promise<Bookmark[]>;
   getBookmarksWithArticles(userId?: number): Promise<{ bookmark: Bookmark; article: Article }[]>;
   createBookmark(bookmark: InsertBookmark & { userId?: number }): Promise<Bookmark>;
   deleteBookmark(articleId: string, userId?: number): Promise<boolean>;
   isBookmarked(articleId: string, userId?: number): Promise<boolean>;
-  
+
   // RSS Sources
   getRssSources(): Promise<RssSource[]>;
   getRssSource(id: string): Promise<RssSource | undefined>;
   createRssSource(source: InsertRssSource): Promise<RssSource>;
   updateRssSource(id: string, source: Partial<InsertRssSource>): Promise<RssSource | undefined>;
   deleteRssSource(id: string): Promise<boolean>;
-  
+
   // User Source Preferences
   getUserSourcePreferences(userId: number): Promise<UserSourcePreference[]>;
   createUserSourcePreference(preference: InsertUserSourcePreference): Promise<UserSourcePreference>;
   updateUserSourcePreference(userId: number, sourceId: string, preference: Partial<InsertUserSourcePreference>): Promise<UserSourcePreference | undefined>;
   deleteUserSourcePreference(userId: number, sourceId: string): Promise<boolean>;
-  
+
   // User Preferences
   getUserPreferences(userId: number): Promise<UserPreferences | undefined>;
   createUserPreferences(preferences: InsertUserPreferences): Promise<UserPreferences>;
   updateUserPreferences(userId: number, preferences: Partial<InsertUserPreferences>): Promise<UserPreferences | undefined>;
-  
+
   // CVE/Vulnerabilities
   getCVEs(params?: { limit?: number; offset?: number; severity?: string; sort?: string }): Promise<CVE[]>;
   getCVE(id: string): Promise<CVE | undefined>;
   createCVE(cve: InsertCVE): Promise<CVE>;
   cveExists(id: string): Promise<boolean>;
-  
+
   // Email Authentication
   getUserByEmail(email: string): Promise<any | undefined>;
   getUserByVerificationToken(token: string): Promise<any | undefined>;
@@ -86,7 +86,11 @@ export interface IStorage {
   verifyUserEmail(userId: number): Promise<boolean>;
   updateUserPassword(userId: number, passwordHash: string): Promise<boolean>;
   setResetToken(userId: number, resetToken: string, expiry: Date): Promise<boolean>;
+  setResetToken(userId: number, resetToken: string, expiry: Date): Promise<boolean>;
   clearResetToken(userId: number): Promise<boolean>;
+
+  // Onboarding
+  updateUserOnboarding(userId: number, data: { role: string; topics: string[] }): Promise<User>;
 }
 
 export class MemStorage implements IStorage {
@@ -229,14 +233,14 @@ export class MemStorage implements IStorage {
   // Articles
   async getArticles(params?: { source?: string; limit?: number; offset?: number; search?: string; sortBy?: string }): Promise<Article[]> {
     let articles = Array.from(this.articles.values());
-    
+
     if (params?.source && params.source !== "all") {
       articles = articles.filter(article => article.source === params.source);
     }
 
     if (params?.search) {
       const searchTerm = params.search.toLowerCase();
-      articles = articles.filter(article => 
+      articles = articles.filter(article =>
         article.title.toLowerCase().includes(searchTerm) ||
         article.summary?.toLowerCase().includes(searchTerm) ||
         article.source.toLowerCase().includes(searchTerm)
@@ -267,7 +271,7 @@ export class MemStorage implements IStorage {
 
   async createArticle(insertArticle: InsertArticle): Promise<Article> {
     const id = randomUUID();
-    const article: Article = { 
+    const article: Article = {
       ...insertArticle,
       summary: insertArticle.summary ?? null,
       sourceIcon: insertArticle.sourceIcon ?? null,
@@ -294,24 +298,24 @@ export class MemStorage implements IStorage {
 
   async getBookmarksWithArticles(userId?: number): Promise<{ bookmark: Bookmark; article: Article }[]> {
     const result: { bookmark: Bookmark; article: Article }[] = [];
-    
+
     for (const bookmark of Array.from(this.bookmarks.values())) {
       const article = this.articles.get(bookmark.articleId);
       if (article) {
         result.push({ bookmark, article });
       }
     }
-    
+
     // Sort by bookmark creation date (newest first)
-    return result.sort((a, b) => 
+    return result.sort((a, b) =>
       new Date(b.bookmark.createdAt || 0).getTime() - new Date(a.bookmark.createdAt || 0).getTime()
     );
   }
 
   async createBookmark(insertBookmark: InsertBookmark & { userId?: number }): Promise<Bookmark> {
     const id = randomUUID();
-    const bookmark: Bookmark = { 
-      ...insertBookmark, 
+    const bookmark: Bookmark = {
+      ...insertBookmark,
       id,
       createdAt: new Date(),
     };
@@ -352,7 +356,7 @@ export class MemStorage implements IStorage {
 
   async createRssSource(insertSource: InsertRssSource): Promise<RssSource> {
     const id = randomUUID();
-    const source: RssSource = { 
+    const source: RssSource = {
       ...insertSource,
       icon: insertSource.icon ?? null,
       color: insertSource.color ?? null,
@@ -391,7 +395,7 @@ export class MemStorage implements IStorage {
   async createUserSourcePreference(insertPreference: InsertUserSourcePreference): Promise<UserSourcePreference> {
     // Generate a numeric ID for in-memory storage
     const id = Math.max(0, ...Array.from(this.userSourcePreferences.keys()).map(k => parseInt(k)), 0) + 1;
-    const preference: UserSourcePreference = { 
+    const preference: UserSourcePreference = {
       id,
       userId: insertPreference.userId,
       sourceId: insertPreference.sourceId,
@@ -407,7 +411,7 @@ export class MemStorage implements IStorage {
     // Find existing preference
     let existing: UserSourcePreference | undefined;
     let existingId: string | undefined;
-    
+
     for (const [id, preference] of Array.from(this.userSourcePreferences.entries())) {
       if (preference.userId === userId && preference.sourceId === sourceId) {
         existing = preference;
@@ -415,11 +419,11 @@ export class MemStorage implements IStorage {
         break;
       }
     }
-    
+
     if (!existing || !existingId) return undefined;
 
-    const updated: UserSourcePreference = { 
-      ...existing, 
+    const updated: UserSourcePreference = {
+      ...existing,
       ...updatePreference,
       updatedAt: new Date(),
     };
@@ -430,14 +434,14 @@ export class MemStorage implements IStorage {
   async deleteUserSourcePreference(userId: number, sourceId: string): Promise<boolean> {
     // Find existing preference
     let existingId: string | undefined;
-    
+
     for (const [id, preference] of Array.from(this.userSourcePreferences.entries())) {
       if (preference.userId === userId && preference.sourceId === sourceId) {
         existingId = id;
         break;
       }
     }
-    
+
     if (!existingId) return false;
     return this.userSourcePreferences.delete(existingId);
   }
@@ -468,7 +472,7 @@ export class MemStorage implements IStorage {
 
   async updateUserPreferences(userId: number, updatePreferences: Partial<InsertUserPreferences>): Promise<UserPreferences | undefined> {
     const existing = this.userPreferences.get(userId);
-    
+
     if (!existing) {
       // Create new if doesn't exist - provide defaults for required fields
       const defaults: InsertUserPreferences = {
@@ -496,15 +500,15 @@ export class MemStorage implements IStorage {
   // CVE/Vulnerabilities
   async getCVEs(params?: { limit?: number; offset?: number; severity?: string; sort?: string }): Promise<CVE[]> {
     let cves = Array.from(this.cves.values());
-    
+
     // Filter by severity if provided
     if (params?.severity) {
       const severityUpper = params.severity.toUpperCase();
-      cves = cves.filter(cve => 
+      cves = cves.filter(cve =>
         cve.cvssV3Severity === severityUpper || cve.cvssV2Severity === severityUpper
       );
     }
-    
+
     // Sort based on the sort parameter
     const sort = params?.sort || 'newest';
     switch (sort) {
@@ -516,12 +520,12 @@ export class MemStorage implements IStorage {
             a.cvssV3Score || 0,
             a.cvssV2Score || 0
           );
-          
+
           const scoreB = Math.max(
             b.cvssV3Score || 0,
             b.cvssV2Score || 0
           );
-          
+
           // Sort by score descending, then by last modified date descending
           if (scoreB !== scoreA) {
             return scoreB - scoreA;
@@ -532,12 +536,12 @@ export class MemStorage implements IStorage {
       case 'newest':
       default:
         // Sort by published date (newest first)
-        cves.sort((a, b) => 
+        cves.sort((a, b) =>
           new Date(b.publishedDate).getTime() - new Date(a.publishedDate).getTime()
         );
         break;
     }
-    
+
     // Apply pagination
     const offset = params?.offset || 0;
     const limit = params?.limit || 50;
@@ -612,6 +616,12 @@ export class MemStorage implements IStorage {
   async clearResetToken(userId: number): Promise<boolean> {
     console.warn('clearResetToken not implemented in MemStorage');
     return false;
+  }
+
+  async updateUserOnboarding(userId: number, data: { role: string; topics: string[] }): Promise<User> {
+    // This is a stub for MemStorage as we primarily use PostgresStorage
+    // In a real implementation, we would update the user in memory
+    throw new Error('updateUserOnboarding not implemented in MemStorage');
   }
 }
 

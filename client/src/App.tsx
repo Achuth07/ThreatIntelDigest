@@ -24,6 +24,7 @@ import SourcesPage from "@/pages/SourcesPage";
 import ContactPage from "@/pages/contact";
 import PrivacyPolicyPage from "@/pages/privacy";
 import TermsOfServicePage from "@/pages/terms";
+import OnboardingPage from "@/pages/onboarding";
 
 // Create context for login popup
 interface LoginPopupContextType {
@@ -62,6 +63,7 @@ function Router() {
         <Route path="/threatfeed" component={Home} />
         <Route path="/login" component={LoginPage} />
         <Route path="/register" component={RegisterPage} />
+        <Route path="/onboarding" component={OnboardingPage} />
         <Route path="/forgot-password" component={ForgotPasswordPage} />
         <Route path="/reset-password" component={ResetPasswordPage} />
         <Route path="/set-password" component={SetPasswordPage} />
@@ -108,12 +110,12 @@ function App() {
   useEffect(() => {
     // Set the document title
     document.title = "WhatCyber - ThreatFeed";
-    
+
     // Handle OAuth redirect parameters
     const urlParams = new URLSearchParams(window.location.search);
     const userParam = urlParams.get('user');
     const errorParam = urlParams.get('error');
-    
+
     if (userParam) {
       try {
         // Decode and parse user data
@@ -126,7 +128,7 @@ function App() {
         console.error('Error parsing user data from URL:', error);
       }
     }
-    
+
     if (errorParam) {
       console.error('OAuth error:', errorParam);
       // Remove URL parameters
@@ -136,20 +138,20 @@ function App() {
 
   useEffect(() => {
     // Only show login popup on threatfeed routes
-    const shouldShowLoginPopup = location.startsWith('/threatfeed') || 
-                                location.startsWith('/login') || 
-                                location.startsWith('/register') || 
-                                location.startsWith('/forgot-password') || 
-                                location.startsWith('/reset-password') || 
-                                location.startsWith('/set-password') || 
-                                location.startsWith('/settings') || 
-                                location.startsWith('/admin');
-    
+    const shouldShowLoginPopup = location.startsWith('/threatfeed') ||
+      location.startsWith('/login') ||
+      location.startsWith('/register') ||
+      location.startsWith('/forgot-password') ||
+      location.startsWith('/reset-password') ||
+      location.startsWith('/set-password') ||
+      location.startsWith('/settings') ||
+      location.startsWith('/admin');
+
     if (shouldShowLoginPopup) {
       // Check if user is authenticated - only show login if not authenticated
       const checkAuthStatus = () => {
         const user = getAuthenticatedUser();
-        
+
         if (!user) {
           setShowLoginPopup(true);
         } else {
@@ -170,7 +172,7 @@ function App() {
       // For non-threatfeed routes, don't show login popup and mark user as checked
       setShowLoginPopup(false);
       setUserChecked(true);
-      
+
       // Still increment visitor count on app load through our backend proxy
       const incrementVisitorCount = async () => {
         try {
@@ -178,7 +180,7 @@ function App() {
           const response = await fetch('/api/visitor-count', {
             method: 'POST'
           });
-          
+
           if (!response.ok) {
             throw new Error(`Counter API proxy failed: ${response.status}`);
           }
@@ -220,8 +222,8 @@ function App() {
           <LoginPopupContext.Provider value={{ showLoginPopup: () => setShowLoginPopup(true) }}>
             <Toaster />
             {showLoginPopup && (
-              <LoginPopup 
-                onLogin={handleLogin} 
+              <LoginPopup
+                onLogin={handleLogin}
               />
             )}
             <div className="flex flex-col min-h-screen">
