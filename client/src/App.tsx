@@ -122,10 +122,21 @@ function App() {
       try {
         // Decode and parse user data
         const userData = JSON.parse(decodeURIComponent(userParam));
+        console.log('App.tsx - OAuth callback - User data:', userData);
+
         // Store user data in localStorage
         updateAuthToken(userData);
+
         // Remove URL parameters
         window.history.replaceState({}, document.title, window.location.pathname);
+
+        // Check if user needs onboarding
+        if (!userData.hasOnboarded) {
+          console.log('App.tsx - User needs onboarding, redirecting to /onboarding');
+          window.location.href = '/onboarding';
+        } else {
+          console.log('App.tsx - User has onboarded, staying on current page');
+        }
       } catch (error) {
         console.error('Error parsing user data from URL:', error);
       }

@@ -84,12 +84,16 @@ export default function LoginPage() {
 
   // Check for user data from Google login
   useEffect(() => {
+    console.log('Login page - checking for user data in URL');
+    console.log('Login page - Current URL:', window.location.href);
     const params = new URLSearchParams(window.location.search);
     const userStr = params.get('user');
+    console.log('Login page - User param:', userStr ? 'Found' : 'Not found');
 
     if (userStr) {
       try {
         const userData = JSON.parse(decodeURIComponent(userStr));
+        console.log('Login page - Parsed user data:', userData);
         if (userData.token) {
           setAuthToken(userData.token);
           toast({
@@ -97,10 +101,15 @@ export default function LoginPage() {
             description: `Welcome back, ${userData.name}!`,
           });
 
+          // Clean up URL
+          window.history.replaceState({}, '', '/login');
+
           // Check if user has onboarded
           if (userData.hasOnboarded) {
+            console.log('Login page - User has onboarded, navigating to /threatfeed/');
             navigate('/threatfeed/');
           } else {
+            console.log('Login page - User needs onboarding, navigating to /onboarding');
             navigate('/onboarding');
           }
         }

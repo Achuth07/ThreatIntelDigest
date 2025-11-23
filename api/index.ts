@@ -429,7 +429,7 @@ async function handleGoogleCallback(req: VercelRequest, res: VercelResponse) {
   // Use VERCAL_ENV for Vercel deployments, fallback to NODE_ENV
   const isProduction = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
   const backendUrl = isProduction ? 'https://www.whatcyber.com' : 'http://localhost:5001';
-  const frontendUrl = isProduction ? 'https://www.whatcyber.com/login' : 'http://localhost:5173/login';
+  const frontendUrl = isProduction ? 'https://www.whatcyber.com/threatfeed' : 'http://localhost:5173/threatfeed';
   const redirectUri = `${backendUrl}/api/auth?action=callback`;
 
   console.log('Environment Detection:');
@@ -522,8 +522,11 @@ async function handleGoogleCallback(req: VercelRequest, res: VercelResponse) {
 
     // Redirect to frontend with user data (URL encoded)
     const userDataString = encodeURIComponent(JSON.stringify(userData));
+    const redirectUrl = `${frontendUrl}?user=${userDataString}`;
     console.log('Google Callback - Redirecting with user data');
-    res.redirect(`${frontendUrl}?user=${userDataString}`);
+    console.log('Google Callback - Redirect URL:', redirectUrl);
+    console.log('Google Callback - User data:', JSON.stringify(userData));
+    res.redirect(redirectUrl);
   } catch (error) {
     console.error('Authentication error:', error);
     console.log('Google Callback - Redirecting with error');
