@@ -493,10 +493,23 @@ const HeroSection = () => {
     document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const handleGetStarted = () => {
+    // Check if user is already logged in
+    const user = getAuthenticatedUser();
+
+    if (user && user.token) {
+      // User is logged in, redirect to threat feed
+      window.location.href = '/threatfeed';
+    } else {
+      // User is not logged in, redirect to login page
+      window.location.href = '/login';
+    }
+  };
+
   return (
     <section
       id="home"
-      className="min-h-screen relative overflow-hidden flex items-center"
+      className="min-h-screen relative overflow-hidden flex items-center pt-20"
       style={{
         background: `
           radial-gradient(ellipse 120% 100% at 30% 50%, rgba(0, 212, 255, 0.08), transparent),
@@ -618,7 +631,7 @@ const HeroSection = () => {
               transition={{ duration: 0.8, delay: 0.6 }}
             >
               <motion.button
-                onClick={() => window.open('https://www.whatcyber.com/threatfeed', '_blank')}
+                onClick={handleGetStarted}
                 className="group relative overflow-hidden bg-gradient-to-r from-[#00d4ff] to-[#00ff88] hover:from-[#0099cc] hover:to-[#00cc66] text-black font-semibold px-8 py-4 text-lg transition-all duration-300 shadow-lg shadow-[#00d4ff]/20 hover:shadow-xl hover:shadow-[#00d4ff]/30 border-0 rounded-full"
                 whileHover={{
                   scale: 1.05,

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Link, useLocation } from 'wouter';
 import { getAuthenticatedUser, updateAuthToken } from '@/lib/auth';
 import { useLoginPopup } from '@/App';
+import { useToast } from '@/hooks/use-toast';
 import logoImage from '@/assets/logo/android-chrome-512x512.png';
 
 interface User {
@@ -34,6 +35,7 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
   const [isSettingsOpen, setIsSettingsOpen] = useState(false); // For dropdown menu
   const settingsRef = useRef<HTMLDivElement>(null); // For detecting clicks outside
   const { showLoginPopup } = useLoginPopup();
+  const { toast } = useToast();
   const [location] = useLocation();
 
   // Close dropdown when clicking outside
@@ -244,7 +246,10 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
               className="p-2 text-slate-400 hover:text-slate-100 transition-colors relative"
               onClick={() => {
                 if (user && user.isGuest) {
-                  showLoginPopup();
+                  toast({
+                    title: "Authentication Required",
+                    description: "Login to use bookmark feature and personalize your experiences.",
+                  });
                 } else {
                   onBookmarksClick();
                 }

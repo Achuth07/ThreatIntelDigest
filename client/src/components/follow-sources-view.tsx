@@ -79,6 +79,14 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
       return;
     }
 
+    if (user.isGuest) {
+      toast({
+        title: "Authentication Required",
+        description: "Login to Follow more sources and personalize your experiences.",
+      });
+      return;
+    }
+
     // Find the source in ALL available sources (not just user's current sources)
     let existingSource = allAvailableSources.find(source =>
       source.name === sourceToAdd.name || source.url === sourceToAdd.url

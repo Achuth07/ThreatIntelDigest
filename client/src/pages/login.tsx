@@ -111,19 +111,10 @@ export default function LoginPage() {
   }, [navigate, toast]);
 
   const handleGuestLogin = () => {
-    // For guest login, we can just redirect to onboarding directly
-    // Or if we want to track them as a guest user, we might need a backend endpoint
-    // For now, let's just redirect to onboarding which will handle guest state locally if needed
-    // But wait, the onboarding requires a user ID to save preferences.
-    // If we want "Continue as Guest", maybe we should create a temporary guest account?
-    // Or just let them browse without saving?
-    // The requirement says "modify the landing page to redirect users to the login page, offering Google, email, or guest sign-in options."
-    // And "Implement a new backend API endpoint ... that accepts onboarding data".
-    // If they are a guest, they probably won't have a user ID to save to.
-    // Let's assume "Continue as Guest" means just going to the feed without logging in.
-    // But the feed might need sources.
-    // If they are guest, they have no persistent preferences.
-    // Maybe we just redirect to /threatfeed and let the frontend handle "no user" state (which shows all sources).
+    // Set guest token in localStorage
+    localStorage.setItem('guestToken', 'true');
+
+    // Navigate to threatfeed
     navigate('/threatfeed/');
   };
 

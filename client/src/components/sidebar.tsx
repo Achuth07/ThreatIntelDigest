@@ -14,7 +14,7 @@ import { exportBookmarks } from '@/lib/export-utils';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { useLoginPopup } from '@/App';
 import { getFaviconUrl } from '@/lib/favicon-utils';
-import { VENDOR_THREAT_RESEARCH, GOVERNMENT_ALERTS, MALWARE_RESEARCH, GENERAL_SECURITY_NEWS, LEGACY_SOURCES } from '@/lib/rss-sources';
+import { VENDOR_THREAT_RESEARCH, GOVERNMENT_ALERTS, MALWARE_RESEARCH, GENERAL_SECURITY_NEWS, LEGACY_SOURCES, RSS_SOURCES } from '@/lib/rss-sources';
 import type { InsertRssSource, RssSource } from '@shared/schema';
 
 interface SidebarProps {
@@ -88,6 +88,34 @@ export function Sidebar({
       } finally {
         setIsLoadingSources(false);
       }
+      return;
+    }
+
+    // For guest users, load predefined sources
+    if (user.isGuest) {
+      const defaultGuestSourceNames = [
+        "Microsoft Security Blog",
+        "Palo Alto Unit 42",
+        "CrowdStrike Blog",
+        "US-Cert (Alerts)",
+        "Bleeping Computer"
+      ];
+
+      const guestSources = RSS_SOURCES.filter(source =>
+        defaultGuestSourceNames.includes(source.name)
+      ).map((source, index) => ({
+        ...source,
+        id: `guest-source-${index}`,
+        isActive: true,
+        userId: 'guest',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        lastFetched: null
+      }));
+
+      setUserSources(guestSources as unknown as RssSource[]);
+      setHasLoadedSources(true);
+      setIsLoadingSources(false);
       return;
     }
 
@@ -206,6 +234,14 @@ export function Sidebar({
       return;
     }
 
+    if (user.isGuest) {
+      toast({
+        title: "Authentication Required",
+        description: "Login to customize your sources and personalize your experiences.",
+      });
+      return;
+    }
+
     updateUserSourceMutation.mutate({
       sourceId,
       isActive: !currentActiveState
@@ -218,6 +254,14 @@ export function Sidebar({
         title: "Authentication Required",
         description: "Please sign in to customize your sources.",
         variant: "destructive",
+      });
+      return;
+    }
+
+    if (user.isGuest) {
+      toast({
+        title: "Authentication Required",
+        description: "Login to customize your sources and personalize your experiences.",
       });
       return;
     }
@@ -307,6 +351,14 @@ export function Sidebar({
         title: "Authentication Required",
         description: "Please sign in to add sources.",
         variant: "destructive",
+      });
+      return;
+    }
+
+    if (user.isGuest) {
+      toast({
+        title: "Authentication Required",
+        description: "Login to Follow more sources and personalize your experiences.",
       });
       return;
     }
@@ -536,7 +588,10 @@ export function Sidebar({
               className="w-full justify-start p-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-700"
               onClick={() => {
                 if (user && user.isGuest) {
-                  showLoginPopup();
+                  toast({
+                    title: "Authentication Required",
+                    description: "Login to use bookmark feature and personalize your experiences.",
+                  });
                 } else {
                   onBookmarksClick?.();
                 }
