@@ -109,10 +109,13 @@ export default function OnboardingFlow() {
                 });
 
                 if (!response.ok) {
-                    throw new Error("Failed to submit onboarding data");
+                    const errorData = await response.json();
+                    console.error('Onboarding submission failed:', errorData);
+                    throw new Error(errorData.message || errorData.error || "Failed to submit onboarding data");
                 }
 
                 const data = await response.json();
+                console.log('Onboarding submission successful:', data);
 
                 // Update local user data if returned
                 if (data.user) {
@@ -120,22 +123,33 @@ export default function OnboardingFlow() {
                     // But for now, just proceeding is fine as the backend updated the DB
                 }
 
+                // Force refresh of sources to show only user-selected sources
+                // This is important because the sidebar may have cached all sources before onboarding
+                localStorage.removeItem('sources_cache'); // Clear any cached sources
+
                 toast({
                     title: "Onboarding Complete",
                     description: "Your feed has been personalized.",
                 });
+
+                // Use window.location.href to force a full page reload
+                // This ensures the sidebar fetches fresh sources with user preferences
+                setTimeout(() => {
+                    window.location.href = "/threatfeed";
+                }, 500); // Small delay to show the toast
+                return;
             } catch (error) {
                 console.error("Failed to save onboarding data", error);
                 toast({
                     title: "Error",
-                    description: "Failed to save your preferences. Please try again.",
+                    description: error instanceof Error ? error.message : "Failed to save your preferences. Please try again.",
                     variant: "destructive"
                 });
                 return; // Don't redirect if failed
             }
         }
 
-        setLocation("/threatfeed");
+        // This should not be reached if onboarding submission was successful
     };
 
     const variants = {

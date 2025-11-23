@@ -115,15 +115,14 @@ export default function RegisterPage() {
       // Store the auth token directly from registration response
       if (data.token) {
         setAuthToken(data.token);
-        
+
         toast({
           title: 'Registration Successful!',
-          description: 'Welcome to WhatCyber ThreatFeed!',
+          description: 'Welcome to WhatCyber! Let\'s personalize your experience.',
         });
 
-        // Redirect to threatfeed page
-        navigate('/threatfeed/');
-        window.location.reload(); // Refresh to update auth state
+        // New users should go through onboarding
+        navigate('/onboarding');
       } else {
         throw new Error('No token received');
       }
@@ -140,7 +139,7 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-whatcyber-dark flex items-center justify-center p-4">
-      <SEO 
+      <SEO
         title="Register - WhatCyber ThreatFeed"
         description="Create a new account on WhatCyber ThreatFeed to access cybersecurity threat intelligence and vulnerability tracking."
         keywords="register, signup, cybersecurity, threat intelligence, CVE, vulnerabilities, security news"
@@ -156,9 +155,9 @@ export default function RegisterPage() {
             Back to Login
           </Button>
           <div className="flex justify-center mb-4">
-            <img 
-              src={logoImage} 
-              alt="WhatCyber Logo" 
+            <img
+              src={logoImage}
+              alt="WhatCyber Logo"
               className="w-16 h-16 rounded-lg cursor-pointer"
               onClick={() => navigate('/')}
             />
@@ -229,8 +228,8 @@ export default function RegisterPage() {
               {formData.password && (
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <Progress 
-                      value={passwordStrength} 
+                    <Progress
+                      value={passwordStrength}
                       className={`h-2 ${getStrengthColor(passwordStrength)}`}
                     />
                     <span className="text-xs text-slate-400">{getStrengthText(passwordStrength)}</span>
@@ -266,8 +265,8 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full bg-whatcyber-teal hover:bg-whatcyber-teal/80 text-white"
               disabled={isLoading}
             >

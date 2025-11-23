@@ -5,6 +5,7 @@ import { Shield, Menu, X, Database, Eye, Settings, Zap, Target, Github, Linkedin
 import * as THREE from 'three';
 import { Helmet } from "react-helmet-async";
 import { SEO } from '@/components/seo';
+import { getAuthenticatedUser } from '@/lib/auth';
 
 // CyberSphere Component
 const CyberSphere = () => {
@@ -241,7 +242,16 @@ const Header = () => {
   }, []);
 
   const handleGetStarted = () => {
-    window.location.href = '/login';
+    // Check if user is already logged in
+    const user = getAuthenticatedUser();
+
+    if (user && user.token) {
+      // User is logged in, redirect to threat feed
+      window.location.href = '/threatfeed';
+    } else {
+      // User is not logged in, redirect to login page
+      window.location.href = '/login';
+    }
   };
 
   const navItems = [

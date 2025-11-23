@@ -1260,28 +1260,60 @@ async function handleSourcesEndpoints(req: VercelRequest, res: VercelResponse, a
       const userId = getUserIdFromRequest(req);
 
       if (userId) {
-        // Fetch user-specific sources
-        const result = await db.execute(sql`
-          SELECT s.id, s.name, s.url, s.icon, s.color, s.is_active, s.last_fetched,
-                 p.is_active as user_active
-          FROM rss_sources s
-          LEFT JOIN user_source_preferences p ON s.id = p.source_id AND p.user_id = ${userId}
-          WHERE s.is_active = true
-          ORDER BY s.name ASC
+        // First, check if user has any source preferences
+        const prefsCheck = await db.execute(sql`
+          SELECT COUNT(*) as count 
+          FROM user_source_preferences 
+          WHERE user_id = ${userId}
         `);
 
-        const sources = result.rows.map((row: any) => ({
-          id: row.id,
-          name: row.name,
-          url: row.url,
-          icon: row.icon,
-          color: row.color,
-          isActive: row.user_active !== null ? row.user_active : true, // Default to active if no preference
-          lastFetched: row.last_fetched
-        }));
+        const hasPreferences = (prefsCheck.rows[0] as any).count > 0;
 
-        console.log(`Successfully fetched ${sources.length} user-specific sources`);
-        res.json(sources);
+        if (hasPreferences) {
+          // User has preferences - show only their selected sources (where preference exists and is active)
+          const result = await db.execute(sql`
+            SELECT s.id, s.name, s.url, s.icon, s.color, s.is_active, s.last_fetched,
+                   p.is_active as user_active
+            FROM rss_sources s
+            INNER JOIN user_source_preferences p ON s.id = p.source_id AND p.user_id = ${userId}
+            WHERE s.is_active = true AND p.is_active = true
+            ORDER BY s.name ASC
+          `);
+
+          const sources = result.rows.map((row: any) => ({
+            id: row.id,
+            name: row.name,
+            url: row.url,
+            icon: row.icon,
+            color: row.color,
+            isActive: true, // All returned sources are active
+            lastFetched: row.last_fetched
+          }));
+
+          console.log(`Successfully fetched ${sources.length} user-selected sources`);
+          res.json(sources);
+        } else {
+          // User has no preferences yet - show all active sources
+          const result = await db.execute(sql`
+            SELECT s.id, s.name, s.url, s.icon, s.color, s.is_active, s.last_fetched
+            FROM rss_sources s
+            WHERE s.is_active = true
+            ORDER BY s.name ASC
+          `);
+
+          const sources = result.rows.map((row: any) => ({
+            id: row.id,
+            name: row.name,
+            url: row.url,
+            icon: row.icon,
+            color: row.color,
+            isActive: true,
+            lastFetched: row.last_fetched
+          }));
+
+          console.log(`Successfully fetched ${sources.length} sources (no user preferences)`);
+          res.json(sources);
+        }
       } else {
         // Fetch all active sources for unauthenticated users
         const result = await db.execute(sql`
@@ -4330,23 +4362,31 @@ async function handleUserOnboardingEndpoints(req: VercelRequest, res: VercelResp
   if (req.method === 'POST') {
     try {
       const { role, topics, sourceIds } = req.body;
+      console.log('Onboarding submission received:', { userId, role, topics, sourceIds });
 
       // Validate input
       if (!role || !Array.isArray(topics) || !Array.isArray(sourceIds)) {
+        console.error('Invalid onboarding data:', { role, topics, sourceIds });
         return res.status(400).json({ message: 'Invalid onboarding data' });
       }
 
       // Update user profile with role and topics
+      console.log('Updating user onboarding...');
       const updatedUser = await storage.updateUserOnboarding(userId, { role, topics });
+      console.log('User onboarding updated:', updatedUser);
 
       // Handle source preferences
       // First, clear existing preferences for this user (if any)
+      console.log('Getting existing preferences...');
       const existingPrefs = await storage.getUserSourcePreferences(userId);
+      console.log('Existing preferences:', existingPrefs);
+
       for (const pref of existingPrefs) {
         await storage.deleteUserSourcePreference(userId, pref.sourceId);
       }
 
       // Add new source preferences
+      console.log('Creating new source preferences...');
       const preferencePromises = sourceIds.map((sourceId: string) =>
         storage.createUserSourcePreference({
           userId,
@@ -4356,6 +4396,7 @@ async function handleUserOnboardingEndpoints(req: VercelRequest, res: VercelResp
       );
 
       await Promise.all(preferencePromises);
+      console.log('Source preferences created successfully');
 
       return res.status(200).json({
         message: 'Onboarding completed successfully',
