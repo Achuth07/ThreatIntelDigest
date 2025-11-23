@@ -15,12 +15,13 @@ import { useToast } from '@/hooks/use-toast';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { SEO } from '@/components/seo';
 import type { Article, Bookmark, RssSource } from '@shared/schema';
+import { RSS_SOURCES } from '@/lib/rss-sources';
 import { Helmet } from "react-helmet-async";
 
 export default function Home() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  
+
   // State management
   const [selectedSource, setSelectedSource] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -40,15 +41,43 @@ export default function Home() {
   console.log('Home component - User:', user);
 
   // Fetch user sources
-  const { data: userSources = [] } = useQuery<RssSource[]>({
+  // Fetch user sources
+  const { data: fetchedSources = [] } = useQuery<RssSource[]>({
     queryKey: ['/api/sources'],
     // Ensure cache is invalidated when sources change
     staleTime: 0,
+    // Disable fetching for guest users to prevent loading all sources
+    enabled: !user?.isGuest
   });
+
+  // Determine effective user sources (handle guest logic)
+  let userSources: RssSource[] = fetchedSources;
+
+  if (user?.isGuest) {
+    const defaultGuestSourceNames = [
+      "Microsoft Security Blog",
+      "Palo Alto Unit 42",
+      "CrowdStrike Blog",
+      "US-Cert (Alerts)",
+      "Bleeping Computer"
+    ];
+
+    userSources = RSS_SOURCES.filter(source =>
+      defaultGuestSourceNames.includes(source.name)
+    ).map((source, index) => ({
+      ...source,
+      id: `guest-source-${index}`,
+      isActive: true,
+      userId: 'guest',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      lastFetched: null
+    })) as unknown as RssSource[];
+  }
 
   // Fetch articles
   const { data: articles = [], isLoading: articlesLoading, refetch: refetchArticles } = useQuery<(Article & { isBookmarked?: boolean })[]>({
-    queryKey: ['/api/articles', { 
+    queryKey: ['/api/articles', {
       source: selectedSource === 'all' ? undefined : selectedSource,
       search: searchQuery,
       sortBy,
@@ -68,7 +97,7 @@ export default function Home() {
     // Disable caching to ensure we always get fresh data
     staleTime: 0,
   });
-  
+
   // Fetch bookmarked articles when in bookmarks view
   const { data: bookmarkedArticles = [], isLoading: bookmarkedArticlesLoading } = useQuery<any[]>({
     queryKey: ['/api/bookmarks', { withArticles: true }],
@@ -76,7 +105,7 @@ export default function Home() {
     staleTime: 0,
   });
   console.log('Home component - Bookmarks:', bookmarks, 'Loading:', bookmarksLoading, 'Error:', bookmarksError, 'User:', user);
-  
+
   // Refetch bookmarks when user changes
   useEffect(() => {
     if (user && user.token) {
@@ -216,7 +245,7 @@ export default function Home() {
       const now = new Date();
       const articleDate = new Date(article.publishedAt);
       const diffInDays = Math.floor((now.getTime() - articleDate.getTime()) / (1000 * 60 * 60 * 24));
-      
+
       switch (timeFilter) {
         case 'today':
           if (diffInDays > 0) return false;
@@ -240,13 +269,13 @@ export default function Home() {
 
   // Show bookmarked articles if bookmarks view is active
   // When showing bookmarks, we should display ALL bookmarked articles regardless of current filters
-  const displayArticles = showBookmarks 
+  const displayArticles = showBookmarks
     ? (bookmarkedArticles as any[]).map(item => ({
-        ...item.article,
-        isBookmarked: true
-      }))
+      ...item.article,
+      isBookmarked: true
+    }))
     : filteredArticles;
-    
+
   // Log a warning if we're in bookmarks view but not all bookmarks are displayed
   if (showBookmarks) {
     const bookmarkCount = (bookmarks as Bookmark[]).length;
@@ -255,12 +284,12 @@ export default function Home() {
       console.warn(`Bookmark count mismatch: ${bookmarkCount} bookmarks exist but only ${displayedBookmarkCount} are displayed`);
     }
   }
-  
+
   console.log('Display articles count:', displayArticles.length, 'Show bookmarks:', showBookmarks);
   console.log('Bookmarks count:', (bookmarks as Bookmark[]).length);
   console.log('Bookmarks:', bookmarks);
   console.log('Articles:', articles.map(a => a.id));
-  
+
   // Log filtering details when in bookmarks view
   if (showBookmarks) {
     console.log('Filtering details:');
@@ -280,32 +309,31 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-whatcyber-darker text-slate-100 flex flex-col">
-      <SEO 
+      <SEO
         title="Live Cybersecurity News Feed | WhatCyber"
         description="Your live, aggregated feed of the latest cybersecurity news. Stay updated on vulnerabilities, threat intel, and breaking stories from around the web."
         keywords="cybersecurity news, threat intelligence, vulnerability feed, security alerts, cyber threats, security updates"
       />
-      <Header 
+      <Header
         onSearch={handleSearch}
         bookmarkCount={(bookmarks as Bookmark[]).length}
         onBookmarksClick={handleBookmarksClick}
         onSidebarToggle={handleSidebarToggle}
         isSidebarOpen={isSidebarOpen}
       />
-      
+
       <div className="flex flex-1 min-h-0 relative">
         {/* Mobile Overlay */}
         {isSidebarOpen && (
-          <div 
+          <div
             className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
             onClick={handleSidebarClose}
           />
         )}
-        
+
         {/* Sidebar */}
-        <div className={`${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } fixed left-0 top-16 h-[calc(100vh-4rem)] z-30 lg:relative lg:translate-x-0 lg:z-10 lg:top-0 lg:h-full transition-transform duration-300 ease-in-out`}>
+        <div className={`${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          } fixed left-0 top-16 h-[calc(100vh-4rem)] z-30 lg:relative lg:translate-x-0 lg:z-10 lg:top-0 lg:h-full transition-transform duration-300 ease-in-out`}>
           <Sidebar
             selectedSource={selectedSource}
             onSourceSelect={(source) => {
@@ -328,7 +356,7 @@ export default function Home() {
           {showVulnerabilities ? (
             <CVEList onClose={handleVulnerabilitiesClose} />
           ) : showFollowSources ? (
-            <FollowSourcesView 
+            <FollowSourcesView
               userSources={userSources}
               onBack={handleFollowSourcesBack}
             />
@@ -341,8 +369,8 @@ export default function Home() {
                     {showBookmarks ? 'Bookmarked Articles' : 'Latest Threat Intelligence'}
                   </h1>
                   <p className="text-sm lg:text-base text-slate-400" data-testid="text-page-description">
-                    {showBookmarks 
-                      ? user 
+                    {showBookmarks
+                      ? user
                         ? 'Your saved articles for later reading'
                         : 'Please log in to view your bookmarks'
                       : 'Stay updated with the latest cybersecurity threats and vulnerabilities'
@@ -415,15 +443,15 @@ export default function Home() {
                   ) : displayArticles.length === 0 ? (
                     <div className="text-center py-12">
                       <div className="text-slate-400 text-lg mb-2" data-testid="text-no-articles">
-                        {showBookmarks 
+                        {showBookmarks
                           ? "No bookmarked articles yet"
-                          : searchQuery 
+                          : searchQuery
                             ? "No articles found matching your search"
                             : "No articles available"
                         }
                       </div>
                       <p className="text-slate-500 text-sm" data-testid="text-no-articles-description">
-                        {showBookmarks 
+                        {showBookmarks
                           ? "Bookmark articles to read them later"
                           : searchQuery
                             ? "Try adjusting your search terms or filters"
@@ -467,9 +495,9 @@ export default function Home() {
           )}
         </main>
       </div>
-      
+
       {/* Article Viewer */}
-      <ArticleViewer 
+      <ArticleViewer
         articleUrl={selectedArticleUrl}
         onClose={handleCloseArticleViewer}
       />
