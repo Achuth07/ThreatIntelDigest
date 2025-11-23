@@ -242,7 +242,13 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
               variant="ghost"
               size="sm"
               className="p-2 text-slate-400 hover:text-slate-100 transition-colors relative"
-              onClick={onBookmarksClick}
+              onClick={() => {
+                if (user && user.isGuest) {
+                  showLoginPopup();
+                } else {
+                  onBookmarksClick();
+                }
+              }}
               data-testid="button-bookmarks"
               title="Bookmarks"
             >

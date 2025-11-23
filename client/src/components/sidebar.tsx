@@ -12,6 +12,7 @@ import { AddSourcesDialog } from '@/components/add-sources-dialog';
 import { ConfirmationDialog } from '@/components/confirmation-dialog';
 import { exportBookmarks } from '@/lib/export-utils';
 import { getAuthenticatedUser } from '@/lib/auth';
+import { useLoginPopup } from '@/App';
 import { getFaviconUrl } from '@/lib/favicon-utils';
 import { VENDOR_THREAT_RESEARCH, GOVERNMENT_ALERTS, MALWARE_RESEARCH, GENERAL_SECURITY_NEWS, LEGACY_SOURCES } from '@/lib/rss-sources';
 import type { InsertRssSource, RssSource } from '@shared/schema';
@@ -58,6 +59,7 @@ export function Sidebar({
     sourceName: null
   });
   const [hasLoadedSources, setHasLoadedSources] = useState(false);
+  const { showLoginPopup } = useLoginPopup();
 
   // Reference for the add sources button
   const addSourcesButtonRef = useRef<HTMLButtonElement>(null);
@@ -71,9 +73,9 @@ export function Sidebar({
   // Fetch user-specific sources with useCallback to prevent re-creation
   const fetchUserSources = useCallback(async (force = false) => {
     if (hasLoadedSources && !force) return; // Prevent multiple loads unless forced
-    
+
     setIsLoadingSources(true);
-    
+
     if (!user) {
       // For unauthenticated users, fetch all active sources
       try {
@@ -169,7 +171,7 @@ export function Sidebar({
   });
 
   const updateUserSourceMutation = useMutation({
-    mutationFn: ({ sourceId, isActive }: { sourceId: string; isActive: boolean }) => 
+    mutationFn: ({ sourceId, isActive }: { sourceId: string; isActive: boolean }) =>
       apiRequest('POST', '/api/user-source-preferences/', { sourceId, isActive }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/sources'] });
@@ -203,10 +205,10 @@ export function Sidebar({
       });
       return;
     }
-    
-    updateUserSourceMutation.mutate({ 
-      sourceId, 
-      isActive: !currentActiveState 
+
+    updateUserSourceMutation.mutate({
+      sourceId,
+      isActive: !currentActiveState
     });
   };
 
@@ -219,7 +221,7 @@ export function Sidebar({
       });
       return;
     }
-    
+
     // Show confirmation dialog before disabling
     setDeleteConfirmation({ open: true, sourceId, sourceName });
   };
@@ -227,9 +229,9 @@ export function Sidebar({
   const confirmDeleteSource = () => {
     if (deleteConfirmation.sourceId) {
       // Instead of deleting, we toggle the source to inactive
-      updateUserSourceMutation.mutate({ 
-        sourceId: deleteConfirmation.sourceId, 
-        isActive: false 
+      updateUserSourceMutation.mutate({
+        sourceId: deleteConfirmation.sourceId,
+        isActive: false
       });
       setDeleteConfirmation({ open: false, sourceId: null, sourceName: null });
     }
@@ -243,11 +245,11 @@ export function Sidebar({
   const renderSourceFavicon = (source: RssSource) => {
     const isActive = source.isActive !== false;
     const faviconUrl = getFaviconUrl(source.url, 20);
-    
+
     return (
       <div className={`w-5 h-5 flex items-center justify-center ${isActive ? '' : 'opacity-50'}`}>
-        <img 
-          src={faviconUrl} 
+        <img
+          src={faviconUrl}
           alt={`${source.name} icon`}
           className="w-5 h-5 rounded-sm"
           onError={(e) => {
@@ -308,7 +310,7 @@ export function Sidebar({
       });
       return;
     }
-    
+
     // Find the source in our predefined lists
     const allSources = [
       ...VENDOR_THREAT_RESEARCH,
@@ -317,12 +319,12 @@ export function Sidebar({
       ...GENERAL_SECURITY_NEWS,
       ...LEGACY_SOURCES
     ];
-    
+
     const sourceToAdd = allSources.find(source => source.name === sourceName);
     if (!sourceToAdd) return;
-    
+
     // Check if source already exists in the user's sources and is active
-    const activeSourceExists = userSources.some(existing => 
+    const activeSourceExists = userSources.some(existing =>
       existing.isActive && (existing.name === sourceToAdd.name || existing.url === sourceToAdd.url)
     );
 
@@ -336,27 +338,27 @@ export function Sidebar({
     }
 
     // Check if inactive source exists that we can reactivate
-    const inactiveSource = userSources.find(existing => 
+    const inactiveSource = userSources.find(existing =>
       !existing.isActive && (existing.name === sourceToAdd.name || existing.url === sourceToAdd.url)
     );
 
     if (inactiveSource) {
       // Reactivate existing inactive source
-      updateUserSourceMutation.mutate({ 
-        sourceId: inactiveSource.id, 
-        isActive: true 
+      updateUserSourceMutation.mutate({
+        sourceId: inactiveSource.id,
+        isActive: true
       });
     } else {
       // Check if the source exists globally
-      const globalSource = userSources.find(source => 
+      const globalSource = userSources.find(source =>
         source.name === sourceToAdd.name || source.url === sourceToAdd.url
       );
-      
+
       if (globalSource) {
         // If source exists globally, just enable it for this user
-        updateUserSourceMutation.mutate({ 
-          sourceId: globalSource.id, 
-          isActive: true 
+        updateUserSourceMutation.mutate({
+          sourceId: globalSource.id,
+          isActive: true
         });
       } else {
         // If source doesn't exist globally, show a message
@@ -371,7 +373,7 @@ export function Sidebar({
 
   // Function to check if a source is already added
   const isSourceAdded = (sourceName: string) => {
-    return userSources.some(source => 
+    return userSources.some(source =>
       source.name === sourceName && source.isActive
     );
   };
@@ -380,16 +382,16 @@ export function Sidebar({
   const renderSourceCard = (source: any) => {
     const isAdded = isSourceAdded(source.name);
     const faviconUrl = getFaviconUrl(source.url, 16);
-    
+
     return (
-      <div 
+      <div
         key={source.name}
         className="border border-whatcyber-light-gray/30 rounded-lg p-3 bg-whatcyber-darker hover:bg-whatcyber-gray/50 transition-colors"
       >
         <div className="flex items-start space-x-2">
           <div className="flex-shrink-0 mt-0.5">
-            <img 
-              src={faviconUrl} 
+            <img
+              src={faviconUrl}
               alt={`${source.name} icon`}
               className="w-4 h-4 rounded-sm"
               onError={(e) => {
@@ -446,14 +448,14 @@ export function Sidebar({
             </Button>
           </div>
         )}
-        
+
         {/* Filter Options - Moved to top */}
         <div className="mb-6">
           <h3 className="text-md font-medium text-slate-200 mb-3 flex items-center">
             <Filter className="w-5 h-5 text-whatcyber-teal mr-2" />
             Filters
           </h3>
-          
+
           {/* Time Filter */}
           <div className="space-y-2">
             <Label className="block text-sm text-slate-400">Time Range</Label>
@@ -514,7 +516,7 @@ export function Sidebar({
               <RefreshCw className={`w-4 h-4 mr-2 ${refreshFeedsMutation.isPending ? 'animate-spin' : ''}`} />
               {refreshFeedsMutation.isPending ? 'Refreshing...' : 'Refresh All Feeds'}
             </Button>
-            
+
             <Button
               variant="ghost"
               size="sm"
@@ -526,13 +528,19 @@ export function Sidebar({
               <Download className={`w-4 h-4 mr-2 ${exportBookmarksMutation.isPending ? 'animate-pulse' : ''}`} />
               {exportBookmarksMutation.isPending ? 'Exporting...' : 'Export Bookmarks'}
             </Button>
-            
+
             {/* New Bookmarks Button */}
             <Button
               variant="ghost"
               size="sm"
               className="w-full justify-start p-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-700"
-              onClick={onBookmarksClick}
+              onClick={() => {
+                if (user && user.isGuest) {
+                  showLoginPopup();
+                } else {
+                  onBookmarksClick?.();
+                }
+              }}
               data-testid="button-sidebar-bookmarks"
             >
               <Bookmark className="w-4 h-4 mr-2" />
@@ -540,7 +548,7 @@ export function Sidebar({
             </Button>
 
           </div>
-          
+
           {/* Callout box for adding new sources */}
           {activeUserSources.length === 0 && (
             <div className="mt-4 p-3 bg-whatcyber-teal/10 border border-whatcyber-teal/30 rounded-lg">
@@ -559,7 +567,7 @@ export function Sidebar({
 
         {/* Follow Sources Section - Moved to its own section */}
         <div className="mb-6">
-          <div 
+          <div
             className="w-full flex items-center justify-between p-2 cursor-pointer hover:bg-slate-700 rounded-lg"
             onClick={onFollowSourcesClick}
             data-testid="button-follow-sources"
@@ -584,13 +592,12 @@ export function Sidebar({
               </div>
             </div>
           </CollapsibleTrigger>
-          
+
           <CollapsibleContent className="space-y-2">
             {/* All Sources */}
             <button
-              className={`w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
-                selectedSource === 'all' ? 'bg-whatcyber-teal/20 border border-whatcyber-teal/30' : 'hover:bg-whatcyber-gray/50'
-              }`}
+              className={`w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${selectedSource === 'all' ? 'bg-whatcyber-teal/20 border border-whatcyber-teal/30' : 'hover:bg-whatcyber-gray/50'
+                }`}
               onClick={() => onSourceSelect('all')}
               data-testid="button-source-all"
             >
@@ -607,9 +614,8 @@ export function Sidebar({
             {activeUserSources.map((source) => (
               <div
                 key={source.id}
-                className={`relative w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors group ${
-                  selectedSource === source.name ? 'bg-whatcyber-teal/20 border border-whatcyber-teal/30' : 'hover:bg-whatcyber-gray/50'
-                }`}
+                className={`relative w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors group ${selectedSource === source.name ? 'bg-whatcyber-teal/20 border border-whatcyber-teal/30' : 'hover:bg-whatcyber-gray/50'
+                  }`}
                 data-testid={`button-source-${source.name.replace(/\s+/g, '-').toLowerCase()}`}
               >
                 <button
@@ -621,7 +627,7 @@ export function Sidebar({
                     {source.name}
                   </span>
                 </button>
-                
+
                 {/* Delete/Hide button - shown on hover */}
                 <button
                   className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-600 rounded text-red-400 hover:text-white"
@@ -657,7 +663,7 @@ export function Sidebar({
               <RefreshCw className={`w-4 h-4 ${fetchCVEsMutation.isPending ? 'animate-spin' : ''}`} />
             </Button>
           </div>
-          
+
           <div className="space-y-2">
             <button
               className="w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors hover:bg-slate-700"
@@ -678,8 +684,8 @@ export function Sidebar({
         </div>
 
       </div>
-      
-      <AddSourcesDialog 
+
+      <AddSourcesDialog
         open={showAddSourcesDialog}
         onOpenChange={setShowAddSourcesDialog}
       />
