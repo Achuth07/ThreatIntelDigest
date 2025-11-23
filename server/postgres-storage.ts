@@ -15,7 +15,7 @@ export class PostgresStorage implements IStorage {
   private async initializeDefaultSources() {
     try {
       const existingSources = await this.db.select().from(rssSources);
-      
+
       if (existingSources.length === 0) {
         const defaultSources: InsertRssSource[] = [
           {
@@ -75,9 +75,9 @@ export class PostgresStorage implements IStorage {
   async getArticles(params?: { source?: string; limit?: number; offset?: number; search?: string; sortBy?: string }): Promise<Article[]> {
     try {
       let queryBuilder = this.db.select().from(articles);
-      
+
       const conditions = [];
-      
+
       if (params?.source && params.source !== "all") {
         conditions.push(eq(articles.source, params.source));
       }
@@ -136,7 +136,7 @@ export class PostgresStorage implements IStorage {
         tags: (insertArticle.tags ? [...(insertArticle.tags as string[])] : []) as string[],
         readTime: insertArticle.readTime || 5,
       };
-      
+
       const result = await this.db.insert(articles).values(articleData).returning();
       return result[0];
     } catch (error) {
@@ -161,7 +161,7 @@ export class PostgresStorage implements IStorage {
       // Calculate the date 30 days ago
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
+
       // Delete articles older than 30 days
       // This will automatically delete associated bookmarks due to foreign key constraints
       const result = await this.db.delete(articles).where(
@@ -170,7 +170,7 @@ export class PostgresStorage implements IStorage {
           // Delete articles older than 30 days
         )
       );
-      
+
       console.log(`Cleaned up ${result.rowCount || 0} old articles`);
       return result.rowCount || 0;
     } catch (error) {
@@ -200,7 +200,7 @@ export class PostgresStorage implements IStorage {
         .innerJoin(articles, eq(bookmarks.articleId, articles.id))
         .where(eq(bookmarks.userId, userId))
         .orderBy(desc(bookmarks.createdAt));
-      
+
       return result.map(row => ({
         bookmark: row.bookmark,
         article: row.article
@@ -220,12 +220,12 @@ export class PostgresStorage implements IStorage {
           eq(bookmarks.articleId, insertBookmark.articleId)
         )
       ).limit(1);
-      
+
       // If bookmark already exists, return it
       if (existing.length > 0) {
         return existing[0];
       }
-      
+
       const result = await this.db.insert(bookmarks).values(insertBookmark).returning();
       return result[0];
     } catch (error) {
@@ -273,11 +273,11 @@ export class PostgresStorage implements IStorage {
           eq(userSourcePreferences.sourceId, insertPreference.sourceId)
         )
       ).limit(1);
-      
+
       // If preference already exists, update it
       if (existing.length > 0) {
         const result = await this.db.update(userSourcePreferences)
-          .set({ 
+          .set({
             isActive: insertPreference.isActive ?? true,
             updatedAt: new Date()
           })
@@ -290,7 +290,7 @@ export class PostgresStorage implements IStorage {
           .returning();
         return result[0];
       }
-      
+
       // Create new preference
       const result = await this.db.insert(userSourcePreferences).values(insertPreference).returning();
       return result[0];
@@ -368,7 +368,7 @@ export class PostgresStorage implements IStorage {
     try {
       // Check if preferences exist
       const existing = await this.getUserPreferences(userId);
-      
+
       if (!existing) {
         // Create new if doesn't exist
         const defaults: InsertUserPreferences = {
@@ -461,9 +461,9 @@ export class PostgresStorage implements IStorage {
   async getCVEs(params?: { limit?: number; offset?: number; severity?: string }): Promise<CVE[]> {
     try {
       let queryBuilder = this.db.select().from(vulnerabilities);
-      
+
       const conditions = [];
-      
+
       if (params?.severity) {
         conditions.push(eq(vulnerabilities.cvssV3Severity, params.severity));
       }
@@ -509,7 +509,7 @@ export class PostgresStorage implements IStorage {
     try {
       const result = await this.db.select().from(vulnerabilities).where(eq(vulnerabilities.id, id)).limit(1);
       if (result.length === 0) return undefined;
-      
+
       const vuln = result[0];
       return {
         id: vuln.id,
@@ -552,10 +552,10 @@ export class PostgresStorage implements IStorage {
         referenceUrls: insertCVE.references || [],
         createdAt: new Date()
       };
-      
+
       const result = await this.db.insert(vulnerabilities).values(vulnerabilityData).returning();
       const vuln = result[0];
-      
+
       return {
         id: vuln.id,
         description: vuln.description,
@@ -756,6 +756,29 @@ export class PostgresStorage implements IStorage {
     } catch (error) {
       console.error('Error clearing reset token:', error);
       return false;
+    }
+  }
+
+  // Onboarding
+  async updateUserOnboarding(userId: number, data: { role: string; topics: string[] }): Promise<User> {
+    try {
+      const result = await this.db.update(users)
+        .set({
+          role: data.role,
+          topics: data.topics,
+          hasOnboarded: true,
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      if (result.length === 0) {
+        throw new Error('User not found');
+      }
+
+      return result[0];
+    } catch (error) {
+      console.error('Error updating user onboarding:', error);
+      throw error;
     }
   }
 }

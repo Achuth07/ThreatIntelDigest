@@ -174,12 +174,21 @@ import { boolean as pgBoolean, integer, jsonb } from 'drizzle-orm/pg-core';
 // Define the users table schema directly
 const users = pgTable('users', {
   id: serial('id').primaryKey(),
-  googleId: varchar('google_id', { length: 255 }).unique().notNull(),
+  googleId: varchar('google_id', { length: 255 }).unique(),
   name: text('name').notNull(),
   email: text('email').notNull(),
   avatar: text('avatar'),
+  passwordHash: text('password_hash'),
+  emailVerified: pgBoolean('email_verified').default(false),
+  verificationToken: text('verification_token'),
+  verificationTokenExpiry: timestamp('verification_token_expiry'),
+  resetToken: text('reset_token'),
+  resetTokenExpiry: timestamp('reset_token_expiry'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   lastLoginAt: timestamp('last_login_at').defaultNow().notNull(),
+  role: text('role'),
+  topics: jsonb('topics').$type<string[]>().default([]),
+  hasOnboarded: pgBoolean('has_onboarded').default(false),
 });
 
 // Define the user_preferences table schema directly
@@ -203,7 +212,7 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'achuthchandra07@gmail.com'; // F
 // Simple interface for user tracking data
 interface UserLoginRecord {
   id: number;
-  googleId: string;
+  googleId: string | null;
   name: string;
   email: string;
   avatar: string | null;
@@ -811,297 +820,285 @@ async function handleEmailAuthEndpoints(req: VercelRequest, res: VercelResponse)
         return res.status(404).json({ error: 'Invalid reset token' });
       }
 
-      // ... rest of the implementation
+      const passwordHash = await hashPassword(password);
+      await db.update(usersTable)
+        .set({ passwordHash })
+        .where(eq(usersTable.id, user.id));
+
+      return res.status(200).json({ message: 'Password reset successfully. Please log in with your new password.' });
+
     } catch (error) {
       console.error('Password Reset Error:', error);
       return res.status(500).json({ error: 'Internal server error' });
     }
   }
 
-  return res.status(404).json({ message: 'Auth endpoint not found' });
-}
+  // Handler for email verification
+  if ((pathname === '/api/auth/email/verify' || pathname === '/api/auth/email/verify/') && req.method === 'GET') {
+    try {
+      const token = req.query.token as string;
 
+      if (!token) {
+        // Redirect to login with error
+        const loginUrl = isProduction
+          ? 'https://www.whatcyber.com/threatfeed/login?error=missing_token'
+          : 'http://localhost:5173/login?error=missing_token';
+        return res.redirect(302, loginUrl);
       }
 
-const passwordHash = await hashPassword(password);
-await db.update(usersTable)
-  .set({ passwordHash })
-  .where(eq(usersTable.id, user.id));
+      // Find user by verification token (also checks expiry)
+      const user = await storage.getUserByVerificationToken(token);
+      if (!user) {
+        // Redirect to login with error
+        const loginUrl = isProduction
+          ? 'https://www.whatcyber.com/threatfeed/login?error=invalid_token'
+          : 'http://localhost:5173/login?error=invalid_token';
+        return res.redirect(302, loginUrl);
+      }
 
-return res.status(200).json({ message: 'Password reset successfully. Please log in with your new password.' });
+      // Verify the user's email
+      await storage.verifyUserEmail(user.id);
 
+      // Redirect to login with success message
+      const loginUrl = isProduction
+        ? 'https://www.whatcyber.com/threatfeed/login?verified=true'
+        : 'http://localhost:5173/login?verified=true';
+      return res.redirect(302, loginUrl);
     } catch (error) {
-  console.error('Password reset error:', error);
-  return res.status(500).json({ error: 'Internal server error' });
-}
-  }
-
-// Handler for email verification
-if ((pathname === '/api/auth/email/verify' || pathname === '/api/auth/email/verify/') && req.method === 'GET') {
-  try {
-    const token = req.query.token as string;
-
-    if (!token) {
+      console.error('Email verification error:', error);
       // Redirect to login with error
       const loginUrl = isProduction
-        ? 'https://www.whatcyber.com/threatfeed/login?error=missing_token'
-        : 'http://localhost:5173/login?error=missing_token';
+        ? 'https://www.whatcyber.com/threatfeed/login?error=verification_failed'
+        : 'http://localhost:5173/login?error=verification_failed';
       return res.redirect(302, loginUrl);
     }
-
-    // Find user by verification token (also checks expiry)
-    const user = await storage.getUserByVerificationToken(token);
-    if (!user) {
-      // Redirect to login with error
-      const loginUrl = isProduction
-        ? 'https://www.whatcyber.com/threatfeed/login?error=invalid_token'
-        : 'http://localhost:5173/login?error=invalid_token';
-      return res.redirect(302, loginUrl);
-    }
-
-    // Verify the user's email
-    await storage.verifyUserEmail(user.id);
-
-    // Redirect to login with success message
-    const loginUrl = isProduction
-      ? 'https://www.whatcyber.com/threatfeed/login?verified=true'
-      : 'http://localhost:5173/login?verified=true';
-    return res.redirect(302, loginUrl);
-  } catch (error) {
-    console.error('Email verification error:', error);
-    // Redirect to login with error
-    const loginUrl = isProduction
-      ? 'https://www.whatcyber.com/threatfeed/login?error=verification_failed'
-      : 'http://localhost:5173/login?error=verification_failed';
-    return res.redirect(302, loginUrl);
   }
-}
 
-// POST /api/auth/email/forgot-password - Request password reset
-if ((pathname === '/api/auth/email/forgot-password' || pathname === '/api/auth/email/forgot-password/') && req.method === 'POST') {
-  try {
-    const { email } = req.body;
+  // POST /api/auth/email/forgot-password - Request password reset
+  if ((pathname === '/api/auth/email/forgot-password' || pathname === '/api/auth/email/forgot-password/') && req.method === 'POST') {
+    try {
+      const { email } = req.body;
 
-    if (!email) {
-      return res.status(400).json({ error: 'Email is required' });
-    }
+      if (!email) {
+        return res.status(400).json({ error: 'Email is required' });
+      }
 
-    // Find user by email
-    const user = await storage.getUserByEmail(email);
+      // Find user by email
+      const user = await storage.getUserByEmail(email);
 
-    // Always return success to prevent email enumeration
-    if (!user || !user.passwordHash) {
+      // Always return success to prevent email enumeration
+      if (!user || !user.passwordHash) {
+        return res.status(200).json({
+          message: 'If an account with this email exists, a password reset link has been sent.'
+        });
+      }
+
+      // Generate reset token (expires in 1 hour)
+      const resetToken = generateSecureToken();
+      const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000);
+
+      // Save reset token
+      await storage.setResetToken(user.id, resetToken, resetTokenExpiry);
+
+      // Send password reset email
+      await sendPasswordResetEmail(email, user.name, resetToken);
+
       return res.status(200).json({
         message: 'If an account with this email exists, a password reset link has been sent.'
       });
+    } catch (error) {
+      console.error('Password reset request error:', error);
+      return res.status(500).json({ error: 'Password reset request failed' });
     }
-
-    // Generate reset token (expires in 1 hour)
-    const resetToken = generateSecureToken();
-    const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000);
-
-    // Save reset token
-    await storage.setResetToken(user.id, resetToken, resetTokenExpiry);
-
-    // Send password reset email
-    await sendPasswordResetEmail(email, user.name, resetToken);
-
-    return res.status(200).json({
-      message: 'If an account with this email exists, a password reset link has been sent.'
-    });
-  } catch (error) {
-    console.error('Password reset request error:', error);
-    return res.status(500).json({ error: 'Password reset request failed' });
   }
-}
 
-// POST /api/auth/email/reset-password - Reset password with token
-if ((pathname === '/api/auth/email/reset-password' || pathname === '/api/auth/email/reset-password/') && req.method === 'POST') {
-  try {
-    const { token, password } = req.body;
+  // POST /api/auth/email/reset-password - Reset password with token
+  if ((pathname === '/api/auth/email/reset-password' || pathname === '/api/auth/email/reset-password/') && req.method === 'POST') {
+    try {
+      const { token, password } = req.body;
 
-    if (!token || !password) {
-      return res.status(400).json({ error: 'Token and new password are required' });
-    }
-
-    // Validate password strength
-    const passwordValidation = validatePasswordStrength(password);
-    if (!passwordValidation.valid) {
-      return res.status(400).json({
-        error: 'Password does not meet requirements',
-        message: passwordValidation.message
-      });
-    }
-
-    // Find user by reset token (also checks expiry)
-    const user = await storage.getUserByResetToken(token);
-    if (!user) {
-      return res.status(400).json({ error: 'Invalid or expired reset token' });
-    }
-
-    // Hash new password
-    const passwordHash = await hashPassword(password);
-
-    // Update password and clear reset token
-    await storage.updateUserPassword(user.id, passwordHash);
-    await storage.clearResetToken(user.id);
-
-    return res.status(200).json({
-      message: 'Password reset successfully! You can now log in with your new password.'
-    });
-  } catch (error) {
-    console.error('Password reset error:', error);
-    return res.status(500).json({ error: 'Password reset failed' });
-  }
-}
-
-// POST /api/auth/email/set-password - Allow authenticated users to set/change password
-if ((pathname === '/api/auth/email/set-password' || pathname === '/api/auth/email/set-password/') && req.method === 'POST') {
-  try {
-    // Get user ID from JWT token
-    const userId = getUserIdFromRequest(req);
-    if (!userId) {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
-
-    const { currentPassword, newPassword } = req.body;
-
-    if (!newPassword) {
-      return res.status(400).json({ error: 'New password is required' });
-    }
-
-    // Validate new password strength
-    const passwordValidation = validatePasswordStrength(newPassword);
-    if (!passwordValidation.valid) {
-      return res.status(400).json({
-        error: 'Password does not meet requirements',
-        message: passwordValidation.message
-      });
-    }
-
-    // Get user from database
-    const { users: usersTable } = await import('../shared/schema.js');
-    const { eq } = await import('drizzle-orm');
-    const userResult = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
-
-    if (!userResult || userResult.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    const user = userResult[0];
-
-    // If user already has a password, verify the current password
-    if (user.passwordHash) {
-      if (!currentPassword) {
-        return res.status(400).json({ error: 'Current password is required' });
+      if (!token || !password) {
+        return res.status(400).json({ error: 'Token and new password are required' });
       }
 
-      const isCurrentPasswordValid = await verifyPassword(currentPassword, user.passwordHash);
-      if (!isCurrentPasswordValid) {
-        return res.status(401).json({ error: 'Current password is incorrect' });
+      // Validate password strength
+      const passwordValidation = validatePasswordStrength(password);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({
+          error: 'Password does not meet requirements',
+          message: passwordValidation.message
+        });
       }
-    }
 
-    // Hash new password
-    const newPasswordHash = await hashPassword(newPassword);
+      // Find user by reset token (also checks expiry)
+      const user = await storage.getUserByResetToken(token);
+      if (!user) {
+        return res.status(400).json({ error: 'Invalid or expired reset token' });
+      }
 
-    // Update password
-    await storage.updateUserPassword(userId, newPasswordHash);
+      // Hash new password
+      const passwordHash = await hashPassword(password);
 
-    // If this is a Google OAuth user setting their first password, mark email as verified
-    if (user.googleId && !user.passwordHash) {
-      await storage.verifyUserEmail(userId);
-    }
+      // Update password and clear reset token
+      await storage.updateUserPassword(user.id, passwordHash);
+      await storage.clearResetToken(user.id);
 
-    return res.status(200).json({
-      message: user.passwordHash
-        ? 'Password changed successfully!'
-        : 'Password set successfully! You can now log in with your email and password.'
-    });
-  } catch (error) {
-    console.error('Set password error:', error);
-    return res.status(500).json({ error: 'Failed to set password' });
-  }
-}
-
-// POST /api/auth/email/register - Register new user with email/password
-if ((pathname === '/api/auth/email/register' || pathname === '/api/auth/email/register/') && req.method === 'POST') {
-  try {
-    const { name, email, password } = req.body;
-
-    // Validate input
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: 'Name, email, and password are required' });
-    }
-
-    // Validate email format
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({ error: 'Invalid email format' });
-    }
-
-    // Validate password strength
-    const passwordValidation = validatePasswordStrength(password);
-    if (!passwordValidation.valid) {
-      return res.status(400).json({
-        error: 'Password does not meet requirements',
-        message: passwordValidation.message
+      return res.status(200).json({
+        message: 'Password reset successfully! You can now log in with your new password.'
       });
+    } catch (error) {
+      console.error('Password reset error:', error);
+      return res.status(500).json({ error: 'Password reset failed' });
     }
+  }
 
-    // Check if user already exists
-    const existingUser = await storage.getUserByEmail(email);
-    if (existingUser) {
-      // Don't reveal if user exists (prevent email enumeration)
+  // POST /api/auth/email/set-password - Allow authenticated users to set/change password
+  if ((pathname === '/api/auth/email/set-password' || pathname === '/api/auth/email/set-password/') && req.method === 'POST') {
+    try {
+      // Get user ID from JWT token
+      const userId = getUserIdFromRequest(req);
+      if (!userId) {
+        return res.status(401).json({ error: 'Authentication required' });
+      }
+
+      const { currentPassword, newPassword } = req.body;
+
+      if (!newPassword) {
+        return res.status(400).json({ error: 'New password is required' });
+      }
+
+      // Validate new password strength
+      const passwordValidation = validatePasswordStrength(newPassword);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({
+          error: 'Password does not meet requirements',
+          message: passwordValidation.message
+        });
+      }
+
+      // Get user from database
+      const { users: usersTable } = await import('../shared/schema.js');
+      const { eq } = await import('drizzle-orm');
+      const userResult = await db.select().from(usersTable).where(eq(usersTable.id, userId)).limit(1);
+
+      if (!userResult || userResult.length === 0) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const user = userResult[0];
+
+      // If user already has a password, verify the current password
+      if (user.passwordHash) {
+        if (!currentPassword) {
+          return res.status(400).json({ error: 'Current password is required' });
+        }
+
+        const isCurrentPasswordValid = await verifyPassword(currentPassword, user.passwordHash);
+        if (!isCurrentPasswordValid) {
+          return res.status(401).json({ error: 'Current password is incorrect' });
+        }
+      }
+
+      // Hash new password
+      const newPasswordHash = await hashPassword(newPassword);
+
+      // Update password
+      await storage.updateUserPassword(userId, newPasswordHash);
+
+      // If this is a Google OAuth user setting their first password, mark email as verified
+      if (user.googleId && !user.passwordHash) {
+        await storage.verifyUserEmail(userId);
+      }
+
+      return res.status(200).json({
+        message: user.passwordHash
+          ? 'Password changed successfully!'
+          : 'Password set successfully! You can now log in with your email and password.'
+      });
+    } catch (error) {
+      console.error('Set password error:', error);
+      return res.status(500).json({ error: 'Failed to set password' });
+    }
+  }
+
+  // POST /api/auth/email/register - Register new user with email/password
+  if ((pathname === '/api/auth/email/register' || pathname === '/api/auth/email/register/') && req.method === 'POST') {
+    try {
+      const { name, email, password } = req.body;
+
+      // Validate input
+      if (!name || !email || !password) {
+        return res.status(400).json({ error: 'Name, email, and password are required' });
+      }
+
+      // Validate email format
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: 'Invalid email format' });
+      }
+
+      // Validate password strength
+      const passwordValidation = validatePasswordStrength(password);
+      if (!passwordValidation.valid) {
+        return res.status(400).json({
+          error: 'Password does not meet requirements',
+          message: passwordValidation.message
+        });
+      }
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        // Don't reveal if user exists (prevent email enumeration)
+        return res.status(200).json({
+          message: 'If this email is not already registered, you will receive a verification email shortly.'
+        });
+      }
+
+      // Hash password
+      const passwordHash = await hashPassword(password);
+
+      // Generate verification token (expires in 24 hours)
+      const verificationToken = generateSecureToken();
+      const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      // Create user
+      const user = await storage.createEmailUser({
+        name,
+        email,
+        passwordHash,
+        verificationToken,
+        verificationTokenExpiry
+      });
+
+      console.log('✅ User created successfully, preparing to send verification email:', {
+        email,
+        name,
+        userId: user?.id,
+        hasToken: !!verificationToken
+      });
+
+      // Send verification email
+      try {
+        await sendVerificationEmail(email, name, verificationToken);
+        console.log('✅ Verification email sent successfully for:', email);
+      } catch (emailError) {
+        console.error('❌ Failed to send verification email:', emailError);
+        // Don't fail registration if email fails - user can request new verification email
+      }
+
       return res.status(200).json({
         message: 'If this email is not already registered, you will receive a verification email shortly.'
       });
+    } catch (error) {
+      console.error('Register error:', error);
+      return res.status(500).json({ error: 'Registration failed' });
     }
-
-    // Hash password
-    const passwordHash = await hashPassword(password);
-
-    // Generate verification token (expires in 24 hours)
-    const verificationToken = generateSecureToken();
-    const verificationTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-    // Create user
-    const user = await storage.createEmailUser({
-      name,
-      email,
-      passwordHash,
-      verificationToken,
-      verificationTokenExpiry
-    });
-
-    console.log('✅ User created successfully, preparing to send verification email:', {
-      email,
-      name,
-      userId: user?.id,
-      hasToken: !!verificationToken
-    });
-
-    // Send verification email
-    try {
-      await sendVerificationEmail(email, name, verificationToken);
-      console.log('✅ Verification email sent successfully for:', email);
-    } catch (emailError) {
-      console.error('❌ Failed to send verification email:', emailError);
-      // Don't fail registration if email fails - user can request new verification email
-    }
-
-    return res.status(200).json({
-      message: 'If this email is not already registered, you will receive a verification email shortly.'
-    });
-  } catch (error) {
-    console.error('Register error:', error);
-    return res.status(500).json({ error: 'Registration failed' });
   }
-}
 
-// If no route matched
-return res.status(404).json({ error: 'Email auth endpoint not found' });
+  // If no route matched
+  return res.status(404).json({ error: 'Email auth endpoint not found' });
 }
 
 async function handleAuthEndpoints(req: VercelRequest, res: VercelResponse, action: string) {
@@ -2329,6 +2326,7 @@ async function getAllUsers(): Promise<UserLoginRecord[]> {
       avatar: user.avatar || null,
       createdAt: user.createdAt,
       lastLoginAt: user.lastLoginAt,
+      hasOnboarded: user.hasOnboarded || false,
     }));
   } catch (error) {
     console.error('Error in getAllUsers:', error);
@@ -4312,9 +4310,10 @@ async function handleInitializeSources(req: VercelRequest, res: VercelResponse) 
       totalSources: defaultSources.length,
       errors: errors.length > 0 ? errors : undefined
     });
-
-  });
-}
+  } catch (error) {
+    console.error('Initialize sources error:', error);
+    res.status(500).json({ error: 'Failed to initialize sources' });
+  }
 }
 
 async function handleUserOnboardingEndpoints(req: VercelRequest, res: VercelResponse, action: string) {
@@ -4325,7 +4324,8 @@ async function handleUserOnboardingEndpoints(req: VercelRequest, res: VercelResp
   }
 
   // Initialize storage
-  const storage = await getStorage();
+  const { PostgresStorage } = await import('../server/postgres-storage.js');
+  const storage = new PostgresStorage();
 
   if (req.method === 'POST') {
     try {
