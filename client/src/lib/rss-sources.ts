@@ -37,12 +37,6 @@ export const VENDOR_THREAT_RESEARCH = [
     color: "#0066cc",
   },
   {
-    name: "Trustwave SpiderLabs",
-    url: "https://www.trustwave.com/en-us/resources/blogs/spiderlabs-blog/?rss=true",
-    icon: "fas fa-spider",
-    color: "#ff6b35",
-  },
-  {
     name: "Palo Alto Unit 42",
     url: "https://unit42.paloaltonetworks.com/feed/", // Fixed URL
     icon: "fas fa-shield-virus",
@@ -53,12 +47,6 @@ export const VENDOR_THREAT_RESEARCH = [
     url: "https://www.microsoft.com/en-us/security/blog/feed/",
     icon: "fas fa-microsoft",
     color: "#00bcf2",
-  },
-  {
-    name: "FortiGuard Labs",
-    url: "https://feeds.fortinet.com/fortiguard-labs/threat-research", // Fixed URL
-    icon: "fas fa-fortress",
-    color: "#ee3124",
   },
   {
     name: "Cisco Threat Research Blog", // New source
@@ -78,12 +66,6 @@ export const VENDOR_THREAT_RESEARCH = [
     url: "https://blog.0patch.com/feeds/posts/default",
     icon: "fas fa-shield-alt",
     color: "#4285f4",
-  },
-  {
-    name: "Anomali",
-    url: "https://www.anomali.com/site/blog-rss",
-    icon: "fas fa-chart-line",
-    color: "#3498db",
   },
   {
     name: "AT&T Cybersecurity",
@@ -164,12 +146,6 @@ export const VENDOR_THREAT_RESEARCH = [
     color: "#4285f4",
   },
   {
-    name: "IBM Security Intelligence",
-    url: "https://securityintelligence.com/feed/", // This URL seems correct, issue may be XML parsing
-    icon: "fas fa-ibm",
-    color: "#052f61",
-  },
-  {
     name: "Malwarebytes Labs",
     url: "https://blog.malwarebytes.com/feed/",
     icon: "fas fa-bug",
@@ -180,18 +156,6 @@ export const VENDOR_THREAT_RESEARCH = [
     url: "https://www.mcafee.com/blogs/feed",
     icon: "fas fa-shield-alt",
     color: "#c01a1a",
-  },
-  {
-    name: "Microsoft Security Response Center",
-    url: "https://msrc-blog.microsoft.com/feed/",
-    icon: "fas fa-microsoft",
-    color: "#00bcf2",
-  },
-  {
-    name: "Naked Security (Sophos)",
-    url: "https://nakedsecurity.sophos.com/feed/",
-    icon: "fas fa-user-secret",
-    color: "#00a86b",
   },
   {
     name: "Proofpoint",
@@ -223,36 +187,7 @@ export const VENDOR_THREAT_RESEARCH = [
     icon: "fas fa-newspaper",
     color: "#dc2626",
   },
-  {
-    name: "Recorded Future (Cyber Threat Intelligence)",
-    url: "https://www.recordedfuture.com/category/cyber/feed/",
-    icon: "fas fa-chart-line",
-    color: "#3498db",
-  },
-  {
-    name: "Recorded Future (Threat Intelligence)",
-    url: "https://www.recordedfuture.com/category/threat-intelligence/feed/",
-    icon: "fas fa-brain",
-    color: "#3498db",
-  },
-  {
-    name: "Recorded Future (Vulnerability Management)",
-    url: "https://www.recordedfuture.com/category/vulnerability-management/feed/",
-    icon: "fas fa-bug",
-    color: "#3498db",
-  },
-  {
-    name: "Recorded Future (Research)",
-    url: "https://www.recordedfuture.com/category/research/vulnerability-management/feed/",
-    icon: "fas fa-search",
-    color: "#3498db",
-  },
-  {
-    name: "Recorded Future (Geopolitical Intelligence)",
-    url: "https://www.recordedfuture.com/category/geopolitical/feed/",
-    icon: "fas fa-globe",
-    color: "#3498db",
-  },
+  // Commented out all Recorded Future feeds - all return 404
   // Commenting out RiskIQ as it's not providing a valid RSS feed
   // {
   //   name: "RiskIQ",
@@ -260,12 +195,6 @@ export const VENDOR_THREAT_RESEARCH = [
   //   icon: "fas fa-globe",
   //   color: "#3498db",
   // },
-  {
-    name: "Dell SecureWorks (Research & Intelligence)",
-    url: "https://www.secureworks.com/blog?format=feed&type=rss", // Fixed URL
-    icon: "fas fa-shield-alt",
-    color: "#ef4444",
-  },
   {
     name: "SensePost (Orange)",
     url: "https://sensepost.com/rss.xml",
@@ -285,34 +214,10 @@ export const VENDOR_THREAT_RESEARCH = [
     color: "#3498db",
   },
   {
-    name: "Signals Corps",
-    url: "https://www.signalscorps.com/feed.xml",
-    icon: "fas fa-signal",
-    color: "#3498db",
-  },
-  {
-    name: "SpecterOps",
-    url: "https://posts.specterops.io/feed",
-    icon: "fas fa-user-secret",
-    color: "#3498db",
-  },
-  {
     name: "Trend Micro",
     url: "http://feeds.trendmicro.com/TrendMicroSimplySecurity",
     icon: "fas fa-shield-alt",
     color: "#d71921",
-  },
-  {
-    name: "Tripwire",
-    url: "https://www.tripwire.com/state-of-security/feed/",
-    icon: "fas fa-lock",
-    color: "#3498db",
-  },
-  {
-    name: "TrustArc",
-    url: "https://www.trustarc.com/blog/feed/",
-    icon: "fas fa-shield-alt",
-    color: "#3498db",
   },
   {
     name: "PaloAlto Networks Blog",
@@ -325,12 +230,6 @@ export const VENDOR_THREAT_RESEARCH = [
     url: "https://unit42.paloaltonetworks.com/feed/", // Fixed URL
     icon: "fas fa-shield-virus",
     color: "#2563eb",
-  },
-  {
-    name: "PhishLabs",
-    url: "http://blog.phishlabs.com/rss.xml",
-    icon: "fas fa-envelope",
-    color: "#3498db",
   },
   {
     name: "UpGuard Blog (news)",
@@ -361,12 +260,6 @@ export const VENDOR_THREAT_RESEARCH = [
     url: "https://blog.virustotal.com/feeds/posts/default",
     icon: "fas fa-search",
     color: "#3498db",
-  },
-  {
-    name: "Webroot Threat Blog",
-    url: "https://www.webroot.com/blog/feed/",
-    icon: "fas fa-shield-alt",
-    color: "#00a86b",
   },
   // Moved from Legacy category
   {
@@ -405,12 +298,6 @@ export const GOVERNMENT_ALERTS = [
     color: "#f59e0b",
   },
   // Additional Government sources
-  {
-    name: "BSI RSS-Newsfeed",
-    url: "https://www.bsi.bund.de/SiteGlobals/Functions/RSSFeed/RSSNewsfeed/RSSNewsfeed.xml",
-    icon: "fas fa-flag-de",
-    color: "#1e40af",
-  },
   {
     name: "Center for Internet Security (Advisories)",
     url: "https://www.cisecurity.org/feed/advisories",
@@ -475,12 +362,6 @@ export const MALWARE_RESEARCH = [
     icon: "fas fa-search",
     color: "#16a34a",
   },
-  {
-    name: "vx-underground",
-    url: "https://vx-underground.org/rss.xml",
-    icon: "fas fa-code",
-    color: "#6b7280",
-  },
   // Commenting out Malware.News Analysis as the URL is not valid
   // {
   //   name: "Malware.News Analysis",
@@ -489,12 +370,6 @@ export const MALWARE_RESEARCH = [
   //   color: "#dc2626",
   // },
   // Additional Malware/Analysis sources
-  {
-    name: "Infosec Institute (malware analysis)",
-    url: "https://resources.infosecinstitute.com/topics/malware-analysis/feed/",
-    icon: "fas fa-bug",
-    color: "#ef4444",
-  },
   {
     name: "Malware Traffic Analysis",
     url: "http://www.malware-traffic-analysis.net/blog-entries.rss",
@@ -537,24 +412,6 @@ export const GENERAL_SECURITY_NEWS = [
   },
   // Additional General News sources
   {
-    name: "Infosec Institute (news)",
-    url: "https://resources.infosecinstitute.com/topics/news/feed/",
-    icon: "fas fa-newspaper",
-    color: "#3498db",
-  },
-  {
-    name: "Infosec Institute (threat intelligence)",
-    url: "https://resources.infosecinstitute.com/topics/threat-intelligence/feed/",
-    icon: "fas fa-brain",
-    color: "#3498db",
-  },
-  {
-    name: "Anton on Security",
-    url: "https://medium.com/feed/anton-on-security",
-    icon: "fas fa-user-secret",
-    color: "#3498db",
-  },
-  {
     name: "Ars Technica (Security)",
     url: "https://arstechnica.com/tag/security/feed/",
     icon: "fas fa-newspaper",
@@ -573,12 +430,6 @@ export const GENERAL_SECURITY_NEWS = [
     color: "#3498db",
   },
   {
-    name: "Dark Reading (all)",
-    url: "https://www.darkreading.com/rss/all.xml",
-    icon: "fas fa-eye",
-    color: "#8b5cf6",
-  },
-  {
     name: "Graham Cluley",
     url: "https://www.grahamcluley.com/feed/",
     icon: "fas fa-user",
@@ -589,18 +440,6 @@ export const GENERAL_SECURITY_NEWS = [
     url: "https://www.theguardian.com/technology/data-computer-security/rss",
     icon: "fas fa-newspaper",
     color: "#059669",
-  },
-  {
-    name: "HackerOne",
-    url: "https://www.hackerone.com/blog.rss",
-    icon: "fas fa-bug",
-    color: "#dc2626",
-  },
-  {
-    name: "HACKMAGEDDON",
-    url: "https://www.hackmageddon.com/feed/",
-    icon: "fas fa-skull",
-    color: "#dc2626",
   },
   {
     name: "HackRead",
