@@ -3,7 +3,7 @@ import { useLocation } from 'wouter';
 import {
   User, Shield, Settings as SettingsIcon, Key, CreditCard, Bell,
   ChevronRight, Monitor, LogOut, Save, AlertCircle, Eye, EyeOff,
-  RefreshCw, Trash2, Check, X
+  RefreshCw, Trash2, Check, X, ArrowLeft
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -272,6 +272,14 @@ export default function Settings() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
         <div className="mb-8">
+          <Button
+            variant="ghost"
+            className="mb-4 text-slate-400 hover:text-slate-100 pl-0 hover:bg-transparent"
+            onClick={() => navigate("/threatfeed")}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Threat Feed
+          </Button>
           <h1 className="text-3xl font-bold text-slate-100 mb-2">Settings</h1>
           <p className="text-slate-400">Manage your account, preferences, and integrations</p>
         </div>

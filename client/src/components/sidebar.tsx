@@ -5,7 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Check, Globe, Rss, Filter, Zap, RefreshCw, Download, Plus, Minus, Shield, ChevronDown, ChevronUp, X, Bookmark } from 'lucide-react';
+import { Check, Globe, Rss, Filter, Zap, RefreshCw, Download, Plus, Minus, Shield, ChevronDown, ChevronUp, X, Bookmark, Bug, Settings, Home, LifeBuoy } from 'lucide-react';
+import { useLocation } from "wouter";
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { AddSourcesDialog } from '@/components/add-sources-dialog';
@@ -42,6 +43,7 @@ export function Sidebar({
   onFollowSourcesClick,
   onBookmarksClick,
 }: SidebarProps) {
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showAddSourcesDialog, setShowAddSourcesDialog] = useState(false);
@@ -734,6 +736,42 @@ export function Sidebar({
               <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-medium">
                 NEW
               </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Support & Settings Section */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-slate-100 mb-4 flex items-center">
+            <LifeBuoy className="w-5 h-5 text-whatcyber-teal mr-2" />
+            Support & Settings
+          </h2>
+          <div className="space-y-2">
+            <button
+              className="w-full flex items-center p-3 rounded-lg cursor-pointer transition-colors hover:bg-slate-700 text-slate-300 hover:text-slate-100"
+              onClick={() => setLocation("/report-bugs")}
+              data-testid="button-report-bugs"
+            >
+              <Bug className="w-5 h-5 mr-3" />
+              <span className="font-medium">Report Bugs/Feedback</span>
+            </button>
+
+            <button
+              className="w-full flex items-center p-3 rounded-lg cursor-pointer transition-colors hover:bg-slate-700 text-slate-300 hover:text-slate-100"
+              onClick={() => setLocation("/settings")}
+              data-testid="button-settings"
+            >
+              <Settings className="w-5 h-5 mr-3" />
+              <span className="font-medium">Settings</span>
+            </button>
+
+            <button
+              className="w-full flex items-center p-3 rounded-lg cursor-pointer transition-colors hover:bg-slate-700 text-slate-300 hover:text-slate-100"
+              onClick={() => setLocation("/")}
+              data-testid="button-homepage"
+            >
+              <Home className="w-5 h-5 mr-3" />
+              <span className="font-medium">Visit Homepage</span>
             </button>
           </div>
         </div>

@@ -25,6 +25,7 @@ import ContactPage from "@/pages/contact";
 import PrivacyPolicyPage from "@/pages/privacy";
 import TermsOfServicePage from "@/pages/terms";
 import OnboardingPage from "@/pages/onboarding";
+import ReportBugs from "@/pages/report-bugs";
 
 // Create context for login popup
 interface LoginPopupContextType {
@@ -96,6 +97,7 @@ function Router() {
         <Route path="/contact" component={ContactPage} />
         <Route path="/privacy" component={PrivacyPolicyPage} />
         <Route path="/terms" component={TermsOfServicePage} />
+        <Route path="/report-bugs" component={ReportBugs} />
         <Route component={NotFound} />
       </Switch>
     </>
