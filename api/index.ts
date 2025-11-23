@@ -126,7 +126,7 @@ let inMemorySources: any[] = [
   },
   {
     id: '4',
-    name: 'Unit 42',
+    name: 'Palo Alto Unit 42',
     url: 'https://unit42.paloaltonetworks.com/feed/',
     icon: 'fas fa-shield-alt',
     color: '#f97316',
