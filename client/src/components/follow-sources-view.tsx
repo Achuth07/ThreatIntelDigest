@@ -30,6 +30,27 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
     },
   });
 
+  const createSourceMutation = useMutation({
+    mutationFn: (newSource: any) =>
+      apiRequest('POST', '/api/sources', {
+        name: newSource.name,
+        url: newSource.url,
+        icon: newSource.icon,
+        color: newSource.color,
+        isActive: true
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/sources'] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create new source. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const updateUserSourceMutation = useMutation({
     mutationFn: ({ sourceId, isActive }: { sourceId: string; isActive: boolean }) =>
       apiRequest('POST', '/api/user-source-preferences/', { sourceId, isActive }),
@@ -48,7 +69,7 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
   });
 
   // Function to handle adding a source (enabling it for the user)
-  const handleAddSource = (sourceToAdd: any) => {
+  const handleAddSource = async (sourceToAdd: any) => {
     if (!user) {
       toast({
         title: "Authentication Required",
@@ -59,14 +80,26 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
     }
 
     // Find the source in ALL available sources (not just user's current sources)
-    const existingSource = allAvailableSources.find(source =>
+    let existingSource = allAvailableSources.find(source =>
       source.name === sourceToAdd.name || source.url === sourceToAdd.url
     );
 
-    if (existingSource) {
-      // Source exists in the system, enable it for this user
+    try {
+      let sourceId: string;
+
+      if (existingSource) {
+        // Source exists in the system
+        sourceId = existingSource.id;
+      } else {
+        // Source doesn't exist, create it first
+        const response = await createSourceMutation.mutateAsync(sourceToAdd);
+        const newSource = await response.json();
+        sourceId = newSource.id;
+      }
+
+      // Enable the source for this user
       updateUserSourceMutation.mutate({
-        sourceId: existingSource.id,
+        sourceId: sourceId,
         isActive: true
       });
 
@@ -74,13 +107,9 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
         title: "Source Added",
         description: `${sourceToAdd.name} has been added to your feed`,
       });
-    } else {
-      // Source doesn't exist in the system at all
-      toast({
-        title: "Source Not Available",
-        description: "This source is not currently available in the system.",
-        variant: "destructive",
-      });
+    } catch (error) {
+      console.error("Error adding source:", error);
+      // Error is handled by mutation callbacks
     }
   };
 
@@ -109,19 +138,14 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
 
   // Function to check if a source is already added (enabled) for this user
   const isSourceAdded = (sourceName: string) => {
+    // We need to check against userSources which contains the user's enabled sources
     const source = userSources.find(source => source.name === sourceName);
-    return source ? source.isActive : false;
-  };
-
-  // Function to check if a source exists in the system
-  const isSourceAvailable = (sourceName: string) => {
-    return allAvailableSources.some(source => source.name === sourceName);
+    return source ? source.isActive !== false : false;
   };
 
   // Render source card
   const renderSourceCard = (source: any) => {
     const isAdded = isSourceAdded(source.name);
-    const isAvailable = isSourceAvailable(source.name);
     const faviconUrl = getFaviconUrl(source.url, 24);
 
     return (
@@ -176,8 +200,8 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
               variant="ghost"
               className="h-8 w-8 p-0 text-whatcyber-teal hover:text-whatcyber-teal"
               onClick={() => handleAddSource(source)}
-              disabled={!isAvailable || updateUserSourceMutation.isPending}
-              title={isAvailable ? "Add source" : "Source not available"}
+              disabled={updateUserSourceMutation.isPending || createSourceMutation.isPending}
+              title="Add source"
             >
               <Plus className="w-5 h-5" />
             </Button>
