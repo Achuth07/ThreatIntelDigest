@@ -2986,10 +2986,11 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
       limit = '50',
       severity,
       page = '1',
-      sort = 'newest'
+      sort = 'newest',
+      vendor
     } = req.query;
 
-    console.log('Query parameters:', { limit, severity, page, sort });
+    console.log('Query parameters:', { limit, severity, page, sort, vendor });
 
     const limitNum = Math.min(parseInt(limit as string, 10) || 50, 100);
     const pageNum = Math.max(parseInt(page as string, 10) || 1, 1);
@@ -3028,9 +3029,13 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
             cvss_v2_severity,
             weaknesses,
             reference_urls,
+            weaknesses,
+            reference_urls,
+            vendors,
             created_at
           FROM vulnerabilities
           WHERE (cvss_v3_severity = ${severityUpper} OR cvss_v2_severity = ${severityUpper})
+          ${vendor ? sql`AND vendors @> ${JSON.stringify([vendor])}` : sql``}
           ${sql.raw(orderByClause)}
           LIMIT ${limitNum}
           OFFSET ${offset}
@@ -3050,8 +3055,12 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
             cvss_v2_severity,
             weaknesses,
             reference_urls,
+            weaknesses,
+            reference_urls,
+            vendors,
             created_at
           FROM vulnerabilities
+          ${vendor ? sql`WHERE vendors @> ${JSON.stringify([vendor])}` : sql``}
           ${sql.raw(orderByClause)}
           LIMIT ${limitNum}
           OFFSET ${offset}
@@ -3072,8 +3081,12 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
           cvss_v2_severity,
           weaknesses,
           reference_urls,
+          weaknesses,
+          reference_urls,
+          vendors,
           created_at
         FROM vulnerabilities
+        ${vendor ? sql`WHERE vendors @> ${JSON.stringify([vendor])}` : sql``}
         ${sql.raw(orderByClause)}
         LIMIT ${limitNum}
         OFFSET ${offset}
@@ -3090,14 +3103,21 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
         countQuery = sql`
           SELECT COUNT(*) as total FROM vulnerabilities
           WHERE (cvss_v3_severity = ${severityUpper} OR cvss_v2_severity = ${severityUpper})
+          ${vendor ? sql`AND vendors @> ${JSON.stringify([vendor])}` : sql``}
         `;
       } else {
-        // Invalid severity filter, count all
-        countQuery = sql`SELECT COUNT(*) as total FROM vulnerabilities`;
+        // Invalid severity filter, count all (with vendor filter if applied)
+        countQuery = sql`
+          SELECT COUNT(*) as total FROM vulnerabilities
+          ${vendor ? sql`WHERE vendors @> ${JSON.stringify([vendor])}` : sql``}
+        `;
       }
     } else {
-      // No severity filter, count all
-      countQuery = sql`SELECT COUNT(*) as total FROM vulnerabilities`;
+      // No severity filter, count all (with vendor filter if applied)
+      countQuery = sql`
+        SELECT COUNT(*) as total FROM vulnerabilities
+        ${vendor ? sql`WHERE vendors @> ${JSON.stringify([vendor])}` : sql``}
+      `;
     }
 
     const countResult = await db.execute(countQuery);
@@ -3115,6 +3135,7 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
       cvssV2Score: row.cvss_v2_score ? parseFloat(row.cvss_v2_score) : null,
       cvssV2Severity: row.cvss_v2_severity,
       weaknesses: row.weaknesses || [],
+      vendors: row.vendors || [],
       references: row.reference_urls || [],
       createdAt: row.created_at,
     }));
@@ -3331,15 +3352,42 @@ async function handleFetchCvesEndpoints(req: VercelRequest, res: VercelResponse,
               tags: ref.tags || []
             })) || [];
 
+            // Extract vendors from configurations (CPEs)
+            const vendors = new Set<string>();
+            if (cve.configurations) {
+              for (const config of cve.configurations) {
+                if (config.nodes) {
+                  for (const node of config.nodes) {
+                    if (node.cpeMatch) {
+                      for (const match of node.cpeMatch) {
+                        if (match.criteria) {
+                          // CPE format: cpe:2.3:part:vendor:product:version:...
+                          const parts = match.criteria.split(':');
+                          if (parts.length >= 5) {
+                            const vendor = parts[3];
+                            if (vendor && vendor !== '*') {
+                              vendors.add(vendor);
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            const vendorsArray = Array.from(vendors);
+
             // Convert arrays to proper PostgreSQL format
             const weaknessesArray = Array.isArray(weaknesses) ? weaknesses : [];
             const referencesJson = JSON.stringify(references);
 
             // Construct array literal for PostgreSQL
             const weaknessesLiteral = '{' + weaknessesArray.map(w => `"${w?.replace(/"/g, '\\"') || ''}"`).join(',') + '}';
+            const vendorsLiteral = JSON.stringify(vendorsArray);
 
             // Create SQL chunk for this row
-            valuesChunks.push(sql`(${cveId}, ${description}, ${cve.published}, ${cve.lastModified}, ${cve.vulnStatus}, ${cvssV3Score !== null ? String(cvssV3Score) : null}, ${cvssV3Severity}, ${cvssV2Score !== null ? String(cvssV2Score) : null}, ${cvssV2Severity}, ${weaknessesLiteral}::text[], ${referencesJson}::jsonb)`);
+            valuesChunks.push(sql`(${cveId}, ${description}, ${cve.published}, ${cve.lastModified}, ${cve.vulnStatus}, ${cvssV3Score !== null ? String(cvssV3Score) : null}, ${cvssV3Severity}, ${cvssV2Score !== null ? String(cvssV2Score) : null}, ${cvssV2Severity}, ${weaknessesLiteral}::text[], ${referencesJson}::jsonb, ${vendorsLiteral}::jsonb)`);
 
             processedCount++;
           } catch (cveError) {
@@ -3362,7 +3410,7 @@ async function handleFetchCvesEndpoints(req: VercelRequest, res: VercelResponse,
               INSERT INTO vulnerabilities (
                 id, description, published_date, last_modified_date, vuln_status,
                 cvss_v3_score, cvss_v3_severity, cvss_v2_score, cvss_v2_severity,
-                weaknesses, reference_urls
+                weaknesses, reference_urls, vendors
               )
               VALUES ${finalValues}
               ON CONFLICT (id) DO UPDATE SET
@@ -3375,7 +3423,8 @@ async function handleFetchCvesEndpoints(req: VercelRequest, res: VercelResponse,
                 cvss_v2_score = EXCLUDED.cvss_v2_score,
                 cvss_v2_severity = EXCLUDED.cvss_v2_severity,
                 weaknesses = EXCLUDED.weaknesses,
-                reference_urls = EXCLUDED.reference_urls
+                reference_urls = EXCLUDED.reference_urls,
+                vendors = EXCLUDED.vendors
             `;
 
             await db.execute(query);

@@ -56,6 +56,7 @@ export const vulnerabilities = pgTable("vulnerabilities", {
   cvssV2Severity: text("cvss_v2_severity"),
   weaknesses: jsonb("weaknesses").$type<string[]>().default([]), // CWE IDs
   configurations: jsonb("configurations").$type<any[]>().default([]), // CPE configurations
+  vendors: jsonb("vendors").$type<string[]>().default([]), // Extracted vendors
   referenceUrls: jsonb("reference_urls").$type<{ url: string; source: string; tags?: string[] }[]>().default([]),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
@@ -146,6 +147,7 @@ export const insertVulnerabilitySchema = createInsertSchema(vulnerabilities, {
     source: z.string(),
     tags: z.array(z.string()).optional()
   })).default([]),
+  vendors: z.array(z.string()).default([]),
 }).omit({
   createdAt: true,
 });
