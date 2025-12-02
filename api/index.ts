@@ -3248,7 +3248,7 @@ async function handleFetchCvesEndpoints(req: VercelRequest, res: VercelResponse,
     const endDateStr = endDate.toISOString().split('T')[0];
 
     let startIndex = 0;
-    const resultsPerPage = 2000; // Max allowed by NVD
+    const resultsPerPage = 1000; // Reduced to 1000 for safer batch processing
     let totalResults = 0;
     let processedCount = 0;
     let errors: string[] = [];
@@ -3288,15 +3288,13 @@ async function handleFetchCvesEndpoints(req: VercelRequest, res: VercelResponse,
       console.log(`Page ${pageCount}: Found ${vulnerabilities.length} CVEs (Total available: ${totalResults})`);
 
       if (vulnerabilities.length > 0) {
+        // Prepare batch data
+        const valuesChunks: any[] = [];
+
         for (const vuln of vulnerabilities) {
           try {
             const cve = vuln.cve;
             const cveId = cve.id;
-
-            // Check if CVE already exists
-            const existingResult = await db.execute(sql`
-              SELECT id FROM vulnerabilities WHERE id = ${cveId}
-            `);
 
             // Extract description
             const description = cve.descriptions?.find((desc: any) => desc.lang === 'en')?.value || 'No description available';
@@ -3340,43 +3338,53 @@ async function handleFetchCvesEndpoints(req: VercelRequest, res: VercelResponse,
             // Construct array literal for PostgreSQL
             const weaknessesLiteral = '{' + weaknessesArray.map(w => `"${w?.replace(/"/g, '\\"') || ''}"`).join(',') + '}';
 
-            if (existingResult.rows.length === 0) {
-              // Insert new CVE
-              await db.execute(sql`
-                INSERT INTO vulnerabilities (
-                  id, description, published_date, last_modified_date, vuln_status,
-                  cvss_v3_score, cvss_v3_severity, cvss_v2_score, cvss_v2_severity,
-                  weaknesses, reference_urls
-                )
-                VALUES (
-                  ${cveId}, ${description}, ${cve.published}, ${cve.lastModified}, ${cve.vulnStatus},
-                  ${cvssV3Score !== null ? String(cvssV3Score) : null}, ${cvssV3Severity}, 
-                  ${cvssV2Score !== null ? String(cvssV2Score) : null}, ${cvssV2Severity},
-                  ${weaknessesLiteral}::text[], ${referencesJson}::jsonb
-                )
-              `);
+            // Create SQL chunk for this row
+            valuesChunks.push(sql`(${cveId}, ${description}, ${cve.published}, ${cve.lastModified}, ${cve.vulnStatus}, ${cvssV3Score !== null ? String(cvssV3Score) : null}, ${cvssV3Severity}, ${cvssV2Score !== null ? String(cvssV2Score) : null}, ${cvssV2Severity}, ${weaknessesLiteral}::text[], ${referencesJson}::jsonb)`);
 
-              processedCount++;
-            } else {
-              // Update existing CVE with latest information
-              await db.execute(sql`
-                UPDATE vulnerabilities SET
-                  description = ${description},
-                  published_date = ${cve.published},
-                  last_modified_date = ${cve.lastModified},
-                  vuln_status = ${cve.vulnStatus},
-                  cvss_v3_score = ${cvssV3Score !== null ? String(cvssV3Score) : null},
-                  cvss_v3_severity = ${cvssV3Severity},
-                  cvss_v2_score = ${cvssV2Score !== null ? String(cvssV2Score) : null},
-                  cvss_v2_severity = ${cvssV2Severity},
-                  weaknesses = ${weaknessesLiteral}::text[],
-                  reference_urls = ${referencesJson}::jsonb
-                WHERE id = ${cveId}
-              `);
-            }
+            processedCount++;
           } catch (cveError) {
-            console.error(`Failed to process CVE:`, cveError);
-            errors.push(`Failed to process CVE: ${cveError instanceof Error ? cveError.message : 'Unknown error'}`);
+            console.error(`Failed to prepare CVE for batch:`, cveError);
+            errors.push(`Failed to prepare CVE: ${cveError instanceof Error ? cveError.message : 'Unknown error'}`);
+          }
+        }
+
+        if (valuesChunks.length > 0) {
+          try {
+            console.log(`Executing batch upsert for ${vulnerabilities.length} CVEs...`);
+
+            // Join chunks with commas
+            const finalValues = valuesChunks.reduce((acc, chunk, i) => {
+              return i === 0 ? chunk : sql`${acc}, ${chunk}`;
+            });
+
+            // Construct the batch upsert query
+            const query = sql`
+              INSERT INTO vulnerabilities (
+                id, description, published_date, last_modified_date, vuln_status,
+                cvss_v3_score, cvss_v3_severity, cvss_v2_score, cvss_v2_severity,
+                weaknesses, reference_urls
+              )
+              VALUES ${finalValues}
+              ON CONFLICT (id) DO UPDATE SET
+                description = EXCLUDED.description,
+                published_date = EXCLUDED.published_date,
+                last_modified_date = EXCLUDED.last_modified_date,
+                vuln_status = EXCLUDED.vuln_status,
+                cvss_v3_score = EXCLUDED.cvss_v3_score,
+                cvss_v3_severity = EXCLUDED.cvss_v3_severity,
+                cvss_v2_score = EXCLUDED.cvss_v2_score,
+                cvss_v2_severity = EXCLUDED.cvss_v2_severity,
+                weaknesses = EXCLUDED.weaknesses,
+                reference_urls = EXCLUDED.reference_urls
+            `;
+
+            await db.execute(query);
+            console.log(`Batch upsert successful for page ${pageCount}`);
+          } catch (batchError) {
+            console.error(`Batch upsert failed for page ${pageCount}:`, batchError);
+            errors.push(`Batch upsert failed for page ${pageCount}: ${batchError instanceof Error ? batchError.message : 'Unknown error'}`);
+            // If batch fails, we could try fallback to individual inserts, but for now we just log error
+            // to avoid timeout issues which is the primary goal
           }
         }
       }
