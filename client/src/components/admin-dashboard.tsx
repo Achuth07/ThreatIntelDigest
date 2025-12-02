@@ -29,6 +29,9 @@ interface User {
   emailVerified?: boolean;
   createdAt: string;
   lastLoginAt: string;
+  role?: string | null;
+  topics?: string[];
+  emailWeeklyDigest?: boolean;
 }
 
 interface UserStats {
@@ -81,23 +84,23 @@ export function AdminDashboard() {
 
         if (userStatsResponse.ok) {
           const userStats = await userStatsResponse.json();
-          
+
           // Update token if provided in response
           if (userStats.token) {
             const updatedUser = { ...userData, token: userStats.token };
             updateAuthToken(updatedUser);
           }
-          
+
           // Fetch visitor count
           try {
             const visitorCountResponse = await fetch('/api/visitor-count');
             let visitorCount = 0;
-            
+
             if (visitorCountResponse.ok) {
               const visitorData = await visitorCountResponse.json();
               visitorCount = visitorData.count || 0;
             }
-            
+
             // Combine user stats with visitor count
             setStats({
               ...userStats,
@@ -167,7 +170,7 @@ export function AdminDashboard() {
 
   const handleDeleteUser = async () => {
     if (!deleteUserId) return;
-    
+
     try {
       const userData = getAuthenticatedUser();
       if (!userData) return;
@@ -184,7 +187,7 @@ export function AdminDashboard() {
           title: '✅ User Deleted',
           description: 'User has been successfully deleted',
         });
-        
+
         // Refresh the user list
         setStats(prevStats => {
           if (!prevStats) return null;
@@ -229,7 +232,7 @@ export function AdminDashboard() {
 
   return (
     <div className="p-6">
-      <SEO 
+      <SEO
         title="Admin Dashboard - WhatCyber ThreatFeed"
         description="Admin dashboard for managing users, statistics, and system metrics for WhatCyber ThreatFeed."
         keywords="admin, dashboard, cybersecurity, threat intelligence, CVE, vulnerabilities, user management"
@@ -298,8 +301,8 @@ export function AdminDashboard() {
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={stats.signupTrend}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                        <XAxis 
-                          dataKey="date" 
+                        <XAxis
+                          dataKey="date"
                           stroke="#94a3b8"
                           tick={{ fill: '#94a3b8' }}
                           tickFormatter={(value) => {
@@ -307,14 +310,14 @@ export function AdminDashboard() {
                             return `${date.getMonth() + 1}/${date.getDate()}`;
                           }}
                         />
-                        <YAxis 
+                        <YAxis
                           stroke="#94a3b8"
                           tick={{ fill: '#94a3b8' }}
                           allowDecimals={false}
                         />
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: '#0a0f1f', 
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: '#0a0f1f',
                             border: '1px solid #334155',
                             borderRadius: '8px',
                             color: '#e2e8f0'
@@ -324,10 +327,10 @@ export function AdminDashboard() {
                             return date.toLocaleDateString();
                           }}
                         />
-                        <Line 
-                          type="monotone" 
-                          dataKey="count" 
-                          stroke="#10b981" 
+                        <Line
+                          type="monotone"
+                          dataKey="count"
+                          stroke="#10b981"
                           strokeWidth={2}
                           dot={{ fill: '#10b981', r: 4 }}
                           activeDot={{ r: 6 }}
@@ -347,6 +350,9 @@ export function AdminDashboard() {
                     <TableHead>User</TableHead>
                     <TableHead>Display Name</TableHead>
                     <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Topics</TableHead>
+                    <TableHead>Weekly Digest</TableHead>
                     <TableHead>Auth Method</TableHead>
                     <TableHead>Verified</TableHead>
                     <TableHead>First Login</TableHead>
@@ -361,9 +367,9 @@ export function AdminDashboard() {
                         <TableCell>
                           <div className="flex items-center">
                             {user.avatar ? (
-                              <img 
-                                src={user.avatar} 
-                                alt={user.name} 
+                              <img
+                                src={user.avatar}
+                                alt={user.name}
                                 className="w-8 h-8 rounded-full mr-2"
                               />
                             ) : (
@@ -380,6 +386,48 @@ export function AdminDashboard() {
                           )}
                         </TableCell>
                         <TableCell>{user.email}</TableCell>
+                        <TableCell>
+                          {user.role ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
+                              {user.role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            </span>
+                          ) : (
+                            <span className="text-slate-500 italic text-xs">Not set</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {user.topics && user.topics.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {user.topics.slice(0, 2).map((topic, idx) => (
+                                <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200">
+                                  {topic}
+                                </span>
+                              ))}
+                              {user.topics.length > 2 && (
+                                <span className="text-xs text-slate-500">+{user.topics.length - 2}</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-slate-500 italic text-xs">None</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {user.emailWeeklyDigest ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                              <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                              Enabled
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
+                              <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                              </svg>
+                              Disabled
+                            </span>
+                          )}
+                        </TableCell>
                         <TableCell>
                           {user.googleId ? (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
@@ -465,7 +513,7 @@ export function AdminDashboard() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center">
+                      <TableCell colSpan={11} className="text-center">
                         No recent users found
                       </TableCell>
                     </TableRow>
@@ -483,7 +531,7 @@ export function AdminDashboard() {
           <AlertDialogHeader>
             <AlertDialogTitle className="text-slate-100">Delete User</AlertDialogTitle>
             <AlertDialogDescription className="text-slate-400">
-              Are you sure you want to delete this user? This action cannot be undone. 
+              Are you sure you want to delete this user? This action cannot be undone.
               All user data including bookmarks and preferences will be permanently deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>

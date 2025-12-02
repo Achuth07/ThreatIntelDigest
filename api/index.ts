@@ -60,6 +60,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Vulnerabilities endpoints
+    if (pathname.startsWith('/api/vulnerabilities/vendors')) {
+      return handleVulnerabilitiesVendorsEndpoint(req, res);
+    }
+
     if (pathname.startsWith('/api/vulnerabilities')) {
       return handleVulnerabilitiesEndpoints(req, res, action);
     }
@@ -2250,9 +2254,9 @@ async function getUserStatistics() {
   try {
     const allUsers = await db.select().from(users);
 
-    // Fetch user preferences for display names
+    // Fetch user preferences for display names and email preferences
     const allPreferences = await db.select().from(userPreferences);
-    const preferencesMap = new Map(allPreferences.map(p => [p.userId, p.displayName]));
+    const preferencesMap = new Map(allPreferences.map(p => [p.userId, p]));
 
     // Calculate statistics
     const totalUsers = allUsers.length;
@@ -2274,20 +2278,26 @@ async function getUserStatistics() {
       new Date(user.lastLoginAt) > oneWeekAgo
     ).length;
 
-    // Get ALL users (not just recent 10) with display names, sorted by creation date (newest first)
+    // Get ALL users (not just recent 10) with display names, role, topics, and emailWeeklyDigest
     const allUsersList = [...allUsers]
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .map(user => ({
-        id: user.id,
-        name: user.name,
-        displayName: preferencesMap.get(user.id) || null,
-        email: user.email,
-        avatar: user.avatar || null,
-        googleId: user.googleId || null,
-        emailVerified: user.emailVerified || false,
-        createdAt: user.createdAt,
-        lastLoginAt: user.lastLoginAt,
-      }));
+      .map(user => {
+        const prefs = preferencesMap.get(user.id);
+        return {
+          id: user.id,
+          name: user.name,
+          displayName: prefs?.displayName || null,
+          email: user.email,
+          avatar: user.avatar || null,
+          googleId: user.googleId || null,
+          emailVerified: user.emailVerified || false,
+          createdAt: user.createdAt,
+          lastLoginAt: user.lastLoginAt,
+          role: user.role || null,
+          topics: user.topics || [],
+          emailWeeklyDigest: prefs?.emailWeeklyDigest || false,
+        };
+      });
 
     // Calculate signup trend data (last 30 days)
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
@@ -3029,8 +3039,6 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
             cvss_v2_severity,
             weaknesses,
             reference_urls,
-            weaknesses,
-            reference_urls,
             vendors,
             created_at
           FROM vulnerabilities
@@ -3055,8 +3063,6 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
             cvss_v2_severity,
             weaknesses,
             reference_urls,
-            weaknesses,
-            reference_urls,
             vendors,
             created_at
           FROM vulnerabilities
@@ -3079,8 +3085,6 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
           cvss_v3_severity,
           cvss_v2_score,
           cvss_v2_severity,
-          weaknesses,
-          reference_urls,
           weaknesses,
           reference_urls,
           vendors,
@@ -3175,6 +3179,65 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
         databaseConfigured: !!process.env.DATABASE_URL,
         errorType: error instanceof Error ? error.constructor.name : 'Unknown'
       }
+    });
+  }
+}
+
+async function handleVulnerabilitiesVendorsEndpoint(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
+
+  try {
+    console.log('Fetching vendors list from database...');
+
+    if (!process.env.DATABASE_URL) {
+      return res.status(500).json({
+        error: 'DATABASE_URL environment variable is required'
+      });
+    }
+
+    // Import modules dynamically
+    const { drizzle } = await import('drizzle-orm/neon-serverless');
+    const { Pool } = await import('@neondatabase/serverless');
+    const { sql } = await import('drizzle-orm');
+
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const db = drizzle(pool);
+
+    // Get all vendors with their CVE counts
+    const query = sql`
+      SELECT 
+        jsonb_array_elements_text(vendors) as vendor,
+        COUNT(*) as cve_count
+      FROM vulnerabilities
+      WHERE vendors IS NOT NULL 
+      AND jsonb_array_length(vendors) > 0
+      GROUP BY vendor
+      ORDER BY cve_count DESC, vendor ASC
+    `;
+
+    const result = await db.execute(query);
+
+    // Transform to expected format
+    const vendors = result.rows.map((row: any) => ({
+      vendor: row.vendor,
+      count: parseInt(row.cve_count as string, 10)
+    }));
+
+    console.log(`Found ${vendors.length} unique vendors`);
+
+    res.json({
+      vendors,
+      total: vendors.length,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('Error fetching vendors:', error);
+    res.status(500).json({
+      message: 'Failed to fetch vendors',
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 }

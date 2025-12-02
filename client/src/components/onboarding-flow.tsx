@@ -50,7 +50,7 @@ export default function OnboardingFlow() {
     const [role, setRole] = useState<string | null>(null);
     const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
     const [followedSources, setFollowedSources] = useState<string[]>([]);
-    const [emailWeeklyDigest, setEmailWeeklyDigest] = useState<boolean>(false);
+    const [emailWeeklyDigest, setEmailWeeklyDigest] = useState<boolean>(true);
     const [, setLocation] = useLocation();
     const { toast } = useToast();
 
