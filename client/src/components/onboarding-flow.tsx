@@ -50,6 +50,7 @@ export default function OnboardingFlow() {
     const [role, setRole] = useState<string | null>(null);
     const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
     const [followedSources, setFollowedSources] = useState<string[]>([]);
+    const [emailWeeklyDigest, setEmailWeeklyDigest] = useState<boolean>(false);
     const [, setLocation] = useLocation();
     const { toast } = useToast();
 
@@ -72,7 +73,7 @@ export default function OnboardingFlow() {
         fetchSources();
     });
 
-    const nextStep = () => setStep((prev) => Math.min(prev + 1, 4));
+    const nextStep = () => setStep((prev) => Math.min(prev + 1, 5));
     // const prevStep = () => setStep((prev) => Math.max(prev - 1, 1)); // Optional: Back button
 
     const toggleTopic = (topic: string) => {
@@ -106,7 +107,8 @@ export default function OnboardingFlow() {
                     body: JSON.stringify({
                         role,
                         topics: selectedTopics,
-                        sourceIds: followedSources // IDs are already strings (UUIDs)
+                        sourceIds: followedSources, // IDs are already strings (UUIDs)
+                        emailWeeklyDigest: emailWeeklyDigest
                     })
                 });
 
@@ -165,11 +167,11 @@ export default function OnboardingFlow() {
             <div className="w-full max-w-2xl">
                 <div className="mb-8 flex justify-between items-center px-2">
                     <div className="flex gap-2">
-                        {[1, 2, 3, 4].map((s) => (
+                        {[1, 2, 3, 4, 5].map((s) => (
                             <div key={s} className={cn("h-2 w-12 rounded-full transition-colors", s <= step ? "bg-primary" : "bg-muted")} />
                         ))}
                     </div>
-                    <span className="text-sm text-muted-foreground">Step {step} of 4</span>
+                    <span className="text-sm text-muted-foreground">Step {step} of 5</span>
                 </div>
 
                 <AnimatePresence mode="wait">
@@ -352,6 +354,90 @@ export default function OnboardingFlow() {
                     {step === 4 && (
                         <motion.div
                             key="step4"
+                            variants={variants}
+                            initial="enter"
+                            animate="center"
+                            exit="exit"
+                            transition={{ duration: 0.3 }}
+                        >
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Stay informed with weekly digests</CardTitle>
+                                    <CardDescription>Get a weekly summary of top threats from the sources you follow, delivered straight to your inbox.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-6">
+                                        <div className="flex items-start space-x-4 p-4 rounded-lg border bg-muted/50">
+                                            <div className="flex-shrink-0 mt-1">
+                                                <svg className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                                </svg>
+                                            </div>
+                                            <div className="flex-1">
+                                                <h4 className="font-medium mb-1">Why subscribe?</h4>
+                                                <ul className="text-sm text-muted-foreground space-y-1">
+                                                    <li>• Never miss critical security updates</li>
+                                                    <li>• Curated highlights from your selected sources</li>
+                                                    <li>• Delivered every Monday morning</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            <button
+                                                onClick={() => setEmailWeeklyDigest(true)}
+                                                className={cn(
+                                                    "w-full p-4 rounded-lg border-2 transition-all text-left",
+                                                    emailWeeklyDigest
+                                                        ? "border-primary bg-primary/5"
+                                                        : "border-muted bg-card hover:border-primary/50"
+                                                )}
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <p className="font-medium">Yes, send me weekly digests</p>
+                                                        <p className="text-sm text-muted-foreground">Stay on top of the latest threats</p>
+                                                    </div>
+                                                    {emailWeeklyDigest && <Check className="h-5 w-5 text-primary" />}
+                                                </div>
+                                            </button>
+
+                                            <button
+                                                onClick={() => setEmailWeeklyDigest(false)}
+                                                className={cn(
+                                                    "w-full p-4 rounded-lg border-2 transition-all text-left",
+                                                    !emailWeeklyDigest
+                                                        ? "border-primary bg-primary/5"
+                                                        : "border-muted bg-card hover:border-primary/50"
+                                                )}
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <p className="font-medium">No, I'll check manually</p>
+                                                        <p className="text-sm text-muted-foreground">You can always enable this later</p>
+                                                    </div>
+                                                    {!emailWeeklyDigest && <Check className="h-5 w-5 text-primary" />}
+                                                </div>
+                                            </button>
+                                        </div>
+
+                                        <p className="text-xs text-muted-foreground text-center">
+                                            You can change this preference anytime in Settings → Notifications
+                                        </p>
+                                    </div>
+                                    <div className="mt-6 flex justify-end">
+                                        <Button onClick={nextStep}>
+                                            Next <ChevronRight className="ml-2 h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </motion.div>
+                    )}
+
+                    {step === 5 && (
+                        <motion.div
+                            key="step5"
                             variants={variants}
                             initial="enter"
                             animate="center"

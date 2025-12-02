@@ -4456,8 +4456,8 @@ async function handleUserOnboardingEndpoints(req: VercelRequest, res: VercelResp
 
   if (req.method === 'POST') {
     try {
-      const { role, topics, sourceIds } = req.body;
-      console.log('Onboarding submission received:', { userId, role, topics, sourceIds });
+      const { role, topics, sourceIds, emailWeeklyDigest } = req.body;
+      console.log('Onboarding submission received:', { userId, role, topics, sourceIds, emailWeeklyDigest });
 
       // Validate input
       if (!role || !Array.isArray(topics) || !Array.isArray(sourceIds)) {
@@ -4493,6 +4493,31 @@ async function handleUserOnboardingEndpoints(req: VercelRequest, res: VercelResp
       await Promise.all(preferencePromises);
       console.log('Source preferences created successfully');
 
+      // Save email weekly digest preference
+      if (emailWeeklyDigest !== undefined) {
+        console.log('Saving email weekly digest preference:', emailWeeklyDigest);
+        const existingUserPrefs = await storage.getUserPreferences(userId);
+
+        if (existingUserPrefs) {
+          // Update existing preferences
+          await storage.updateUserPreferences(userId, {
+            emailWeeklyDigest: emailWeeklyDigest
+          });
+          console.log('Updated existing user preferences with emailWeeklyDigest');
+        } else {
+          // Create new preferences
+          await storage.createUserPreferences({
+            userId,
+            emailWeeklyDigest: emailWeeklyDigest,
+            autoExtractIOCs: true,
+            autoEnrichIOCs: false,
+            hiddenIOCTypes: [],
+            emailWatchlistAlerts: false
+          });
+          console.log('Created new user preferences with emailWeeklyDigest');
+        }
+      }
+
       return res.status(200).json({
         message: 'Onboarding completed successfully',
         user: updatedUser
@@ -4509,4 +4534,6 @@ async function handleUserOnboardingEndpoints(req: VercelRequest, res: VercelResp
 
   return res.status(405).json({ message: 'Method not allowed' });
 }
+
+
 
