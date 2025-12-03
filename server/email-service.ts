@@ -364,71 +364,193 @@ function generateDigestHtml(articles: Partial<Article>[]): string {
   };
 
   const articlesHtml = articles.map(article => `
-    <div style="background-color: #1e293b; border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #334155;">
-      <div style="margin-bottom: 10px;">
-        <span style="background-color: ${getThreatColor(article.threatLevel)}; color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; display: inline-block; margin-bottom: 8px;">
-          ${article.threatLevel || 'UNKNOWN'}
-        </span>
-        <h3 style="margin: 0; font-size: 18px; color: #f8fafc; line-height: 1.4;">
-          <a href="${article.url}" style="color: #f8fafc; text-decoration: none;">${article.title}</a>
-        </h3>
-      </div>
-      <p style="color: #cbd5e1; font-size: 14px; line-height: 1.6; margin: 0 0 15px 0;">
-        ${article.summary ? article.summary.substring(0, 150) + (article.summary.length > 150 ? '...' : '') : 'No summary available.'}
-      </p>
-      <a href="${article.url}" style="color: #10b981; font-size: 14px; font-weight: 600; text-decoration: none;">Read More →</a>
-    </div>
+    <!-- Threat Item -->
+    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #111111; border: 1px solid #333333; border-radius: 12px; margin-bottom: 20px;">
+        <tr>
+            <td style="padding: 25px;">
+                <span style="background-color: ${getThreatColor(article.threatLevel)}; color: #ffffff; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">${article.threatLevel || 'UNKNOWN'}</span>
+                <h3 style="margin: 15px 0 10px; font-size: 18px; line-height: 26px; font-weight: 700; color: #ffffff;">
+                    <a href="${article.url}" style="color: #ffffff; text-decoration: none;">${article.title}</a>
+                </h3>
+                <p style="margin: 0 0 20px; font-size: 14px; line-height: 22px; color: #9ca3af;">
+                    ${article.summary ? article.summary.substring(0, 150) + (article.summary.length > 150 ? '...' : '') : 'No summary available.'}
+                </p>
+                <a href="${article.url}" style="font-size: 14px; font-weight: 700; color: #10b981; text-decoration: none;">Read More &rarr;</a>
+            </td>
+        </tr>
+    </table>
   `).join('');
 
   return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      </head>
-      <body style="margin: 0; padding: 0; background-color: #0f1419; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;">
-        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f1419; padding: 40px 20px;">
-          <tr>
-            <td align="center">
-              <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #0a0f1f; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);">
+<!DOCTYPE html>
+<html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+    <meta charset="utf-8"> 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"> 
+    <meta name="x-apple-disable-message-reformatting"> 
+    <title>Weekly Threat Digest</title> 
+
+    <!-- Web Font Reference for Outlook compatibility -->
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
+
+    <style>
+        /* CSS Resets */
+        body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+        table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+        img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+        table { border-collapse: collapse !important; }
+        body { height: 100% !important; margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: #ffffff; color: #000000; }
+
+        /* Mobile Styles */
+        @media screen and (max-width: 600px) {
+            .email-container { width: 100% !important; margin: auto !important; }
+            .mobile-padding { padding-left: 20px !important; padding-right: 20px !important; }
+            .hero-text { font-size: 28px !important; line-height: 34px !important; }
+        }
+    </style>
+</head>
+
+<body style="margin: 0; padding: 0; background-color: #ffffff; font-family: 'Segoe UI', Helvetica, Arial, sans-serif;">
+
+    <!-- Outer Wrapper -->
+    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff;">
+        <tr>
+            <td align="center" style="padding: 20px;">
                 
-                <!-- Header -->
-                <tr>
-                  <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 30px; text-align: center;">
-                    <img src="https://www.whatcyber.com/threatfeed/logo512.png" alt="WhatCyber Logo" style="width: 64px; height: 64px; margin-bottom: 20px; border-radius: 8px;">
-                    <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">Weekly Threat Digest</h1>
-                    <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0; font-size: 14px;">Your curated summary of top cybersecurity threats</p>
-                  </td>
-                </tr>
+                <!-- The Green Frame Container (Thicker Border via Padding) -->
+                <table border="0" cellpadding="0" cellspacing="0" width="600" class="email-container" style="background-color: #10b981; border-radius: 16px; overflow: hidden;">
+                    <tr>
+                        <td align="center" style="padding: 16px;"> <!-- Increased thickness here -->
+                            
+                            <!-- Inner Content Container -->
+                            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="border-radius: 12px; overflow: hidden; background-color: #ffffff;">
+                                
+                                <!-- TOP SECTION: WHITE BACKGROUND (Header) -->
+                                <tr>
+                                    <td bgcolor="#ffffff" style="padding: 20px 30px;">
+                                        <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                            <tr>
+                                                <!-- Logo & Text -->
+                                                <td valign="middle">
+                                                    <table border="0" cellpadding="0" cellspacing="0">
+                                                        <tr>
+                                                            <td valign="middle" style="padding-right: 12px;">
+                                                                <a href="https://www.whatcyber.com/" style="text-decoration: none; border: 0;">
+                                                                    <img src="https://i.ibb.co/HDw55Gr5/android-chrome-192x192.png" width="40" height="40" alt="Logo" style="display: block; border: 0; border-radius: 8px;">
+                                                                </a>
+                                                            </td>
+                                                            <td valign="middle">
+                                                                <h1 style="margin: 0; font-size: 20px; font-weight: 800; color: #000000; line-height: 1; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">WhatCyber</h1>
+                                                                <p style="margin: 0; font-size: 11px; font-weight: 600; color: #10b981; line-height: 1.2; text-transform: uppercase; letter-spacing: 0.5px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">Threatfeed</p>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                                <!-- Login Button -->
+                                                <td align="right" valign="middle">
+                                                    <table border="0" cellpadding="0" cellspacing="0">
+                                                        <tr>
+                                                            <td style="background-color: #10b981; border-radius: 50px; padding: 8px 20px;">
+                                                                <a href="https://www.whatcyber.com/login/" style="color: #000000; font-size: 13px; font-weight: 700; text-decoration: none; display: block; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">Log in</a>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+
+                                <!-- HERO SECTION: LIGHT GREY BACKGROUND -->
+                                <tr>
+                                    <td bgcolor="#f3f4f6" style="padding: 50px 30px; border-bottom: 1px solid #e5e7eb;">
+                                        <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                            <tr>
+                                                <td align="left">
+                                                    <h2 class="hero-text" style="color: #111827; font-size: 32px; line-height: 40px; font-weight: 900; margin: 0 0 10px 0; letter-spacing: -0.5px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+                                                        WEEKLY<br>THREAT DIGEST
+                                                    </h2>
+                                                    <p style="color: #4b5563; font-size: 18px; margin: 0; font-weight: 400; line-height: 1.5; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+                                                        Your curated summary of top cybersecurity threats.
+                                                    </p>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                </tr>
+
+                                <!-- BOTTOM SECTION: BLACK BACKGROUND (Cards) -->
+                                <tr>
+                                    <td bgcolor="#000000" style="padding: 40px 20px;">
+                                        
+                                        ${articlesHtml}
+
+                                        <!-- Footer Content inside Black Section -->
+                                        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top: 40px; border-top: 1px solid #333333;">
+                                            <tr>
+                                                <td align="center" style="padding-top: 30px;">
+                                                    <a href="https://www.whatcyber.com/" style="text-decoration: none; border: 0;">
+                                                        <img src="https://i.ibb.co/HDw55Gr5/android-chrome-192x192.png" width="32" height="32" alt="WhatCyber" style="display: block; border: 0; border-radius: 6px; margin-bottom: 10px;">
+                                                    </a>
+                                                    <p style="color: #ffffff; font-size: 16px; font-weight: 700; margin: 0 0 2px 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">WhatCyber</p>
+                                                    <p style="color: #666666; font-size: 12px; margin: 0 0 20px 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">Threatfeed</p>
+                                                    
+                                                    <!-- Socials -->
+                                                    <table border="0" cellpadding="0" cellspacing="0">
+                                                        <tr>
+                                                            <td style="padding: 0 10px;">
+                                                                <a href="mailto:support@whatcyber.com" style="text-decoration: none;">
+                                                                    <img src="https://img.icons8.com/ios-filled/50/ffffff/mail.png" width="24" height="24" alt="Email" style="display: block; border: 0;">
+                                                                </a>
+                                                            </td>
+                                                            <td style="padding: 0 10px;">
+                                                                <a href="https://x.com/whatcyber" style="text-decoration: none;">
+                                                                    <img src="https://img.icons8.com/ios-filled/50/ffffff/twitterx.png" width="24" height="24" alt="X" style="display: block; border: 0;">
+                                                                </a>
+                                                            </td>
+                                                            <td style="padding: 0 10px;">
+                                                                <a href="https://www.linkedin.com/company/whatcyber/" style="text-decoration: none;">
+                                                                    <img src="https://img.icons8.com/ios-filled/50/ffffff/linkedin.png" width="24" height="24" alt="LinkedIn" style="display: block; border: 0;">
+                                                                </a>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+
+                                                    <p style="color: #444444; font-size: 11px; margin-top: 20px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;">
+                                                        &copy; ${new Date().getFullYear()} WhatCyber. All rights reserved.<br>
+                                                        You are receiving this email because you opted in to weekly digests.
+                                                        <a href="https://www.whatcyber.com/settings" style="color: #444444; text-decoration: underline;">Unsubscribe</a><br>
+                                                        <span style="color: #333333; font-size: 10px; opacity: 0.5;">Generated: ${new Date().toISOString()}</span>
+                                                    </p>
+                                                </td>
+                                            </tr>
+                                        </table>
+
+                                    </td>
+                                </tr>
+                            </table>
+                            <!-- End Inner Content Container -->
+
+                        </td>
+                    </tr>
+                </table>
+                <!-- End Green Outline Container -->
                 
-                <!-- Content -->
-                <tr>
-                  <td style="padding: 40px 30px; color: #e2e8f0;">
-                    <h2 style="color: #10b981; margin: 0 0 20px 0; font-size: 20px; font-weight: 600;">Top Threats This Week</h2>
-                    ${articlesHtml}
-                  </td>
-                </tr>
-                
-                <!-- Footer -->
-                <tr>
-                  <td style="background-color: #0f1419; padding: 30px; text-align: center; border-top: 1px solid #1e293b;">
-                    <p style="font-size: 12px; color: #64748b; margin: 0 0 10px 0; line-height: 1.5;">
-                      You are receiving this email because you opted in to weekly digests from WhatCyber.
-                    </p>
-                    <p style="font-size: 12px; color: #64748b; margin: 0;">
-                      © 2025 WhatCyber. All rights reserved.<br>
-                      <a href="https://www.whatcyber.com/threatfeed" style="color: #10b981; text-decoration: none;">www.whatcyber.com/threatfeed</a>
-                    </p>
-                  </td>
-                </tr>
-                
-              </table>
             </td>
-          </tr>
-        </table>
-      </body>
-    </html>
+        </tr>
+    </table>
+
+</body>
+</html>
   `;
 }
 
@@ -449,7 +571,7 @@ export async function sendWeeklyDigestEmail(to: string, articles: Partial<Articl
     const data = await resend.emails.send({
       from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
       to: [to],
-      subject: 'Weekly Threat Intel Digest - WhatCyber',
+      subject: `Weekly Threat Intel Digest - WhatCyber - ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
       html: html,
     });
 
