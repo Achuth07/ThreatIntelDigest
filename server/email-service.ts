@@ -1,11 +1,15 @@
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
+import { Resend } from 'resend';
+import type { Article } from '@shared/schema';
 
 const SENDER_EMAIL = 'contact@whatcyber.com';
 const SENDER_NAME = 'WhatCyber';
-const BASE_URL = process.env.VERCEL_ENV === 'production' 
-  ? 'https://www.whatcyber.com/threatfeed' 
+const BASE_URL = process.env.VERCEL_ENV === 'production'
+  ? 'https://www.whatcyber.com/threatfeed'
   : 'http://localhost:5173';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 /**
  * Create SMTP transporter (called lazily to avoid serverless timeout issues)
@@ -44,7 +48,7 @@ export async function sendVerificationEmail(
   verificationToken: string
 ): Promise<void> {
   const verificationUrl = `${BASE_URL}/api/auth/email/verify?token=${verificationToken}`;
-  
+
   console.log('📧 Preparing to send verification email via SMTP:', {
     to,
     from: SENDER_EMAIL,
@@ -167,10 +171,10 @@ export async function sendVerificationEmail(
   try {
     const transporter = createTransporter();
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Verification email sent successfully:', { 
-      to, 
+    console.log('✅ Verification email sent successfully:', {
+      to,
       messageId: info.messageId,
-      response: info.response 
+      response: info.response
     });
   } catch (error: any) {
     console.error('❌ Error sending verification email via SMTP:', {
@@ -180,7 +184,7 @@ export async function sendVerificationEmail(
       command: error.command,
       fullError: error
     });
-    
+
     throw new Error('Failed to send verification email');
   }
 }
@@ -197,7 +201,7 @@ export async function sendPasswordResetEmail(
   resetToken: string
 ): Promise<void> {
   const resetUrl = `${BASE_URL}/reset-password?token=${resetToken}`;
-  
+
   console.log('📧 Preparing to send password reset email via SMTP:', {
     to,
     from: SENDER_EMAIL,
@@ -327,10 +331,10 @@ export async function sendPasswordResetEmail(
   try {
     const transporter = createTransporter();
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Password reset email sent successfully:', { 
-      to, 
+    console.log('✅ Password reset email sent successfully:', {
+      to,
       messageId: info.messageId,
-      response: info.response 
+      response: info.response
     });
   } catch (error: any) {
     console.error('❌ Error sending password reset email via SMTP:', {
@@ -340,7 +344,118 @@ export async function sendPasswordResetEmail(
       command: error.command,
       fullError: error
     });
-    
+
     throw new Error('Failed to send password reset email');
+  }
+}
+
+/**
+ * Generate HTML for the weekly digest
+ */
+function generateDigestHtml(articles: Partial<Article>[]): string {
+  const getThreatColor = (level: string | undefined) => {
+    switch (level?.toUpperCase()) {
+      case 'CRITICAL': return '#ef4444'; // Red
+      case 'HIGH': return '#f97316';     // Orange
+      case 'MEDIUM': return '#eab308';   // Yellow
+      case 'LOW': return '#3b82f6';      // Blue
+      default: return '#94a3b8';         // Slate
+    }
+  };
+
+  const articlesHtml = articles.map(article => `
+    <div style="background-color: #1e293b; border-radius: 8px; padding: 20px; margin-bottom: 20px; border: 1px solid #334155;">
+      <div style="margin-bottom: 10px;">
+        <span style="background-color: ${getThreatColor(article.threatLevel)}; color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; display: inline-block; margin-bottom: 8px;">
+          ${article.threatLevel || 'UNKNOWN'}
+        </span>
+        <h3 style="margin: 0; font-size: 18px; color: #f8fafc; line-height: 1.4;">
+          <a href="${article.url}" style="color: #f8fafc; text-decoration: none;">${article.title}</a>
+        </h3>
+      </div>
+      <p style="color: #cbd5e1; font-size: 14px; line-height: 1.6; margin: 0 0 15px 0;">
+        ${article.summary ? article.summary.substring(0, 150) + (article.summary.length > 150 ? '...' : '') : 'No summary available.'}
+      </p>
+      <a href="${article.url}" style="color: #10b981; font-size: 14px; font-weight: 600; text-decoration: none;">Read More →</a>
+    </div>
+  `).join('');
+
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #0f1419; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f1419; padding: 40px 20px;">
+          <tr>
+            <td align="center">
+              <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #0a0f1f; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);">
+                
+                <!-- Header -->
+                <tr>
+                  <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 30px; text-align: center;">
+                    <img src="https://www.whatcyber.com/threatfeed/logo512.png" alt="WhatCyber Logo" style="width: 64px; height: 64px; margin-bottom: 20px; border-radius: 8px;">
+                    <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">Weekly Threat Digest</h1>
+                    <p style="color: rgba(255, 255, 255, 0.9); margin: 10px 0 0 0; font-size: 14px;">Your curated summary of top cybersecurity threats</p>
+                  </td>
+                </tr>
+                
+                <!-- Content -->
+                <tr>
+                  <td style="padding: 40px 30px; color: #e2e8f0;">
+                    <h2 style="color: #10b981; margin: 0 0 20px 0; font-size: 20px; font-weight: 600;">Top Threats This Week</h2>
+                    ${articlesHtml}
+                  </td>
+                </tr>
+                
+                <!-- Footer -->
+                <tr>
+                  <td style="background-color: #0f1419; padding: 30px; text-align: center; border-top: 1px solid #1e293b;">
+                    <p style="font-size: 12px; color: #64748b; margin: 0 0 10px 0; line-height: 1.5;">
+                      You are receiving this email because you opted in to weekly digests from WhatCyber.
+                    </p>
+                    <p style="font-size: 12px; color: #64748b; margin: 0;">
+                      © 2025 WhatCyber. All rights reserved.<br>
+                      <a href="https://www.whatcyber.com/threatfeed" style="color: #10b981; text-decoration: none;">www.whatcyber.com/threatfeed</a>
+                    </p>
+                  </td>
+                </tr>
+                
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+    </html>
+  `;
+}
+
+/**
+ * Send weekly digest email using Resend
+ */
+export async function sendWeeklyDigestEmail(to: string, articles: Partial<Article>[]): Promise<void> {
+  console.log('📧 Preparing to send weekly digest via Resend:', { to, articleCount: articles.length });
+
+  if (!process.env.RESEND_API_KEY) {
+    console.error('❌ RESEND_API_KEY is missing');
+    throw new Error('RESEND_API_KEY is missing');
+  }
+
+  try {
+    const html = generateDigestHtml(articles);
+
+    const data = await resend.emails.send({
+      from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
+      to: [to],
+      subject: 'Weekly Threat Intel Digest - WhatCyber',
+      html: html,
+    });
+
+    console.log('✅ Weekly digest sent successfully:', data);
+  } catch (error) {
+    console.error('❌ Error sending weekly digest via Resend:', error);
+    throw error;
   }
 }

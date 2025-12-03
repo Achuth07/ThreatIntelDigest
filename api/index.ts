@@ -3529,14 +3529,41 @@ async function handleFetchCvesEndpoints(req: VercelRequest, res: VercelResponse,
 // Helper functions for fetch-feeds
 function determineThreatLevel(title: string, content: string): string {
   const text = (title + " " + content).toLowerCase();
+  let score = 0;
 
-  if (text.includes("critical") || text.includes("zero-day") || text.includes("ransomware")) {
-    return "CRITICAL";
-  } else if (text.includes("high") || text.includes("vulnerability") || text.includes("exploit")) {
-    return "HIGH";
-  } else {
-    return "MEDIUM";
-  }
+  // Critical keywords (+30)
+  const criticalKeywords = [
+    "rce", "remote code execution", "active exploitation", "in the wild",
+    "zero-day", "0-day", "cvss 10", "cvss 9", "unauthenticated", "critical",
+    "ransomware", "data breach", "supply chain attack"
+  ];
+
+  // High keywords (+20)
+  const highKeywords = [
+    "privilege escalation", "dos", "denial of service", "high severity",
+    "cvss 8", "cvss 7", "sql injection", "xss", "exploit available",
+    "patch tuesday", "memory corruption"
+  ];
+
+  // Medium keywords (+10)
+  const mediumKeywords = [
+    "medium severity", "cvss 6", "cvss 5", "bypass", "spoofing",
+    "cross-site", "information disclosure"
+  ];
+
+  // Calculate score based on unique keyword matches
+  // We use 'some' to ensure we don't double count if multiple keywords from same category appear? 
+  // No, the plan implies weighted scoring, so multiple keywords should increase score.
+  // But to avoid over-inflating, let's count each keyword only once.
+
+  criticalKeywords.forEach(word => { if (text.includes(word)) score += 30; });
+  highKeywords.forEach(word => { if (text.includes(word)) score += 20; });
+  mediumKeywords.forEach(word => { if (text.includes(word)) score += 10; });
+
+  // Determine level based on score
+  if (score >= 30) return "CRITICAL";
+  if (score >= 20) return "HIGH";
+  return "MEDIUM"; // Default
 }
 
 function extractTags(title: string, content: string): string[] {
