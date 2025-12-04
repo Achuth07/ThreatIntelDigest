@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, ExternalLink, Clock, Calendar, ShieldAlert } from "lucide-react";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
+import logoImage from '@/assets/logo/android-chrome-512x512.png';
 
 interface Article {
     id: string;
@@ -75,34 +76,77 @@ export default function ArticlePage() {
 
     if (isArticleLoading) {
         return (
-            <div className="container max-w-4xl mx-auto py-8 px-4">
-                <div className="mb-6">
-                    <Skeleton className="h-10 w-32" />
+            <div className="min-h-screen bg-background pb-12">
+                {/* Header Skeleton */}
+                <header className="bg-whatcyber-dark border-b border-whatcyber-light-gray/30 sticky top-0 z-50 backdrop-blur-sm bg-whatcyber-dark/95 mb-8">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center">
+                        <div className="flex items-center space-x-3">
+                            <Skeleton className="w-8 h-8 rounded-lg" />
+                            <div className="flex flex-col gap-1">
+                                <Skeleton className="w-24 h-4" />
+                                <Skeleton className="w-16 h-3" />
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
+                <div className="container max-w-4xl mx-auto px-4">
+                    <div className="mb-6">
+                        <Skeleton className="h-10 w-32" />
+                    </div>
+                    <Skeleton className="h-12 w-3/4 mb-4" />
+                    <div className="flex gap-4 mb-8">
+                        <Skeleton className="h-6 w-24" />
+                        <Skeleton className="h-6 w-24" />
+                        <Skeleton className="h-6 w-24" />
+                    </div>
+                    <Skeleton className="h-96 w-full" />
                 </div>
-                <Skeleton className="h-12 w-3/4 mb-4" />
-                <div className="flex gap-4 mb-8">
-                    <Skeleton className="h-6 w-24" />
-                    <Skeleton className="h-6 w-24" />
-                    <Skeleton className="h-6 w-24" />
-                </div>
-                <Skeleton className="h-96 w-full" />
             </div>
         );
     }
 
     if (articleError || !article) {
         return (
-            <div className="container max-w-4xl mx-auto py-12 px-4 text-center">
-                <h2 className="text-2xl font-bold mb-4">Article not found</h2>
-                <p className="text-muted-foreground mb-6">The article you are looking for could not be found or has been removed.</p>
-                <Button onClick={() => setLocation('/threatfeed')}>Return to Feed</Button>
+            <div className="min-h-screen bg-background pb-12">
+                {/* Header */}
+                <header className="bg-whatcyber-dark border-b border-whatcyber-light-gray/30 sticky top-0 z-50 backdrop-blur-sm bg-whatcyber-dark/95 mb-8">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center">
+                        <a href="https://www.whatcyber.com/threatfeed/" className="flex items-center space-x-3 hover:opacity-90 transition-opacity">
+                            <img src={logoImage} alt="WhatCyber Logo" className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg" />
+                            <div className="flex flex-col">
+                                <h1 className="text-lg lg:text-xl font-bold text-slate-100 leading-tight">WhatCyber</h1>
+                                <span className="text-xs text-whatcyber-teal font-medium -mt-1">ThreatFeed</span>
+                            </div>
+                        </a>
+                    </div>
+                </header>
+
+                <div className="container max-w-4xl mx-auto py-12 px-4 text-center">
+                    <h2 className="text-2xl font-bold mb-4">Article not found</h2>
+                    <p className="text-muted-foreground mb-6">The article you are looking for could not be found or has been removed.</p>
+                    <Button onClick={() => setLocation('/threatfeed')}>Return to Feed</Button>
+                </div>
             </div>
         );
     }
 
     return (
         <div className="min-h-screen bg-background pb-12">
-            <div className="container max-w-4xl mx-auto py-8 px-4">
+            {/* Header */}
+            <header className="bg-whatcyber-dark border-b border-whatcyber-light-gray/30 sticky top-0 z-50 backdrop-blur-sm bg-whatcyber-dark/95 mb-8">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center">
+                    <a href="https://www.whatcyber.com/threatfeed/" className="flex items-center space-x-3 hover:opacity-90 transition-opacity">
+                        <img src={logoImage} alt="WhatCyber Logo" className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg" />
+                        <div className="flex flex-col">
+                            <h1 className="text-lg lg:text-xl font-bold text-slate-100 leading-tight">WhatCyber</h1>
+                            <span className="text-xs text-whatcyber-teal font-medium -mt-1">ThreatFeed</span>
+                        </div>
+                    </a>
+                </div>
+            </header>
+
+            <div className="container max-w-4xl mx-auto px-4">
                 {/* Navigation */}
                 <Button
                     variant="ghost"
