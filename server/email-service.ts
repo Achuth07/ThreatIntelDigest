@@ -6,7 +6,7 @@ import type { Article } from '@shared/schema';
 const SENDER_EMAIL = 'contact@whatcyber.com';
 const SENDER_NAME = 'WhatCyber';
 const BASE_URL = process.env.VERCEL_ENV === 'production'
-  ? 'https://www.whatcyber.com/threatfeed'
+  ? 'https://www.whatcyber.com'
   : 'http://localhost:5173';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
