@@ -771,74 +771,7 @@ async function handleEmailAuthEndpoints(req: VercelRequest, res: VercelResponse)
     }
   }
 
-  // POST /api/auth/email/forgot-password - Request password reset
-  if ((pathname === '/api/auth/email/forgot-password' || pathname === '/api/auth/email/forgot-password/') && req.method === 'POST') {
-    try {
-      const { email } = req.body;
 
-      if (!email) {
-        return res.status(400).json({ error: 'Email is required' });
-      }
-
-      const user = await storage.getUserByEmail(email);
-      if (!user) {
-        return res.status(404).json({ error: 'Email not found' });
-      }
-
-      // Generate password reset token
-      const resetToken = generateSecureToken();
-      await db.update(usersTable)
-        .set({ resetToken })
-        .where(eq(usersTable.id, user.id));
-
-      // Send password reset email
-      await sendPasswordResetEmail(user.email, user.name, resetToken);
-
-      return res.status(200).json({ message: 'Password reset email sent. Please check your inbox to reset your password.' });
-
-    } catch (error) {
-      console.error('Password Reset Request Error:', error);
-      return res.status(500).json({ error: 'Internal server error' });
-    }
-  }
-
-  // POST /api/auth/email/reset-password - Reset password with token
-  if ((pathname === '/api/auth/email/reset-password' || pathname === '/api/auth/email/reset-password/') && req.method === 'POST') {
-    try {
-      const { token, password, passwordConfirm } = req.body;
-
-      if (!token || !password || !passwordConfirm) {
-        return res.status(400).json({ error: 'All fields are required' });
-      }
-
-      if (password !== passwordConfirm) {
-        return res.status(400).json({ error: 'Passwords do not match' });
-      }
-
-      if (!validatePasswordStrength(password)) {
-        return res.status(400).json({
-          error: 'Password too weak',
-          message: 'Password must be at least 8 characters long, and contain uppercase letters, numbers and symbols'
-        });
-      }
-
-      const user = await storage.getUserByResetToken(token);
-      if (!user) {
-        return res.status(404).json({ error: 'Invalid reset token' });
-      }
-
-      const passwordHash = await hashPassword(password);
-      await db.update(usersTable)
-        .set({ passwordHash })
-        .where(eq(usersTable.id, user.id));
-
-      return res.status(200).json({ message: 'Password reset successfully. Please log in with your new password.' });
-
-    } catch (error) {
-      console.error('Password Reset Error:', error);
-      return res.status(500).json({ error: 'Internal server error' });
-    }
-  }
 
   // Handler for email verification
   if ((pathname === '/api/auth/email/verify' || pathname === '/api/auth/email/verify/') && req.method === 'GET') {
