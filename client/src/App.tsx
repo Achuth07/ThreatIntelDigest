@@ -152,7 +152,6 @@ function App() {
   useEffect(() => {
     // Only show login popup on threatfeed routes
     const shouldShowLoginPopup = location.startsWith('/threatfeed') ||
-      location.startsWith('/forgot-password') ||
       location.startsWith('/reset-password') ||
       location.startsWith('/set-password') ||
       location.startsWith('/settings') ||

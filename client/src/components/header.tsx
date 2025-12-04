@@ -163,9 +163,6 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
 
   // Check if we're on a route where login popup should be shown
   const shouldShowLoginPopup = location.startsWith('/threatfeed') ||
-    location.startsWith('/login') ||
-    location.startsWith('/register') ||
-    location.startsWith('/forgot-password') ||
     location.startsWith('/reset-password') ||
     location.startsWith('/set-password') ||
     location.startsWith('/settings') ||
