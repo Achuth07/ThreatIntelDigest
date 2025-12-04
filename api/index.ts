@@ -1583,7 +1583,37 @@ async function handleArticlesEndpoints(req: VercelRequest, res: VercelResponse, 
 
     if (req.method === 'GET') {
       console.log('Fetching articles...');
-      const { source, source_ids, limit = '10', offset = '0', search, sortBy = 'newest' } = req.query;
+      const { id, source, source_ids, limit = '10', offset = '0', search, sortBy = 'newest' } = req.query;
+
+      // Handle single article fetch by ID
+      if (id) {
+        console.log(`Fetching single article with ID: ${id}`);
+        const articleResult = await db.execute(sql`
+          SELECT * FROM articles WHERE id = ${id}
+        `);
+
+        if (articleResult.rows.length === 0) {
+          return res.status(404).json({ message: 'Article not found' });
+        }
+
+        // Map snake_case to camelCase for consistency
+        const row = articleResult.rows[0] as any;
+        const article = {
+          id: row.id,
+          title: row.title,
+          summary: row.summary,
+          url: row.url,
+          source: row.source,
+          sourceIcon: row.source_icon,
+          publishedAt: row.published_at,
+          threatLevel: row.threat_level,
+          tags: row.tags,
+          readTime: row.read_time,
+          createdAt: row.created_at
+        };
+
+        return res.json(article);
+      }
 
       // Check if user is authenticated and get their source preferences
       const userId = getUserIdFromRequest(req);

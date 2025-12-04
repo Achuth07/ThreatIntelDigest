@@ -370,12 +370,12 @@ function generateDigestHtml(articles: Partial<Article>[]): string {
             <td style="padding: 25px;">
                 <span style="background-color: ${getThreatColor(article.threatLevel)}; color: #ffffff; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">${article.threatLevel || 'UNKNOWN'}</span>
                 <h3 style="margin: 15px 0 10px; font-size: 18px; line-height: 26px; font-weight: 700; color: #ffffff;">
-                    <a href="${article.url}" style="color: #ffffff; text-decoration: none;">${article.title}</a>
+                    <a href="https://www.whatcyber.com/article/${article.id}" style="color: #ffffff; text-decoration: none;">${article.title}</a>
                 </h3>
                 <p style="margin: 0 0 20px; font-size: 14px; line-height: 22px; color: #9ca3af;">
                     ${article.summary ? article.summary.substring(0, 150) + (article.summary.length > 150 ? '...' : '') : 'No summary available.'}
                 </p>
-                <a href="${article.url}" style="font-size: 14px; font-weight: 700; color: #10b981; text-decoration: none;">Read More &rarr;</a>
+                <a href="https://www.whatcyber.com/article/${article.id}" style="font-size: 14px; font-weight: 700; color: #10b981; text-decoration: none;">Read More &rarr;</a>
             </td>
         </tr>
     </table>
