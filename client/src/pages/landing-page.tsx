@@ -1085,11 +1085,9 @@ const FooterSection = () => {
   const currentYear = new Date().getFullYear();
 
   const socialLinks = [
-    { icon: Github, href: "https://github.com/Achuth07", label: "GitHub" },
     { icon: Linkedin, href: "https://www.linkedin.com/company/whatcyber/", label: "LinkedIn" },
     { icon: Twitter, href: "https://x.com/WhatCyber_", label: "X (Twitter)" },
-    { icon: Mail, href: "mailto:contact@whatcyber.com", label: "Email" },
-    { icon: Globe, href: "https://www.achuthchandra.me", label: "Portfolio" }
+    { icon: Mail, href: "mailto:contact@whatcyber.com", label: "Email" }
   ];
 
   return (

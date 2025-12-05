@@ -8,6 +8,7 @@ import Parser from "rss-parser";
 import axios from "axios";
 import { JSDOM } from 'jsdom';
 import { Readability } from '@mozilla/readability';
+import { submitUrl } from "./services/indexnow";
 
 // Initialize storage based on environment
 const storage: IStorage = process.env.DATABASE_URL ? new PostgresStorage() : new MemStorage();
@@ -438,6 +439,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('GET /api/visitor-count - Error:', error);
       res.status(500).json({ error: 'Failed to fetch visitor count' });
+    }
+  });
+
+  // IndexNow Submission Endpoint
+  app.post('/api/admin/indexnow/submit', async (req, res) => {
+    try {
+      const { urls } = req.body;
+      const urlsToSubmit = urls || ['https://whatcyber.com/'];
+
+      await submitUrl(urlsToSubmit);
+
+      res.json({ message: 'IndexNow submission triggered successfully' });
+    } catch (error) {
+      console.error('IndexNow submission error:', error);
+      res.status(500).json({
+        message: 'Failed to submit to IndexNow',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
