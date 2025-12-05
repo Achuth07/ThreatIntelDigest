@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'wouter';
 import { motion } from 'framer-motion';
-import { Shield, Menu, X, Database, Eye, Settings, Zap, Target, Github, Linkedin, Mail, Globe, Heart, Twitter } from 'lucide-react';
+import { Shield, Menu, X, Database, Eye, Settings, Zap, Target, Github, Linkedin, Mail, Globe, Heart, Twitter, ChevronDownIcon, HelpCircle, Plus, Minus } from 'lucide-react';
 import * as THREE from 'three';
 import { Helmet } from "react-helmet-async";
 import { SEO } from '@/components/seo';
@@ -827,6 +827,94 @@ const FeaturesSection = () => {
   );
 };
 
+// FAQSection Component
+const FAQSection = () => {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+  const faqs = [
+    {
+      question: "What is WhatCyber?",
+      answer: "WhatCyber is a comprehensive cybersecurity threat intelligence aggregator. It collects and organizes the latest security news, CVE vulnerabilities, and threat reports from trusted sources like Bleeping Computer, Unit 42, and Dark Reading into a single, real-time dashboard."
+    },
+    {
+      question: "Is WhatCyber free to use?",
+      answer: "Yes, WhatCyber offers a free tier that provides access to essential threat intelligence feeds and vulnerability updates. We believe in democratizing access to cybersecurity information."
+    },
+    {
+      question: "How often is the threat feed updated?",
+      answer: "Our threat feed is updated in real-time. As soon as our sources publish new information, it is automatically aggregated and displayed on your dashboard, ensuring you never miss critical security updates."
+    },
+    {
+      question: "Can I customize my news sources?",
+      answer: "Absolutely. WhatCyber allows you to follow specific RSS feeds and customize your dashboard to focus on the sources and topics that matter most to you and your organization."
+    },
+    {
+      question: "What kind of vulnerabilities does it track?",
+      answer: "We track Common Vulnerabilities and Exposures (CVEs) from the National Vulnerability Database (NVD) and other major security advisories, providing you with details on severity, affected systems, and available patches."
+    }
+  ];
+
+  const toggleFAQ = (index: number) => {
+    setOpenIndex(openIndex === index ? null : index);
+  };
+
+  return (
+    <section className="py-16 sm:py-20 lg:py-24 px-4 sm:px-6 relative overflow-hidden bg-[#0a0a0a]">
+      <div className="max-w-4xl mx-auto relative z-10">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+          className="text-center mb-12"
+        >
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+            <span className="text-[#666]">Frequently Asked</span>{' '}
+            <span className="bg-gradient-to-r from-[#00d4ff] to-[#00ff88] bg-clip-text text-transparent">
+              Questions
+            </span>
+          </h2>
+        </motion.div>
+
+        <div className="space-y-4">
+          {faqs.map((faq, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: index * 0.1 }}
+              className="border border-white/10 rounded-xl overflow-hidden bg-white/5 backdrop-blur-sm hover:border-[#00d4ff]/50 transition-colors duration-300"
+            >
+              <button
+                onClick={() => toggleFAQ(index)}
+                className="w-full px-6 py-4 flex items-center justify-between text-left focus:outline-none"
+              >
+                <span className="text-lg font-medium text-white">{faq.question}</span>
+                {openIndex === index ? (
+                  <Minus className="w-5 h-5 text-[#00d4ff]" />
+                ) : (
+                  <Plus className="w-5 h-5 text-[#00ff88]" />
+                )}
+              </button>
+              <motion.div
+                initial={false}
+                animate={{ height: openIndex === index ? 'auto' : 0, opacity: openIndex === index ? 1 : 0 }}
+                transition={{ duration: 0.3 }}
+                className="overflow-hidden"
+              >
+                <div className="px-6 pb-4 text-[#aaa] leading-relaxed">
+                  {faq.answer}
+                </div>
+              </motion.div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
 // TimelineSection Component
 const TimelineSection = () => {
   const steps = [
@@ -1123,28 +1211,101 @@ const FooterSection = () => {
   );
 };
 
-// ChevronDownIcon Component
-const ChevronDownIcon = ({ className }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-  </svg>
-);
+
 
 // Main LandingPage Component
 export default function LandingPage() {
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "name": "WhatCyber",
+        "applicationCategory": "SecurityApplication",
+        "operatingSystem": "Web",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "USD"
+        },
+        "description": "Real-time cybersecurity threat intelligence aggregator and CVE vulnerability tracker."
+      },
+      {
+        "@type": "Organization",
+        "name": "WhatCyber",
+        "url": "https://whatcyber.com",
+        "logo": "https://whatcyber.com/android-chrome-192x192.png",
+        "sameAs": [
+          "https://x.com/WhatCyber_",
+          "https://www.linkedin.com/company/whatcyber/"
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is WhatCyber?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "WhatCyber is a comprehensive cybersecurity threat intelligence aggregator. It collects and organizes the latest security news, CVE vulnerabilities, and threat reports from trusted sources like Bleeping Computer, Unit 42, and Dark Reading into a single, real-time dashboard."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is WhatCyber free to use?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes, WhatCyber offers a free tier that provides access to essential threat intelligence feeds and vulnerability updates. We believe in democratizing access to cybersecurity information."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How often is the threat feed updated?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Our threat feed is updated in real-time. As soon as our sources publish new information, it is automatically aggregated and displayed on your dashboard, ensuring you never miss critical security updates."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I customize my news sources?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Absolutely. WhatCyber allows you to follow specific RSS feeds and customize your dashboard to focus on the sources and topics that matter most to you and your organization."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What kind of vulnerabilities does it track?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "We track Common Vulnerabilities and Exposures (CVEs) from the National Vulnerability Database (NVD) and other major security advisories, providing you with details on severity, affected systems, and available patches."
+            }
+          }
+        ]
+      }
+    ]
+  };
+
   return (
-    <div className="min-h-screen bg-gray-900">
+    <div className="bg-black min-h-screen text-white selection:bg-[#00d4ff] selection:text-black font-sans">
       <SEO
-        title="WhatCyber: The Cybersecurity News Aggregator"
-        description="Get your real-time cybersecurity news feed from WhatCyber. We aggregate the latest threat intelligence, vulnerabilities, and cyber news from top sources."
-        keywords="cybersecurity, threat intelligence, news aggregator, vulnerability tracking, cyber news, security alerts"
+        title="WhatCyber - ThreatFeed"
+        description="Stay updated with the latest cybersecurity threats, vulnerabilities, and intelligence from trusted sources."
+        keywords="cybersecurity, threat intelligence, CVE, vulnerabilities, security news, cyber threats"
+        structuredData={structuredData}
       />
+
       <Header />
+
       <main>
         <HeroSection />
         <FeaturesSection />
+        <FAQSection />
         <TimelineSection />
       </main>
+
       <FooterSection />
     </div>
   );
