@@ -1302,8 +1302,8 @@ export default function LandingPage() {
       <main>
         <HeroSection />
         <FeaturesSection />
-        <FAQSection />
         <TimelineSection />
+        <FAQSection />
       </main>
 
       <FooterSection />
