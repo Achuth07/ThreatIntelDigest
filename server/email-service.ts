@@ -508,12 +508,12 @@ function generateDigestHtml(articles: Partial<Article>[]): string {
                                                     <table border="0" cellpadding="0" cellspacing="0">
                                                         <tr>
                                                             <td style="padding: 0 10px;">
-                                                                <a href="mailto:support@whatcyber.com" style="text-decoration: none;">
+                                                                <a href="mailto:contact@whatcyber.com" style="text-decoration: none;">
                                                                     <img src="https://img.icons8.com/ios-filled/50/ffffff/mail.png" width="24" height="24" alt="Email" style="display: block; border: 0;">
                                                                 </a>
                                                             </td>
                                                             <td style="padding: 0 10px;">
-                                                                <a href="https://x.com/whatcyber" style="text-decoration: none;">
+                                                                <a href="https://x.com/WhatCyber_" style="text-decoration: none;">
                                                                     <img src="https://img.icons8.com/ios-filled/50/ffffff/twitterx.png" width="24" height="24" alt="X" style="display: block; border: 0;">
                                                                 </a>
                                                             </td>

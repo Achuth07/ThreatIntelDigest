@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'wouter';
 import { motion } from 'framer-motion';
-import { Shield, Menu, X, Database, Eye, Settings, Zap, Target, Github, Linkedin, Mail, Globe, Heart } from 'lucide-react';
+import { Shield, Menu, X, Database, Eye, Settings, Zap, Target, Github, Linkedin, Mail, Globe, Heart, Twitter } from 'lucide-react';
 import * as THREE from 'three';
 import { Helmet } from "react-helmet-async";
 import { SEO } from '@/components/seo';
@@ -998,7 +998,8 @@ const FooterSection = () => {
 
   const socialLinks = [
     { icon: Github, href: "https://github.com/Achuth07", label: "GitHub" },
-    { icon: Linkedin, href: "https://www.linkedin.com/in/achuth-chandra/", label: "LinkedIn" },
+    { icon: Linkedin, href: "https://www.linkedin.com/company/whatcyber/", label: "LinkedIn" },
+    { icon: Twitter, href: "https://x.com/WhatCyber_", label: "X (Twitter)" },
     { icon: Mail, href: "mailto:contact@whatcyber.com", label: "Email" },
     { icon: Globe, href: "https://www.achuthchandra.me", label: "Portfolio" }
   ];
