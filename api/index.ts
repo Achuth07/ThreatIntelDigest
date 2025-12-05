@@ -88,6 +88,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return handleDatabaseEndpoints(req, res, action);
     }
 
+    // IndexNow endpoint
+    if (pathname.startsWith('/api/admin/indexnow/submit')) {
+      return handleIndexNowEndpoint(req, res);
+    }
+
     // Default 404 response
     res.status(404).json({ message: 'API endpoint not found' });
   } catch (error) {
@@ -4590,3 +4595,24 @@ async function handleUserOnboardingEndpoints(req: VercelRequest, res: VercelResp
 
 
 
+async function handleIndexNowEndpoint(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
+
+  try {
+    const { submitUrl } = await import('../server/services/indexnow.js');
+    const { urls } = req.body || {};
+    const urlsToSubmit = urls || ['https://whatcyber.com/'];
+
+    await submitUrl(urlsToSubmit);
+
+    res.json({ message: 'IndexNow submission triggered successfully' });
+  } catch (error) {
+    console.error('IndexNow submission error:', error);
+    res.status(500).json({
+      message: 'Failed to submit to IndexNow',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
