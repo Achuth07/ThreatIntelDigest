@@ -735,9 +735,7 @@ export function Sidebar({
                 </div>
                 <span className="font-medium text-slate-100">Latest CVEs</span>
               </div>
-              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-medium">
-                CVE
-              </span>
+
             </button>
 
             <button

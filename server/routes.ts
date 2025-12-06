@@ -102,6 +102,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     await consolidatedApiHandler(mockReq as any, mockRes as any);
   });
 
+  // Vulnerabilities API (delegated to consolidated handler)
+  app.get('/api/vulnerabilities', async (req, res) => {
+    const { mockReq, mockRes } = createMockHandlers(req, res, '/api/vulnerabilities');
+    await consolidatedApiHandler(mockReq as any, mockRes as any);
+  });
+
+  app.get('/api/vulnerabilities/vendors', async (req, res) => {
+    const { mockReq, mockRes } = createMockHandlers(req, res, '/api/vulnerabilities/vendors');
+    await consolidatedApiHandler(mockReq as any, mockRes as any);
+  });
+
+  app.get('/api/fetch-cves', async (req, res) => {
+    const { mockReq, mockRes } = createMockHandlers(req, res, '/api/fetch-cves');
+    await consolidatedApiHandler(mockReq as any, mockRes as any);
+  });
+
   // User Source Preferences API
   app.get('/api/user-source-preferences', async (req, res) => {
     const { mockReq, mockRes } = createMockHandlers(req, res, '/api/user-source-preferences');
