@@ -54,6 +54,23 @@ export default function ThreatActorDetailPage() {
         handleSidebarClose();
     };
 
+    // Helper function to clean up Markdown links and citations from text
+    const cleanDescription = (text: string) => {
+        if (!text) return "";
+        
+        // Remove Markdown links but keep the link text
+        // Matches [link text](url) and replaces with just link text
+        let cleanedText = text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+        
+        // Remove citation references like (Citation: ...)
+        cleanedText = cleanedText.replace(/\(Citation: [^\)]+\)/g, '');
+        
+        // Clean up extra whitespace
+        cleanedText = cleanedText.replace(/\s+/g, ' ').trim();
+        
+        return cleanedText;
+    };
+
     if (isLoading) {
         return (
             <div className="min-h-screen bg-whatcyber-darker text-slate-100 flex flex-col">
@@ -177,7 +194,7 @@ export default function ThreatActorDetailPage() {
                                         Overview
                                     </h2>
                                     <div className="prose prose-invert max-w-none text-slate-300 bg-slate-900/50 p-6 rounded-lg border border-slate-800/50">
-                                        <p className="whitespace-pre-wrap">{group.description || "No description available."}</p>
+                                        <p className="whitespace-pre-wrap">{cleanDescription(group.description) || "No description available."}</p>
                                     </div>
                                 </section>
 
