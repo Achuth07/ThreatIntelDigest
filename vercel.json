@@ -16,7 +16,7 @@
   "crons": [
     {
       "path": "/api/cron/fetch-kev",
-      "schedule": "0 */4 * * *"
+      "schedule": "0 0 * * *"
     }
   ],
   "redirects": [
