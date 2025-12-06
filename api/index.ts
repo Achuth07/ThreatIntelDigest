@@ -4719,7 +4719,7 @@ async function handleThreatGroupsEndpoints(req: VercelRequest, res: VercelRespon
     const { eq, desc, ilike, or, sql } = await import('drizzle-orm');
 
     // GET /api/threat-groups/:id
-    const idMatch = pathname.match(/\/api\/threat-groups\/([a-zA-Z0-9-]+)$/);
+    const idMatch = pathname.match(/\/api\/threat-groups\/([a-zA-Z0-9-]+)\/?$/);
     if (idMatch && idMatch[1] && idMatch[1] !== 'search') {
       const id = idMatch[1];
       console.log('Raw pathname:', pathname);
