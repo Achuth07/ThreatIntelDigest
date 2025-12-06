@@ -43,7 +43,7 @@ export default function ThreatActorsPage() {
             });
             if (search) params.append("search", search);
 
-            const res = await fetch(`/api/threat-groups?${params}`);
+            const res = await fetch(`/api/threat-groups/?${params}`);
             if (!res.ok) throw new Error("Failed to fetch threat groups");
             return res.json();
         }
@@ -141,7 +141,7 @@ export default function ThreatActorsPage() {
                                         <Card
                                             key={group.id}
                                             className="bg-whatcyber-darker border-slate-700 hover:border-whatcyber-teal/50 transition-colors cursor-pointer group h-full"
-                                            onClick={() => setLocation(`/threat-actors/${group.id}`)}
+                                            onClick={() => setLocation(`/threat-actors/${group.id}/`)}
                                         >
                                             <CardHeader>
                                                 <CardTitle className="text-slate-100 group-hover:text-whatcyber-teal transition-colors flex justify-between items-start">

@@ -30,6 +30,7 @@ import ArticlePage from "@/pages/ArticlePage";
 import ThreatActorsPage from "@/pages/threat-actors";
 import ThreatActorDetailPage from "@/pages/threat-actor-detail";
 
+
 // Import context from separate file to prevent HMR issues
 import { LoginPopupContext, useLoginPopup } from "@/contexts/login-popup-context";
 export { useLoginPopup };
@@ -91,6 +92,7 @@ function Router() {
         <Route path="/terms" component={TermsOfServicePage} />
         <Route path="/report-bugs" component={ReportBugs} />
         <Route path="/article/:id" component={ArticlePage} />
+
         <Route path="/threat-actors" component={ThreatActorsPage} />
         <Route path="/threat-actors/:id" component={ThreatActorDetailPage} />
         <Route component={NotFound} />

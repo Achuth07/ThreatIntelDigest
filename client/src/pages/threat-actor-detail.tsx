@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useParams, useLocation } from "wouter";
+import { useRoute, useLocation } from "wouter";
 import { Loader2, AlertTriangle, ArrowLeft, Globe, Calendar, ExternalLink, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,9 +16,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Bookmark } from "@shared/schema";
 
 export default function ThreatActorDetailPage() {
-    const params = useParams();
+    const [, params] = useRoute("/threat-actors/:id");
     const [, setLocation] = useLocation();
-    const id = params.id;
+    const id = params?.id;
+    
+
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const { toast } = useToast();
 
@@ -35,11 +37,11 @@ export default function ThreatActorDetailPage() {
         enabled: !!user && !!user.token,
     });
 
-    const { data: group, isLoading, isError } = useQuery({
+    const { data: group, isLoading, isError, error } = useQuery({
         queryKey: ["/api/threat-groups", id],
         queryFn: async () => {
-            const res = await fetch(`/api/threat-groups/${id}`);
-            if (!res.ok) throw new Error("Failed to fetch threat group");
+            const res = await fetch(`/api/threat-groups/${id}/`);
+            if (!res.ok) throw new Error(`Failed to fetch threat group: ${res.status} ${res.statusText}`);
             return res.json();
         },
         enabled: !!id
@@ -196,7 +198,7 @@ export default function ThreatActorDetailPage() {
                                                         sourceIcon: article.sourceIcon || undefined,
                                                         tags: [] // Tags might not be fetched in join but component needs it
                                                     }}
-                                                    compact={false}
+
                                                 />
                                             ))}
                                         </div>

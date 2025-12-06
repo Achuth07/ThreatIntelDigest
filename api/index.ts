@@ -4722,6 +4722,8 @@ async function handleThreatGroupsEndpoints(req: VercelRequest, res: VercelRespon
     const idMatch = pathname.match(/\/api\/threat-groups\/([a-zA-Z0-9-]+)$/);
     if (idMatch && idMatch[1] && idMatch[1] !== 'search') {
       const id = idMatch[1];
+      console.log('Raw pathname:', pathname);
+      console.log('Extracted ID:', id);
 
       // Get group details
       const groupResult = await db.select().from(threatGroups).where(eq(threatGroups.id, id)).limit(1);
@@ -4740,7 +4742,7 @@ async function handleThreatGroupsEndpoints(req: VercelRequest, res: VercelRespon
           publishedAt: articles.publishedAt,
           url: articles.url,
           source: articles.source,
-          sourceIcon: articles.sourceIcon
+          threatLevel: articles.threatLevel
         })
         .from(articleThreatGroups)
         .innerJoin(articles, eq(articleThreatGroups.articleId, articles.id))
