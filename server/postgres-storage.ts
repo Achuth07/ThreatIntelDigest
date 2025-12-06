@@ -1,9 +1,9 @@
 import { and, desc, asc, ilike, inArray, eq } from 'drizzle-orm';
 import { getDb } from './db.js';
-import { articles, bookmarks, rssSources, vulnerabilities, users, userSourcePreferences, userPreferences } from '../shared/schema.js';
+import { articles, bookmarks, rssSources, vulnerabilities, users, userSourcePreferences, userPreferences, knownExploitedVulnerabilities } from '../shared/schema.js';
 import type { IStorage, CVE, InsertCVE } from './storage.js';
 import type { Article, InsertArticle, Bookmark, InsertBookmark, RssSource, InsertRssSource } from '../shared/schema.js';
-import type { User, InsertUser, UserSourcePreference, InsertUserSourcePreference, UserPreferences, InsertUserPreferences } from '../shared/schema.js';
+import type { User, InsertUser, UserSourcePreference, InsertUserSourcePreference, UserPreferences, InsertUserPreferences, KnownExploitedVulnerability, InsertKnownExploitedVulnerability } from '../shared/schema.js';
 
 export class PostgresStorage implements IStorage {
   private db = getDb();
@@ -779,6 +779,113 @@ export class PostgresStorage implements IStorage {
     } catch (error) {
       console.error('Error updating user onboarding:', error);
       throw error;
+    }
+  }
+  // CISA KEV
+  async getKnownExploitedVulnerabilities(params?: { limit?: number; offset?: number; vendorProject?: string; knownRansomwareCampaignUse?: string; sort?: string }): Promise<KnownExploitedVulnerability[]> {
+    console.log('getKnownExploitedVulnerabilities called with params:', params);
+    try {
+      let queryBuilder = this.db.select().from(knownExploitedVulnerabilities);
+      const conditions = [];
+
+      if (params?.vendorProject) {
+        conditions.push(eq(knownExploitedVulnerabilities.vendorProject, params.vendorProject));
+      }
+
+      if (params?.knownRansomwareCampaignUse) {
+        conditions.push(eq(knownExploitedVulnerabilities.knownRansomwareCampaignUse, params.knownRansomwareCampaignUse));
+      }
+
+      if (conditions.length > 0) {
+        queryBuilder = queryBuilder.where(and(...conditions)) as typeof queryBuilder;
+      }
+
+      // Sort
+      const sort = params?.sort || 'newest';
+      if (sort === 'oldest') {
+        queryBuilder = queryBuilder.orderBy(asc(knownExploitedVulnerabilities.dateAdded)) as typeof queryBuilder;
+      } else {
+        queryBuilder = queryBuilder.orderBy(desc(knownExploitedVulnerabilities.dateAdded)) as typeof queryBuilder;
+      }
+
+      // Pagination
+      const limit = params?.limit || 50;
+      const offset = params?.offset || 0;
+      queryBuilder = queryBuilder.limit(limit).offset(offset) as typeof queryBuilder;
+
+      const result = await queryBuilder;
+      console.log('getKnownExploitedVulnerabilities result count:', result.length);
+      return result;
+    } catch (error) {
+      console.error('Error fetching KEVs:', error);
+      return [];
+    }
+  }
+
+  async getKnownExploitedVulnerability(cveID: string): Promise<KnownExploitedVulnerability | undefined> {
+    try {
+      const result = await this.db.select().from(knownExploitedVulnerabilities).where(eq(knownExploitedVulnerabilities.cveID, cveID)).limit(1);
+      return result[0];
+    } catch (error) {
+      console.error('Error fetching KEV:', error);
+      return undefined;
+    }
+  }
+
+  async createKnownExploitedVulnerability(insertKev: InsertKnownExploitedVulnerability): Promise<KnownExploitedVulnerability> {
+    try {
+      const result = await this.db.insert(knownExploitedVulnerabilities).values({
+        ...insertKev,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).onConflictDoUpdate({
+        target: knownExploitedVulnerabilities.cveID,
+        set: {
+          vendorProject: insertKev.vendorProject,
+          product: insertKev.product,
+          vulnerabilityName: insertKev.vulnerabilityName,
+          dateAdded: insertKev.dateAdded,
+          shortDescription: insertKev.shortDescription,
+          requiredAction: insertKev.requiredAction,
+          dueDate: insertKev.dueDate,
+          knownRansomwareCampaignUse: insertKev.knownRansomwareCampaignUse,
+          notes: insertKev.notes,
+          updatedAt: new Date()
+        }
+      }).returning();
+      return result[0];
+    } catch (error) {
+      console.error('Error creating/updating KEV:', error);
+      throw error;
+    }
+  }
+
+  async kevExists(cveID: string): Promise<boolean> {
+    try {
+      const result = await this.db.select({ id: knownExploitedVulnerabilities.cveID }).from(knownExploitedVulnerabilities).where(eq(knownExploitedVulnerabilities.cveID, cveID)).limit(1);
+      return result.length > 0;
+    } catch (error) {
+      console.error('Error checking if KEV exists:', error);
+      return false;
+    }
+  }
+
+  async getKevVendors(): Promise<{ vendorProject: string; count: number }[]> {
+    try {
+      const { sql } = await import('drizzle-orm');
+      const result = await this.db
+        .select({
+          vendorProject: knownExploitedVulnerabilities.vendorProject,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(knownExploitedVulnerabilities)
+        .groupBy(knownExploitedVulnerabilities.vendorProject)
+        .orderBy(desc(sql`count(*)`));
+
+      return result;
+    } catch (error) {
+      console.error('Error fetching KEV vendors:', error);
+      return [];
     }
   }
 }

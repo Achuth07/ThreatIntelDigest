@@ -1,4 +1,4 @@
-import { type Article, type InsertArticle, type Bookmark, type InsertBookmark, type RssSource, type InsertRssSource, type UserSourcePreference, type InsertUserSourcePreference, type UserPreferences, type InsertUserPreferences, type User } from "@shared/schema.js";
+import { type Article, type InsertArticle, type Bookmark, type InsertBookmark, type RssSource, type InsertRssSource, type UserSourcePreference, type InsertUserSourcePreference, type UserPreferences, type InsertUserPreferences, type User, type KnownExploitedVulnerability, type InsertKnownExploitedVulnerability } from "@shared/schema.js";
 import { randomUUID } from "crypto";
 
 // Define CVE types for in-memory storage
@@ -32,7 +32,7 @@ interface InsertCVE {
 }
 
 // Re-export types for use in other files
-export { type Article, type InsertArticle, type Bookmark, type InsertBookmark, type RssSource, type InsertRssSource, type UserSourcePreference, type InsertUserSourcePreference, type UserPreferences, type InsertUserPreferences, type CVE, type InsertCVE };
+export { type Article, type InsertArticle, type Bookmark, type InsertBookmark, type RssSource, type InsertRssSource, type UserSourcePreference, type InsertUserSourcePreference, type UserPreferences, type InsertUserPreferences, type CVE, type InsertCVE, type KnownExploitedVulnerability, type InsertKnownExploitedVulnerability };
 
 export interface IStorage {
   // Articles
@@ -71,6 +71,13 @@ export interface IStorage {
   getCVE(id: string): Promise<CVE | undefined>;
   createCVE(cve: InsertCVE): Promise<CVE>;
   cveExists(id: string): Promise<boolean>;
+
+  // Known Exploited Vulnerabilities (KEV)
+  getKnownExploitedVulnerabilities(params?: { limit?: number; offset?: number; vendorProject?: string; knownRansomwareCampaignUse?: string; sort?: string }): Promise<KnownExploitedVulnerability[]>;
+  getKnownExploitedVulnerability(cveID: string): Promise<KnownExploitedVulnerability | undefined>;
+  createKnownExploitedVulnerability(kev: InsertKnownExploitedVulnerability): Promise<KnownExploitedVulnerability>;
+  kevExists(cveID: string): Promise<boolean>;
+  getKevVendors(): Promise<{ vendorProject: string; count: number }[]>;
 
   // Email Authentication
   getUserByEmail(email: string): Promise<any | undefined>;
@@ -623,21 +630,59 @@ export class MemStorage implements IStorage {
     // In a real implementation, we would update the user in memory
     throw new Error('updateUserOnboarding not implemented in MemStorage');
   }
+  // KEV (stubs)
+  async getKnownExploitedVulnerabilities(params?: { limit?: number; offset?: number; vendorProject?: string; knownRansomwareCampaignUse?: string; sort?: string }): Promise<KnownExploitedVulnerability[]> {
+    return [];
+  }
+
+  async getKnownExploitedVulnerability(cveID: string): Promise<KnownExploitedVulnerability | undefined> {
+    return undefined;
+  }
+
+  async createKnownExploitedVulnerability(kev: InsertKnownExploitedVulnerability): Promise<KnownExploitedVulnerability> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  async kevExists(cveID: string): Promise<boolean> {
+    return false;
+  }
+
+  async getKevVendors(): Promise<{ vendorProject: string; count: number }[]> {
+    return [];
+  }
 }
 
 // Import PostgresStorage dynamically to avoid circular dependency
 let PostgresStorage: any = null;
+let storageInstance: IStorage | null = null;
 
-const getStorage = async (): Promise<IStorage> => {
+const initStorage = async (): Promise<IStorage> => {
+  if (storageInstance) {
+    return storageInstance;
+  }
+
   if (process.env.DATABASE_URL) {
     if (!PostgresStorage) {
       const module = await import('./postgres-storage');
       PostgresStorage = module.PostgresStorage;
     }
-    return new PostgresStorage();
+    storageInstance = new PostgresStorage();
+  } else {
+    storageInstance = new MemStorage();
   }
-  return new MemStorage();
+
+  return storageInstance;
 };
 
-// For now, use MemStorage by default, we'll update this in routes.ts
-export const storage = new MemStorage();
+// Initialize storage synchronously - will use MemStorage until initStorage is called
+// In production, routes.ts should call initStorage() at startup
+let storage: IStorage = new MemStorage();
+
+// This function should be called during server startup
+export const initializeStorage = async () => {
+  storage = await initStorage();
+  console.log(`Storage initialized: ${process.env.DATABASE_URL ? 'PostgresStorage' : 'MemStorage'}`);
+  return storage;
+};
+
+export { storage };

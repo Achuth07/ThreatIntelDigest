@@ -13,7 +13,7 @@ import ResetPasswordPage from "@/pages/reset-password";
 import SetPasswordPage from "@/pages/set-password";
 import NotFound from "@/pages/not-found";
 import { Footer } from "@/components/footer";
-import { useEffect, useState, createContext, useContext } from "react";
+import { useEffect, useState } from "react";
 import { AdminDashboard } from "@/components/admin-dashboard";
 import { LoginPopup } from "@/components/login-popup";
 import { getAuthenticatedUser, updateAuthToken } from "@/lib/auth";
@@ -28,20 +28,9 @@ import OnboardingPage from "@/pages/onboarding";
 import ReportBugs from "@/pages/report-bugs";
 import ArticlePage from "@/pages/ArticlePage";
 
-// Create context for login popup
-interface LoginPopupContextType {
-  showLoginPopup: () => void;
-}
-
-export const LoginPopupContext = createContext<LoginPopupContextType | null>(null);
-
-export const useLoginPopup = () => {
-  const context = useContext(LoginPopupContext);
-  if (!context) {
-    throw new Error('useLoginPopup must be used within LoginPopupProvider');
-  }
-  return context;
-};
+// Import context from separate file to prevent HMR issues
+import { LoginPopupContext, useLoginPopup } from "@/contexts/login-popup-context";
+export { useLoginPopup };
 
 // ScrollToTop component to handle automatic scrolling on route changes
 const ScrollToTop = () => {

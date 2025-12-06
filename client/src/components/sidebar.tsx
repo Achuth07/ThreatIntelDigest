@@ -13,7 +13,7 @@ import { AddSourcesDialog } from '@/components/add-sources-dialog';
 import { ConfirmationDialog } from '@/components/confirmation-dialog';
 import { exportBookmarks } from '@/lib/export-utils';
 import { getAuthenticatedUser } from '@/lib/auth';
-import { useLoginPopup } from '@/App';
+import { useLoginPopup } from '@/contexts/login-popup-context';
 import { getFaviconUrl } from '@/lib/favicon-utils';
 import { VENDOR_THREAT_RESEARCH, GOVERNMENT_ALERTS, MALWARE_RESEARCH, GENERAL_SECURITY_NEWS, LEGACY_SOURCES, RSS_SOURCES } from '@/lib/rss-sources';
 import type { InsertRssSource, RssSource } from '@shared/schema';
@@ -27,8 +27,9 @@ interface SidebarProps {
   onThreatFilterChange: (filters: string[]) => void;
   onClose?: () => void;
   onVulnerabilitiesClick?: () => void;
-  onFollowSourcesClick?: () => void; // Add this new prop
-  onBookmarksClick?: () => void; // Add this new prop
+  onFollowSourcesClick?: () => void;
+  onBookmarksClick?: () => void;
+  onKevClick?: () => void;
 }
 
 export function Sidebar({
@@ -42,6 +43,7 @@ export function Sidebar({
   onVulnerabilitiesClick,
   onFollowSourcesClick,
   onBookmarksClick,
+  onKevClick,
 }: SidebarProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -734,6 +736,22 @@ export function Sidebar({
                 <span className="font-medium text-slate-100">Latest CVEs</span>
               </div>
               <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-medium">
+                CVE
+              </span>
+            </button>
+
+            <button
+              className="w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors hover:bg-slate-700"
+              onClick={onKevClick}
+              data-testid="button-kev"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="w-5 h-5 bg-orange-500 rounded-sm flex items-center justify-center text-white text-xs">
+                  KEV
+                </div>
+                <span className="font-medium text-slate-100">Exploited Vulnerabilities</span>
+              </div>
+              <span className="bg-whatcyber-teal text-whatcyber-dark text-xs px-2 py-1 rounded-full font-bold animate-pulse">
                 NEW
               </span>
             </button>

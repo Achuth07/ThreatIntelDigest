@@ -61,6 +61,21 @@ export const vulnerabilities = pgTable("vulnerabilities", {
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
+export const knownExploitedVulnerabilities = pgTable("known_exploited_vulnerabilities", {
+  cveID: varchar("cve_id").primaryKey(),
+  vendorProject: text("vendor_project").notNull(),
+  product: text("product").notNull(),
+  vulnerabilityName: text("vulnerability_name").notNull(),
+  dateAdded: timestamp("date_added").notNull(),
+  shortDescription: text("short_description").notNull(),
+  requiredAction: text("required_action").notNull(),
+  dueDate: timestamp("due_date"),
+  knownRansomwareCampaignUse: text("known_ransomware_campaign_use"), // "Known" or "Unknown"
+  notes: text("notes"),
+  createdAt: timestamp("created_at").default(sql`now()`),
+  updatedAt: timestamp("updated_at").default(sql`now()`),
+});
+
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   googleId: varchar('google_id', { length: 255 }).unique(),
@@ -205,3 +220,20 @@ export type InsertUserSourcePreference = z.infer<typeof insertUserSourcePreferen
 export type UserSourcePreference = typeof userSourcePreferences.$inferSelect;
 export type InsertUserPreferences = z.infer<typeof insertUserPreferencesSchema>;
 export type UserPreferences = typeof userPreferences.$inferSelect;
+
+export const insertKnownExploitedVulnerabilitySchema = createInsertSchema(knownExploitedVulnerabilities, {
+  cveID: z.string().regex(/^CVE-\d{4}-\d{4,}$/),
+  vendorProject: z.string().min(1),
+  product: z.string().min(1),
+  vulnerabilityName: z.string().min(1),
+  dateAdded: z.date(),
+  shortDescription: z.string().min(1),
+  requiredAction: z.string().min(1),
+  dueDate: z.date().optional(),
+}).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertKnownExploitedVulnerability = z.infer<typeof insertKnownExploitedVulnerabilitySchema>;
+export type KnownExploitedVulnerability = typeof knownExploitedVulnerabilities.$inferSelect;

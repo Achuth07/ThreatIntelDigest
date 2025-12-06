@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Link, useLocation } from 'wouter';
 import { getAuthenticatedUser, updateAuthToken } from '@/lib/auth';
-import { useLoginPopup } from '@/App';
+import { useLoginPopup } from '@/contexts/login-popup-context';
 import { useToast } from '@/hooks/use-toast';
 import logoImage from '@/assets/logo/android-chrome-512x512.png';
 

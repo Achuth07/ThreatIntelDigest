@@ -93,6 +93,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return handleIndexNowEndpoint(req, res);
     }
 
+    // KEV endpoints
+    if (pathname.startsWith('/api/kev') || pathname.startsWith('/api/cron/fetch-kev')) {
+      return handleKevEndpoints(req, res, action);
+    }
+
     // Default 404 response
     res.status(404).json({ message: 'API endpoint not found' });
   } catch (error) {
@@ -4615,4 +4620,82 @@ async function handleIndexNowEndpoint(req: VercelRequest, res: VercelResponse) {
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
+}
+
+async function handleKevEndpoints(req: VercelRequest, res: VercelResponse, action: string) {
+  const { pathname } = new URL(req.url!, `https://${req.headers.host}`);
+  const method = req.method;
+
+  // Initialize storage
+  let storage;
+  if (process.env.DATABASE_URL) {
+    const { PostgresStorage } = await import('../server/postgres-storage.js');
+    storage = new PostgresStorage();
+  } else {
+    // Fallback for when DB not configured (should not happen for KEV ideally)
+    return res.status(500).json({ error: 'Database required for KEV' });
+  }
+
+  // GET /api/cron/fetch-kev
+  if (pathname === '/api/cron/fetch-kev' && method === 'GET') {
+    try {
+      // Basic security for cron (check for header if needed, but Vercel Cron uses specific header)
+      // For now we allow it open or check for CRON_SECRET if we set it up.
+      // Vercel Cron requests include 'Authorization' header with 'Bearer <CRON_SECRET>' if configured.
+
+      const { fetchCisaKevData } = await import('../server/services/cisa-service.js');
+      const result = await fetchCisaKevData();
+      return res.json(result);
+    } catch (error) {
+      console.error('Error in KEV cron:', error);
+      return res.status(500).json({ error: 'Failed to fetch KEV data' });
+    }
+  }
+
+  // GET /api/kev
+  if ((pathname === '/api/kev' || pathname === '/api/kev/') && method === 'GET') {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = (page - 1) * limit;
+      const vendorProject = req.query.vendorProject as string;
+      const knownRansomwareCampaignUse = req.query.knownRansomwareCampaignUse as string;
+      const sort = req.query.sort as string; // 'newest' | 'oldest'
+
+      const kevs = await storage.getKnownExploitedVulnerabilities({
+        limit,
+        offset,
+        vendorProject,
+        knownRansomwareCampaignUse,
+        sort
+      });
+
+      // Get vendor stats for filter options (only on first page or separate endpoint? keeping here for simplicity)
+      // Actually, let's make a separate endpoint for vendors if needed, but for now client might want it.
+      // But query might be heavy. Let's add a specific endpoint for metadata or include it if requested.
+      // For now, just return the list.
+
+      return res.json({
+        data: kevs,
+        page,
+        limit
+      });
+    } catch (error) {
+      console.error('Error fetching KEVs:', error);
+      return res.status(500).json({ error: 'Failed to fetch KEVs' });
+    }
+  }
+
+  // GET /api/kev/vendors
+  if ((pathname === '/api/kev/vendors' || pathname === '/api/kev/vendors/') && method === 'GET') {
+    try {
+      const vendors = await storage.getKevVendors();
+      return res.json(vendors);
+    } catch (error) {
+      console.error('Error fetching KEV vendors:', error);
+      return res.status(500).json({ error: 'Failed to fetch KEV vendors' });
+    }
+  }
+
+  return res.status(404).json({ error: 'Endpoint not found' });
 }

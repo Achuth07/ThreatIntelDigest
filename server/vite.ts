@@ -26,14 +26,18 @@ export async function setupVite(app: Express, server: Server) {
     allowedHosts: true as const,
   };
 
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const castedConfig = viteConfig as any;
+  const resolvedConfig = typeof castedConfig === "function" ? await castedConfig() : castedConfig;
+
   const vite = await createViteServer({
-    ...viteConfig,
+    ...resolvedConfig,
     configFile: false,
     customLogger: {
       ...viteLogger,
       error: (msg, options) => {
         viteLogger.error(msg, options);
-        process.exit(1);
+        // process.exit(1);
       },
     },
     server: serverOptions,
@@ -43,6 +47,11 @@ export async function setupVite(app: Express, server: Server) {
   app.use(vite.middlewares);
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
+
+    // Skip serving index.html for Vite internal paths and let Vite middleware handle them
+    if (url.startsWith('/@')) {
+      return next();
+    }
 
     try {
       const clientTemplate = path.resolve(
@@ -87,7 +96,7 @@ export function serveStatic(app: Express) {
       console.log(`API route detected, passing through: ${req.path}`);
       return next();
     }
-    
+
     // For all other routes, serve index.html
     console.log(`Serving index.html for route: ${req.path}`);
     res.sendFile(path.resolve(distPath, "index.html"));

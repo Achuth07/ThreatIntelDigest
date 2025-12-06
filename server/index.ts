@@ -80,9 +80,9 @@ app.use((req, res, next) => {
     return res.redirect(301, redirectUrl);
   }
 
-  // Redirect non-trailing-slash URLs to trailing-slash URLs (except for file extensions and API routes)
-  if (path !== '/' && !path.endsWith('/') && !path.includes('.') && !path.startsWith('/api/') && !req.query.noRedirect) {
-    const redirectUrl = `https://${host || 'www.whatcyber.com'}${path}/${query ? `?${query}` : ''}`;
+  // Redirect non-trailing-slash URLs to trailing-slash URLs (except for file extensions, API routes, and Vite internal paths)
+  if (path !== '/' && !path.endsWith('/') && !path.includes('.') && !path.startsWith('/api/') && !path.startsWith('/@') && !req.query.noRedirect) {
+    const redirectUrl = `${req.protocol}://${host || 'www.whatcyber.com'}${path}/${query ? `?${query}` : ''}`;
     return res.redirect(301, redirectUrl);
   }
 
@@ -120,6 +120,10 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize storage (PostgresStorage if DATABASE_URL is set)
+  const { initializeStorage } = await import("./storage");
+  await initializeStorage();
+
   const server = await registerRoutes(app);
 
   // Google OAuth routes
@@ -324,7 +328,7 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  const port = process.env.PORT || 3000;
+  const port = process.env.PORT || 5002;
   server.listen(port, () => {
     console.log(`Server running on port ${port}`);
   });

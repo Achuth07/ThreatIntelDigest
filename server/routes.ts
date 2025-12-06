@@ -1,17 +1,14 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { insertArticleSchema, insertBookmarkSchema, insertRssSourceSchema } from "../shared/schema";
-import type { IStorage } from "./storage";
-import { PostgresStorage } from "./postgres-storage";
+import { storage, type IStorage } from "./storage";
 import { MemStorage, type CVE } from "./storage";
 import Parser from "rss-parser";
 import axios from "axios";
 import { JSDOM } from 'jsdom';
 import { Readability } from '@mozilla/readability';
 import { submitUrl } from "./services/indexnow";
-
-// Initialize storage based on environment
-const storage: IStorage = process.env.DATABASE_URL ? new PostgresStorage() : new MemStorage();
+import { fetchCisaKevData } from "./services/cisa-service";
 
 const parser = new Parser();
 
@@ -457,6 +454,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: 'Failed to submit to IndexNow',
         error: error instanceof Error ? error.message : 'Unknown error'
       });
+    }
+  });
+
+
+
+
+  // KEV Endpoints (Express)
+  app.get('/api/kev', async (req, res) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const offset = (page - 1) * limit;
+      const vendorProject = req.query.vendorProject as string;
+      const knownRansomwareCampaignUse = req.query.knownRansomwareCampaignUse as string;
+      const sort = req.query.sort as string;
+
+      const kevs = await storage.getKnownExploitedVulnerabilities({
+        limit,
+        offset,
+        vendorProject,
+        knownRansomwareCampaignUse,
+        sort
+      });
+
+      res.json({
+        data: kevs,
+        page,
+        limit
+      });
+    } catch (error) {
+      console.error('Error fetching KEVs:', error);
+      res.status(500).json({ error: 'Failed to fetch KEVs' });
+    }
+  });
+
+  app.get('/api/kev/vendors', async (req, res) => {
+    try {
+      const vendors = await storage.getKevVendors();
+      res.json(vendors);
+    } catch (error) {
+      console.error('Error fetching KEV vendors:', error);
+      res.status(500).json({ error: 'Failed to fetch KEV vendors' });
+    }
+  });
+
+  app.get('/api/cron/fetch-kev', async (req, res) => {
+    try {
+      const result = await fetchCisaKevData();
+      res.json(result);
+    } catch (error) {
+      console.error('Error in KEV cron:', error);
+      res.status(500).json({ error: 'Failed to fetch KEV data' });
     }
   });
 

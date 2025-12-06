@@ -13,6 +13,12 @@
       "maxDuration": 10
     }
   },
+  "crons": [
+    {
+      "path": "/api/cron/fetch-kev",
+      "schedule": "0 */4 * * *"
+    }
+  ],
   "redirects": [
     {
       "source": "/threatfeed",

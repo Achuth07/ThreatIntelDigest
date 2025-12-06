@@ -504,7 +504,7 @@ export const GENERAL_SECURITY_NEWS = [
 ];
 
 // Legacy Sources
-export const LEGACY_SOURCES = [
+export const LEGACY_SOURCES: { name: string; url: string; icon: string; color: string }[] = [
 ];
 
 // Combined RSS sources for easy access
