@@ -554,6 +554,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Threat Groups API
+  app.get('/api/threat-groups', async (req, res) => {
+    const { mockReq, mockRes } = createMockHandlers(req, res, '/api/threat-groups');
+    await consolidatedApiHandler(mockReq as any, mockRes as any);
+  });
+
+  app.get('/api/threat-groups/:id', async (req, res) => {
+    const { mockReq, mockRes } = createMockHandlers(req, res, `/api/threat-groups/${req.params.id}`);
+    await consolidatedApiHandler(mockReq as any, mockRes as any);
+  });
+
   console.log('API routes registered successfully');
   return httpServer;
 }

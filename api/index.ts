@@ -98,6 +98,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return handleKevEndpoints(req, res, action);
     }
 
+    // Threat Groups endpoints
+    if (pathname.startsWith('/api/threat-groups')) {
+      return handleThreatGroupsEndpoints(req, res, action);
+    }
+
     // Default 404 response
     res.status(404).json({ message: 'API endpoint not found' });
   } catch (error) {
@@ -4698,4 +4703,101 @@ async function handleKevEndpoints(req: VercelRequest, res: VercelResponse, actio
   }
 
   return res.status(404).json({ error: 'Endpoint not found' });
+}
+
+async function handleThreatGroupsEndpoints(req: VercelRequest, res: VercelResponse, action: string) {
+  const { pathname } = new URL(req.url!, `https://${req.headers.host}`);
+  const method = req.method;
+
+  if (method !== 'GET') {
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
+
+  try {
+    const db = await getDb();
+    const { threatGroups, articleThreatGroups, articles } = await import('../shared/schema.js');
+    const { eq, desc, ilike, or, sql } = await import('drizzle-orm');
+
+    // GET /api/threat-groups/:id
+    const idMatch = pathname.match(/\/api\/threat-groups\/([a-zA-Z0-9-]+)$/);
+    if (idMatch && idMatch[1] && idMatch[1] !== 'search') {
+      const id = idMatch[1];
+
+      // Get group details
+      const groupResult = await db.select().from(threatGroups).where(eq(threatGroups.id, id)).limit(1);
+
+      if (groupResult.length === 0) {
+        return res.status(404).json({ message: 'Threat group not found' });
+      }
+      const group = groupResult[0];
+
+      // Get linked articles
+      const linkedArticles = await db
+        .select({
+          id: articles.id,
+          title: articles.title,
+          summary: articles.summary,
+          publishedAt: articles.publishedAt,
+          url: articles.url,
+          source: articles.source,
+          sourceIcon: articles.sourceIcon
+        })
+        .from(articleThreatGroups)
+        .innerJoin(articles, eq(articleThreatGroups.articleId, articles.id))
+        .where(eq(articleThreatGroups.threatGroupId, id))
+        .orderBy(desc(articles.publishedAt))
+        .limit(20);
+
+      return res.json({
+        ...group,
+        recentArticles: linkedArticles
+      });
+    }
+
+    // GET /api/threat-groups (List/Search)
+    if (pathname === '/api/threat-groups' || pathname === '/api/threat-groups/') {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const offset = (page - 1) * limit;
+      const search = req.query.search as string;
+
+      let conditions = undefined;
+      if (search) {
+        const searchVal = `%${search}%`;
+        conditions = or(
+          ilike(threatGroups.name, searchVal),
+          sql`${threatGroups.aliases}::text ILIKE ${searchVal}`
+        );
+      }
+
+      const groups = await db
+        .select()
+        .from(threatGroups)
+        .where(conditions)
+        .orderBy(desc(threatGroups.lastUpdated))
+        .limit(limit)
+        .offset(offset);
+
+      const totalResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(threatGroups)
+        .where(conditions);
+      const total = Number(totalResult[0].count);
+
+      return res.json({
+        data: groups,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit)
+        }
+      });
+    }
+
+    return res.status(404).json({ message: 'Endpoint not found' });
+  } catch (error) {
+    console.error('Error in threat groups API:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 }

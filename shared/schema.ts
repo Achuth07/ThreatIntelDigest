@@ -8,13 +8,14 @@ import {
   integer,
   boolean as pgBoolean,
   decimal,
-  jsonb
+  jsonb,
+  uuid
 } from 'drizzle-orm/pg-core';
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const articles = pgTable("articles", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
   summary: text("summary"),
   url: text("url").notNull(),
@@ -29,13 +30,13 @@ export const articles = pgTable("articles", {
 
 export const bookmarks = pgTable("bookmarks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  articleId: varchar("article_id").notNull().references(() => articles.id),
+  articleId: uuid("article_id").notNull().references(() => articles.id),
   userId: integer("user_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
 export const rssSources = pgTable("rss_sources", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   url: text("url").notNull(),
   icon: text("icon"),
@@ -237,3 +238,44 @@ export const insertKnownExploitedVulnerabilitySchema = createInsertSchema(knownE
 
 export type InsertKnownExploitedVulnerability = z.infer<typeof insertKnownExploitedVulnerabilitySchema>;
 export type KnownExploitedVulnerability = typeof knownExploitedVulnerabilities.$inferSelect;
+
+export const threatGroups = pgTable("threat_groups", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  stixId: text("stix_id").notNull().unique(), // The STIX ID
+  name: text("name").notNull(),
+  description: text("description"),
+  aliases: jsonb("aliases").$type<string[]>().default([]),
+  lastUpdated: timestamp("last_updated"),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+export const articleThreatGroups = pgTable("article_threat_groups", {
+  id: serial("id").primaryKey(),
+  articleId: uuid("article_id").notNull().references(() => articles.id, { onDelete: 'cascade' }),
+  threatGroupId: uuid("threat_group_id").notNull().references(() => threatGroups.id, { onDelete: 'cascade' }),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+export const insertThreatGroupSchema = createInsertSchema(threatGroups, {
+  stixId: z.string().min(1),
+  name: z.string().min(1),
+  description: z.string().optional(),
+  aliases: z.array(z.string()).default([]),
+  lastUpdated: z.date().optional(),
+}).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertArticleThreatGroupSchema = createInsertSchema(articleThreatGroups, {
+  articleId: z.string().min(1),
+  threatGroupId: z.string().min(1),
+}).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertThreatGroup = z.infer<typeof insertThreatGroupSchema>;
+export type ThreatGroup = typeof threatGroups.$inferSelect;
+export type InsertArticleThreatGroup = z.infer<typeof insertArticleThreatGroupSchema>;
+export type ArticleThreatGroup = typeof articleThreatGroups.$inferSelect;

@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Check, Globe, Rss, Filter, Zap, RefreshCw, Download, Plus, Minus, Shield, ChevronDown, ChevronUp, X, Bookmark, Bug, Settings, Home, LifeBuoy } from 'lucide-react';
+import { Check, Globe, Rss, Filter, Zap, RefreshCw, Download, Plus, Minus, Shield, ChevronDown, ChevronUp, X, Bookmark, Bug, Settings, Home, LifeBuoy, Users } from 'lucide-react';
 import { useLocation } from "wouter";
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -748,6 +748,31 @@ export function Sidebar({
                   KEV
                 </div>
                 <span className="font-medium text-slate-100">Exploited Vulnerabilities</span>
+              </div>
+              <span className="bg-whatcyber-teal text-whatcyber-dark text-xs px-2 py-1 rounded-full font-bold animate-pulse">
+                NEW
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Threat Actors Section */}
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-slate-100 flex items-center mb-4">
+            <Users className="w-5 h-5 text-whatcyber-teal mr-2" />
+            Threat Actors
+          </h2>
+          <div className="space-y-2">
+            <button
+              className="w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors hover:bg-slate-700"
+              onClick={() => setLocation("/threat-actors")}
+              data-testid="button-threat-actors"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="w-5 h-5 bg-purple-500 rounded-sm flex items-center justify-center text-white text-xs">
+                  APT
+                </div>
+                <span className="font-medium text-slate-100">Threat Groups</span>
               </div>
               <span className="bg-whatcyber-teal text-whatcyber-dark text-xs px-2 py-1 rounded-full font-bold animate-pulse">
                 NEW
