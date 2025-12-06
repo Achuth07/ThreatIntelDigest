@@ -78,6 +78,7 @@ export interface IStorage {
   createKnownExploitedVulnerability(kev: InsertKnownExploitedVulnerability): Promise<KnownExploitedVulnerability>;
   kevExists(cveID: string): Promise<boolean>;
   getKevVendors(): Promise<{ vendorProject: string; count: number }[]>;
+  getRelatedArticlesForKev(params: { cveID: string; product?: string; vendor?: string; vulnerabilityName?: string; limit?: number }): Promise<Article[]>;
 
   // Email Authentication
   getUserByEmail(email: string): Promise<any | undefined>;
@@ -648,6 +649,10 @@ export class MemStorage implements IStorage {
   }
 
   async getKevVendors(): Promise<{ vendorProject: string; count: number }[]> {
+    return [];
+  }
+
+  async getRelatedArticlesForKev(params: { cveID: string; product?: string; vendor?: string; vulnerabilityName?: string; limit?: number }): Promise<Article[]> {
     return [];
   }
 }

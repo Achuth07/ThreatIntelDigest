@@ -1,4 +1,4 @@
-import { and, desc, asc, ilike, inArray, eq } from 'drizzle-orm';
+import { and, desc, asc, ilike, inArray, eq, or } from 'drizzle-orm';
 import { getDb } from './db.js';
 import { articles, bookmarks, rssSources, vulnerabilities, users, userSourcePreferences, userPreferences, knownExploitedVulnerabilities } from '../shared/schema.js';
 import type { IStorage, CVE, InsertCVE } from './storage.js';
@@ -885,6 +885,100 @@ export class PostgresStorage implements IStorage {
       return result;
     } catch (error) {
       console.error('Error fetching KEV vendors:', error);
+      return [];
+    }
+  }
+
+  async getRelatedArticlesForKev(params: { cveID: string; product?: string; vendor?: string; vulnerabilityName?: string; limit?: number }): Promise<Article[]> {
+    try {
+      const { cveID, product, vendor, vulnerabilityName, limit = 10 } = params;
+
+      // Build HIGH PRIORITY conditions (CVE ID, product name)
+      // These are precise enough to match alone
+      const highPriorityConditions = [];
+
+      // CVE ID is always high priority - very specific
+      if (cveID) {
+        const cveTerm = `%${cveID}%`;
+        highPriorityConditions.push(or(
+          ilike(articles.title, cveTerm),
+          ilike(articles.summary, cveTerm)
+        ));
+      }
+
+      // Product name is high priority if it's specific enough (more than 5 chars)
+      if (product && product.length > 5) {
+        const productTerm = `%${product}%`;
+        highPriorityConditions.push(or(
+          ilike(articles.title, productTerm),
+          ilike(articles.summary, productTerm)
+        ));
+      }
+
+      // Build COMBINED conditions (vendor + vulnerability keywords together)
+      // These are only useful when combined to avoid false positives
+      let combinedCondition = null;
+      if (vendor && vulnerabilityName) {
+        const vendorTerm = `%${vendor}%`;
+
+        // Extract meaningful keywords (skip common words and short words)
+        const skipWords = ['vulnerability', 'and', 'the', 'in', 'of', 'a', 'an', 'is', 'for', 'to', 'with', 'remote', 'code', 'execution', 'arbitrary'];
+        const keywords = vulnerabilityName
+          .split(/[\s,]+/)
+          .filter(word => word.length > 4 && !skipWords.includes(word.toLowerCase()))
+          .slice(0, 2); // Take top 2 keywords
+
+        if (keywords.length > 0) {
+          // Require BOTH vendor AND at least one keyword to match
+          const keywordConditions = keywords.map(keyword => {
+            const keywordTerm = `%${keyword}%`;
+            return or(
+              ilike(articles.title, keywordTerm),
+              ilike(articles.summary, keywordTerm)
+            );
+          });
+
+          // Vendor in title + keyword somewhere
+          combinedCondition = and(
+            ilike(articles.title, vendorTerm),
+            or(...keywordConditions)
+          );
+        }
+      }
+
+      // Combine all conditions with OR
+      const allConditions = [...highPriorityConditions];
+      if (combinedCondition) {
+        allConditions.push(combinedCondition);
+      }
+
+      if (allConditions.length === 0) {
+        return [];
+      }
+
+      // Select only columns that exist in the database to avoid schema mismatch
+      const result = await this.db
+        .selectDistinct({
+          id: articles.id,
+          title: articles.title,
+          summary: articles.summary,
+          url: articles.url,
+          source: articles.source,
+          publishedAt: articles.publishedAt,
+          threatLevel: articles.threatLevel,
+          tags: articles.tags,
+          readTime: articles.readTime,
+          createdAt: articles.createdAt,
+        })
+        .from(articles)
+        .where(or(...allConditions))
+        .orderBy(desc(articles.publishedAt))
+        .limit(limit);
+
+      console.log(`getRelatedArticlesForKev found ${result.length} articles for CVE: ${cveID}, product: ${product}, vendor: ${vendor}`);
+      return result as Article[];
+    } catch (error) {
+      console.error('Error fetching related articles for KEV:', error);
       return [];
     }
   }

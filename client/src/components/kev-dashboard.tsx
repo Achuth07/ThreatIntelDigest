@@ -40,12 +40,12 @@ export function KevDashboard({ onClose }: KevDashboardProps) {
         }
     });
 
-    // Fetch Related News when a CVE is selected
+    // Fetch Related News when a CVE is selected (uses smart multi-term matching)
     const { data: relatedNews, isLoading: isLoadingNews } = useQuery<Article[]>({
-        queryKey: ['/api/articles', { search: selectedCveForNews }],
+        queryKey: ['/api/kev', selectedCveForNews, 'related-articles'],
         queryFn: async () => {
             if (!selectedCveForNews) return [];
-            const res = await apiRequest('GET', `/api/articles?search=${selectedCveForNews}&limit=10`);
+            const res = await apiRequest('GET', `/api/kev/${selectedCveForNews}/related-articles?limit=10`);
             return res.json();
         },
         enabled: !!selectedCveForNews

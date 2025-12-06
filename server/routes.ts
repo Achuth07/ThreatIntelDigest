@@ -499,6 +499,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get related articles for a specific KEV entry (smart matching)
+  app.get('/api/kev/:cveId/related-articles', async (req, res) => {
+    try {
+      const { cveId } = req.params;
+      const limit = parseInt(req.query.limit as string) || 10;
+
+      // First, get the KEV entry to extract product/vendor info
+      const kev = await storage.getKnownExploitedVulnerability(cveId);
+
+      if (!kev) {
+        return res.status(404).json({ error: 'KEV entry not found' });
+      }
+
+      // Use smart matching with multiple criteria
+      const relatedArticles = await storage.getRelatedArticlesForKev({
+        cveID: kev.cveID,
+        product: kev.product,
+        vendor: kev.vendorProject,
+        vulnerabilityName: kev.vulnerabilityName,
+        limit
+      });
+
+      res.json(relatedArticles);
+    } catch (error) {
+      console.error('Error fetching related articles for KEV:', error);
+      res.status(500).json({ error: 'Failed to fetch related articles' });
+    }
+  });
+
   app.get('/api/cron/fetch-kev', async (req, res) => {
     try {
       const result = await fetchCisaKevData();
