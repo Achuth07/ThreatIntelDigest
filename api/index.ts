@@ -4702,6 +4702,36 @@ async function handleKevEndpoints(req: VercelRequest, res: VercelResponse, actio
     }
   }
 
+  // GET /api/kev/:cveId/related-articles
+  const relatedArticlesMatch = pathname.match(/^\/api\/kev\/([\w-]+(?:-[\w-]+)*)\/related-articles\/?$/);
+  if (relatedArticlesMatch && relatedArticlesMatch[1] && method === 'GET') {
+    try {
+      const cveId = relatedArticlesMatch[1];
+      const limit = parseInt(req.query.limit as string) || 10;
+
+      // First, get the KEV entry to extract product/vendor info
+      const kev = await storage.getKnownExploitedVulnerability(cveId);
+
+      if (!kev) {
+        return res.status(404).json({ error: 'KEV entry not found' });
+      }
+
+      // Use smart matching with multiple criteria
+      const relatedArticles = await storage.getRelatedArticlesForKev({
+        cveID: kev.cveID,
+        product: kev.product,
+        vendor: kev.vendorProject,
+        vulnerabilityName: kev.vulnerabilityName,
+        limit
+      });
+
+      return res.json(relatedArticles);
+    } catch (error) {
+      console.error('Error fetching related articles for KEV:', error);
+      return res.status(500).json({ error: 'Failed to fetch related articles' });
+    }
+  }
+
   return res.status(404).json({ error: 'Endpoint not found' });
 }
 
