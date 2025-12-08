@@ -103,6 +103,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return handleThreatGroupsEndpoints(req, res, action);
     }
 
+    // Weekly Digest Cron endpoint
+    if (pathname === '/api/cron/weekly-digest') {
+      return handleWeeklyDigestCronEndpoint(req, res, action);
+    }
+
     // Default 404 response
     res.status(404).json({ message: 'API endpoint not found' });
   } catch (error) {
@@ -4842,3 +4847,37 @@ async function handleThreatGroupsEndpoints(req: VercelRequest, res: VercelRespon
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
+
+async function handleWeeklyDigestCronEndpoint(req: VercelRequest, res: VercelResponse, action: string) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
+
+  try {
+    // Basic security for cron
+    const authHeader = req.headers.authorization;
+    if (process.env.CRON_SECRET && (!authHeader || authHeader !== `Bearer ${process.env.CRON_SECRET}`)) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    // Import digest service dynamically
+    const { digestService } = await import('../server/services/digest-service.js');
+    console.log('Triggering weekly digest generation via cron...');
+    const result = await digestService.generateWeeklyDigest();
+
+    return res.json({
+      success: true,
+      message: 'Weekly digest generation completed',
+      result
+    });
+  } catch (error) {
+    console.error('Error in weekly digest cron:', error);
+    return res.status(500).json({
+      error: 'Failed to generate weekly digest',
+      details: error instanceof Error ? error.message : String(error)
+    });
+  }
+}
+
+// Start the server
+

@@ -4,16 +4,19 @@ import { eq, and, gte, desc, sql } from 'drizzle-orm';
 import { sendWeeklyDigestEmail } from '../email-service.js';
 
 export const digestService = {
-    async generateWeeklyDigest() {
+    async generateWeeklyDigest(options: { excludeEmails?: string[] } = {}) {
         const db = getDb();
         if (!db) throw new Error("Database not initialized");
 
         console.log("Starting weekly digest generation...");
+        if (options.excludeEmails?.length) {
+            console.log(`Excluding ${options.excludeEmails.length} recipients:`, options.excludeEmails);
+        }
 
         // 1. Fetch users opted into weekly digest
         // We need users who have emailWeeklyDigest = true in preferences
         // AND their email is verified (optional but good practice)
-        const recipients = await db.select({
+        let recipients = await db.select({
             email: users.email,
             name: users.name,
         })
@@ -23,6 +26,12 @@ export const digestService = {
                 eq(userPreferences.emailWeeklyDigest, true),
                 eq(users.emailVerified, true)
             ));
+
+        // Filter out excluded emails
+        if (options.excludeEmails?.length) {
+            const excludedSet = new Set(options.excludeEmails.map(e => e.toLowerCase()));
+            recipients = recipients.filter(r => !excludedSet.has(r.email.toLowerCase()));
+        }
 
         console.log(`Found ${recipients.length} recipients for weekly digest.`);
 
@@ -174,6 +183,8 @@ export const digestService = {
             try {
                 await sendWeeklyDigestEmail(recipient.email, uniqueArticles);
                 sentCount++;
+                // Add 1 second delay to respect Resend's rate limit (2 reqs/sec)
+                await new Promise(resolve => setTimeout(resolve, 1000));
             } catch (error) {
                 console.error(`Failed to send digest to ${recipient.email}:`, error);
                 errorCount++;

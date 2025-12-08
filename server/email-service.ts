@@ -568,14 +568,19 @@ export async function sendWeeklyDigestEmail(to: string, articles: Partial<Articl
   try {
     const html = generateDigestHtml(articles);
 
-    const data = await resend.emails.send({
+    const response = await resend.emails.send({
       from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
       to: [to],
       subject: `Weekly Threat Intel Digest - WhatCyber - ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
       html: html,
     });
 
-    console.log('✅ Weekly digest sent successfully:', data);
+    if (response.error) {
+      console.error('❌ Resend API Error:', response.error);
+      throw new Error(response.error.message || 'Failed to send email');
+    }
+
+    console.log('✅ Weekly digest sent successfully:', response.data);
   } catch (error) {
     console.error('❌ Error sending weekly digest via Resend:', error);
     throw error;
