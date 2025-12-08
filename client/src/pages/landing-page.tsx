@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'wouter';
 import { motion } from 'framer-motion';
-import { Shield, Menu, X, Database, Eye, Settings, Zap, Target, Github, Linkedin, Mail, Globe, Heart, Twitter, ChevronDownIcon, HelpCircle, Plus, Minus } from 'lucide-react';
+import { Shield, Menu, X, Database, Eye, Settings, Zap, Target, Github, Linkedin, Mail, Globe, Heart, Twitter, ChevronDownIcon, HelpCircle, Plus, Minus, FileText, ShieldAlert, Users, Activity } from 'lucide-react';
 import * as THREE from 'three';
 import { Helmet } from "react-helmet-async";
 import { SEO } from '@/components/seo';
@@ -619,8 +619,8 @@ const HeroSection = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
             >
-              Your centralized hub for cybersecurity news, latest CVE vulnerabilities, and threat intelligence.
-              Stay informed with real-time updates from trusted security sources.
+              Actionable Intelligence. Aggregated Daily.
+              Your centralized hub for real-time cybersecurity news, vulnerability tracking, and threat actor intelligence.
             </motion.p>
 
             {/* CTA Button */}
@@ -663,22 +663,61 @@ const HeroSection = () => {
         </div>
 
         {/* Scroll indicator */}
+
+      </div>
+    </section>
+  );
+};
+
+// StatsSection Component
+const StatsSection = () => {
+  const stats = [
+    { icon: FileText, value: "20,000+", label: "News Articles Indexed" },
+    { icon: ShieldAlert, value: "1,100+", label: "Known Exploited Vulnerabilities" },
+    { icon: Users, value: "140+", label: "Threat Actor Profiles" },
+    { icon: Activity, value: "Real-Time", label: "Updates" }
+  ];
+
+  return (
+    <section className="relative z-20 -mt-28 px-4 sm:px-6">
+      {/* Transitional background bloom */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[200%] bg-gradient-to-b from-[#00ff88]/10 via-[#00ff88]/5 to-transparent blur-3xl pointer-events-none -z-10" />
+
+      <div className="max-w-6xl mx-auto">
         <motion.div
-          className="absolute bottom-8 left-1/2 transform -translate-x-1/2 cursor-pointer"
-          onClick={scrollToFeatures}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 1 }}
-          whileHover={{ scale: 1.1 }}
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+          className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl py-6 px-8 shadow-2xl relative overflow-hidden"
         >
-          <motion.div
-            className="flex flex-col items-center space-y-2 text-[#666] hover:text-[#00d4ff] transition-colors"
-            animate={{ y: [0, 10, 0] }}
-            transition={{ duration: 2, repeat: Infinity }}
-          >
-            <span className="text-sm">Scroll to explore</span>
-            <ChevronDownIcon className="h-6 w-6" />
-          </motion.div>
+          {/* Animated glow background */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#00ff88]/10 via-transparent to-[#00d4ff]/10 animate-gradient-x" />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
+            {stats.map((stat, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                className="flex items-center gap-4 group"
+              >
+                <div className="w-12 h-12 shrink-0 rounded-xl bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 border border-white/5 group-hover:border-[#00ff88]/30">
+                  <stat.icon className="w-6 h-6 text-[#00ff88] group-hover:text-[#00d4ff] transition-colors duration-300" />
+                </div>
+                <div className="flex flex-col">
+                  <h3 className="text-2xl font-bold text-white bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+                    {stat.value}
+                  </h3>
+                  <p className="text-xs text-[#888] font-medium uppercase tracking-wider leading-tight">
+                    {stat.label}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </motion.div>
       </div>
     </section>
@@ -697,29 +736,32 @@ const FeaturesSection = () => {
 
   const features = [
     {
-      icon: Database,
-      title: "Real-Time Aggregation",
-      description: "Stay ahead of threats with instant updates from sources like Bleeping Computer, Unit 42, and Dark Reading.",
-      delay: 0.2
+      title: "Vulnerability Intelligence",
+      description: "Advanced sorting and filtering capabilities for CVEs. Quickly identify critical vulnerabilities affecting your infrastructure using our comprehensive dashboard.",
+      video: "/latest-cves-demo.mp4",
+      webm: "/latest-cves-demo.webm",
+      align: "right"
     },
     {
-      icon: Eye,
-      title: "Centralized Dashboard",
-      description: "One unified view for all your intelligence feeds. No more tab-switching between different sources.",
-      delay: 0.4
+      title: "Exploited Vulnerabilities",
+      description: "Stay updated with CISA's Known Exploited Vulnerabilities (KEV) catalog and related news. Prioritize patching based on real-world exploitation data.",
+      video: "/exploited-vulnerabilities-demo.mp4",
+      webm: "/exploited-vulnerabilities-demo.webm",
+      align: "left"
     },
     {
-      icon: Settings,
-      title: "Customizable Sources",
-      description: "Tailor your feed. Add or remove any RSS source to create a personalized intelligence hub.",
-      delay: 0.6
+      title: "Threat Actor Directory",
+      description: "Comprehensive profiles of threat groups driven by MITRE ATT&CK data. Monitor live activity streams and related news for specific threat actors.",
+      video: "/threat-actors-demo.mp4",
+      webm: "/threat-actors-demo.webm",
+      align: "right"
     }
   ];
 
   return (
     <section
       id="features"
-      className="py-16 sm:py-20 lg:py-24 px-4 sm:px-6 relative overflow-hidden"
+      className="-mt-24 pt-32 pb-16 sm:pb-20 lg:pb-24 px-4 sm:px-6 relative overflow-hidden"
       style={{
         background: `
           radial-gradient(ellipse 100% 80% at 20% 50%, rgba(0, 255, 136, 0.05), transparent),
@@ -728,26 +770,22 @@ const FeaturesSection = () => {
         `
       }}
     >
-      {/* Parallax background elements with blur */}
+      {/* Background Elements */}
       <motion.div
         className="absolute top-10 right-10 w-32 h-32 border border-[#00ff88]/10 rotate-12 backdrop-blur-xs"
-        style={{ y: scrollY * -0.3 }}
-      />
-      <motion.div
-        className="absolute bottom-20 left-10 w-24 h-24 border border-[#00d4ff]/15 rounded-full backdrop-blur-xs"
-        style={{ y: scrollY * -0.4 }}
+        style={{ y: scrollY * -0.1 }}
       />
 
-      <div className="max-w-7xl mx-auto relative">
+      <div className="max-w-7xl mx-auto relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
-          className="text-center mb-12 sm:mb-16"
+          className="text-center mb-20"
         >
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6">
-            <span className="text-[#666]">Key</span>{' '}
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6">
+            <span className="text-[#666]">Platform</span>{' '}
             <motion.span
               className="bg-gradient-to-r from-[#00d4ff] via-[#00ff88] to-[#00d4ff] bg-clip-text text-transparent"
               style={{ backgroundSize: '200% 100%' }}
@@ -757,66 +795,56 @@ const FeaturesSection = () => {
               Features
             </motion.span>
           </h2>
-          <p className="text-lg sm:text-xl text-[#888] max-w-3xl mx-auto leading-relaxed px-4">
-            Essential capabilities of our cybersecurity news aggregator platform
+          <p className="text-lg sm:text-xl text-[#888] max-w-3xl mx-auto leading-relaxed">
+            Essential capabilities designed for modern threat intelligence
           </p>
         </motion.div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+        <div className="space-y-24">
           {features.map((feature, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, y: 50 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: feature.delay }}
-              whileHover={{ y: -10, scale: 1.02 }}
-              className="group relative"
+              transition={{ duration: 0.8 }}
+              className={`flex flex-col lg:flex-row items-center gap-12 lg:gap-20 ${feature.align === 'left' ? 'lg:flex-row-reverse' : ''
+                }`}
             >
-              {/* Card with backdrop blur */}
-              <div className="bg-white/5 backdrop-blur-lg p-6 sm:p-8 rounded-2xl border border-white/10 hover:border-[#00d4ff] transition-all duration-500 shadow-2xl shadow-black/20 hover:shadow-[0_20px_40px_rgba(0,212,255,0.15)] relative overflow-hidden h-full">
-                {/* Animated background gradient */}
-                <motion.div
-                  className="absolute -inset-2 bg-gradient-to-br from-transparent via-[rgba(0,212,255,0.1)] to-transparent opacity-0 group-hover:opacity-100"
-                  animate={{
-                    x: ['-100%', '100%'],
-                  }}
-                  transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
-                />
+              {/* Text Content */}
+              <div className="w-full lg:w-[40%] text-center lg:text-left">
+                <h3 className="text-3xl sm:text-4xl font-bold text-white mb-6 tracking-tight">
+                  {feature.title}
+                </h3>
+                <p className="text-lg text-[#aaa] leading-relaxed mb-8">
+                  {feature.description}
+                </p>
 
-                <div className="relative z-10">
-                  {/* Animated icon container */}
-                  <motion.div
-                    className="mb-4 sm:mb-6 relative"
-                    whileHover={{ scale: 1.1, rotate: 5 }}
-                    transition={{ duration: 0.3 }}
+                {/* Visual decorative line */}
+                <div className={`h-1 w-24 bg-gradient-to-r from-[#00d4ff] to-[#00ff88] rounded-full mx-auto lg:mx-0`} />
+              </div>
+
+              {/* Video Content */}
+              <div className="w-full lg:w-[60%] relative group">
+                {/* Glow Effect */}
+                <div className="absolute -inset-4 bg-gradient-to-r from-[#00d4ff]/20 to-[#00ff88]/20 rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+
+                {/* Video Container */}
+                <div className="relative rounded-xl overflow-hidden shadow-2xl border border-white/10 bg-black/50 backdrop-blur-sm group-hover:border-[#00d4ff]/30 transition-colors duration-500">
+                  <video
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="w-full h-auto object-cover rounded-xl"
                   >
-                    <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-[#00d4ff] to-[#00ff88] rounded-xl flex items-center justify-center shadow-[0_8px_20px_rgba(0,212,255,0.3)] group-hover:shadow-[0_12px_30px_rgba(0,212,255,0.4)] transition-shadow duration-300 relative overflow-hidden">
-                      <motion.div
-                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                        animate={{ x: ['-100%', '100%'] }}
-                        transition={{ duration: 3, repeat: Infinity, repeatDelay: 2 }}
-                      />
-                      <feature.icon className="w-6 h-6 sm:w-8 sm:h-8 text-black relative z-10" />
-                    </div>
-                  </motion.div>
+                    <source src={feature.webm} type="video/webm" />
+                    <source src={feature.video} type="video/mp4" />
+                    Your browser does not support the video tag.
+                  </video>
 
-                  <h3 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-white group-hover:text-[#00d4ff] transition-colors duration-300">
-                    {feature.title}
-                  </h3>
-
-                  <p className="text-[#ccc] leading-relaxed text-sm sm:text-base mb-4">
-                    {feature.description}
-                  </p>
-
-                  <div className="flex items-center gap-2 text-xs text-[#666]">
-                    <motion.div
-                      className="w-2 h-2 bg-[#00ff88] rounded-full"
-                      animate={{ opacity: [0.3, 1, 0.3] }}
-                      transition={{ duration: 2, repeat: Infinity }}
-                    />
-                    Active
-                  </div>
+                  {/* Glass overly reflection */}
+                  <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent pointer-events-none" />
                 </div>
               </div>
             </motion.div>
@@ -837,8 +865,16 @@ const FAQSection = () => {
       answer: "WhatCyber is a comprehensive cybersecurity threat intelligence aggregator. It collects and organizes the latest security news, CVE vulnerabilities, and threat reports from trusted sources like Bleeping Computer, Unit 42, and Dark Reading into a single, real-time dashboard."
     },
     {
+      question: "What are KEVs and why do they matter?",
+      answer: "KEVs, or Known Exploited Vulnerabilities, are security flaws that are actively being used by attackers in the wild. We integrate the CISA KEV catalog to help you prioritize patching the most dangerous vulnerabilities first."
+    },
+    {
+      question: "What information is in the Threat Actor profiles?",
+      answer: "Our Threat Actor Directory combines MITRE ATT&CK framework data with real-time news. You get detailed insights into an actor's aliases, targeted sectors, methods, and the latest activities associated with them."
+    },
+    {
       question: "Is WhatCyber free to use?",
-      answer: "Yes, WhatCyber offers a free tier that provides access to essential threat intelligence feeds and vulnerability updates. We believe in democratizing access to cybersecurity information."
+      answer: "Yes, WhatCyber offers a free tier that provides access to essential threat intelligence feeds, vulnerability updates, and threat actor profiles. We believe in democratizing access to cybersecurity information."
     },
     {
       question: "How often is the threat feed updated?",
@@ -847,10 +883,6 @@ const FAQSection = () => {
     {
       question: "Can I customize my news sources?",
       answer: "Absolutely. WhatCyber allows you to follow specific RSS feeds and customize your dashboard to focus on the sources and topics that matter most to you and your organization."
-    },
-    {
-      question: "What kind of vulnerabilities does it track?",
-      answer: "We track Common Vulnerabilities and Exposures (CVEs) from the National Vulnerability Database (NVD) and other major security advisories, providing you with details on severity, affected systems, and available patches."
     }
   ];
 
@@ -920,20 +952,20 @@ const TimelineSection = () => {
   const steps = [
     {
       icon: Eye,
-      title: "Discover",
-      description: "Aggregate real-time cybersecurity news and CVE alerts from trusted sources worldwide.",
+      title: "Discover KEVs",
+      description: "Aggregate real-time cybersecurity news and known exploited vulnerabilities to stay ahead of critical threats.",
       number: "01"
     },
     {
       icon: Target,
-      title: "Analyze",
-      description: "Filter and prioritize relevant threats based on your specific interests and requirements.",
+      title: "Analyze Actors",
+      description: "Deep dive into threat actor profiles, tracking their tactics, techniques, and procedures with MITRE integration.",
       number: "02"
     },
     {
       icon: Zap,
-      title: "Act",
-      description: "Stay informed and take proactive measures to protect your digital assets effectively.",
+      title: "Act Fast",
+      description: "Leverage actionable intelligence to patch vulnerabilities and fortify your defenses against active exploits.",
       number: "03"
     }
   ];
@@ -1139,8 +1171,8 @@ const FooterSection = () => {
               transition={{ duration: 0.6, delay: 0.1 }}
               viewport={{ once: true }}
             >
-              Advanced cybersecurity solutions powered by AI. Protecting your digital assets
-              with next-generation threat intelligence and automated defense systems.
+              Your centralized hub for real-time cybersecurity news, vulnerability tracking,
+              and threat actor intelligence. Stay ahead of emerging threats with WhatCyber.
             </motion.p>
 
             <motion.div
@@ -1287,7 +1319,7 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="bg-black min-h-screen text-white selection:bg-[#00d4ff] selection:text-black font-sans">
+    <div className="bg-black min-h-screen text-white selection:bg-[#00d4ff] selection:text-black font-sans overflow-x-hidden">
       <SEO
         title="WhatCyber - ThreatFeed"
         description="Stay updated with the latest cybersecurity threats, vulnerabilities, and intelligence from trusted sources."
@@ -1299,6 +1331,7 @@ export default function LandingPage() {
 
       <main>
         <HeroSection />
+        <StatsSection />
         <FeaturesSection />
         <TimelineSection />
         <FAQSection />
