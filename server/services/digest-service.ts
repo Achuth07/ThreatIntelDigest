@@ -22,10 +22,9 @@ export const digestService = {
         })
             .from(users)
             .innerJoin(userPreferences, eq(users.id, userPreferences.userId))
-            .where(and(
-                eq(userPreferences.emailWeeklyDigest, true),
-                eq(users.emailVerified, true)
-            ));
+            .where(
+                eq(userPreferences.emailWeeklyDigest, true)
+            );
 
         // Filter out excluded emails
         if (options.excludeEmails?.length) {
