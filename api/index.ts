@@ -1395,6 +1395,15 @@ async function handleSourcesEndpoints(req: VercelRequest, res: VercelResponse, a
 
   } catch (error) {
     console.error('Fatal error in sources API:', error);
+
+    // Check if this is a duplicate URL error (PostgreSQL error code 23505)
+    if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
+      return res.status(409).json({
+        message: "This source already exists",
+        error: "A source with this URL has already been added to your feed"
+      });
+    }
+
     res.status(500).json({
       message: "Internal server error",
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -3873,7 +3882,7 @@ async function handleFetchArticleEndpoints(req: VercelRequest, res: VercelRespon
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
         'Accept-Language': 'en-US,en;q=0.9',
-        'Accept-Encoding': 'gzip, deflate, br, zstd',
+        'Accept-Encoding': 'gzip, deflate',
         'Connection': 'keep-alive',
         'Upgrade-Insecure-Requests': '1',
         'Sec-Fetch-Dest': 'document',

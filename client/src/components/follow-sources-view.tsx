@@ -42,10 +42,33 @@ export function FollowSourcesView({ userSources, onSourceAdded, onBack }: Follow
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/sources'] });
     },
-    onError: () => {
+    onError: (error: any) => {
+      let errorMessage = "Failed to create new source. Please try again.";
+
+      // The error from apiRequest is in the format "statusCode: jsonBody"
+      // Try to parse the JSON body to get the actual error message
+      try {
+        if (error?.message) {
+          const parts = error.message.split(': ');
+          if (parts.length > 1) {
+            // Try to parse the JSON part
+            const jsonPart = parts.slice(1).join(': '); // Rejoin in case the message contains colons
+            const errorData = JSON.parse(jsonPart);
+            if (errorData?.error) {
+              errorMessage = errorData.error;
+            } else if (errorData?.message) {
+              errorMessage = errorData.message;
+            }
+          }
+        }
+      } catch (e) {
+        // If we can't parse the error, use the default message
+        console.error('Error parsing error message:', e);
+      }
+
       toast({
         title: "Error",
-        description: "Failed to create new source. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     },

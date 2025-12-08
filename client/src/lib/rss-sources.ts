@@ -48,12 +48,7 @@ export const VENDOR_THREAT_RESEARCH = [
     icon: "fas fa-microsoft",
     color: "#00bcf2",
   },
-  {
-    name: "Cisco Threat Research Blog", // New source
-    url: "https://blogs.cisco.com/feed",
-    icon: "fas fa-network-wired",
-    color: "#1ba0d7",
-  },
+
   {
     name: "Check Point Research", // New source
     url: "https://research.checkpoint.com/feed/",
@@ -109,12 +104,7 @@ export const VENDOR_THREAT_RESEARCH = [
     icon: "fas fa-cogs",
     color: "#3498db",
   },
-  {
-    name: "We Live Security (ESET)",
-    url: "http://eset.com/int/rss.xml",
-    icon: "fas fa-shield-virus",
-    color: "#0066cc",
-  },
+
   {
     name: "FireEye",
     url: "http://www.fireeye.com/blog/feed",
