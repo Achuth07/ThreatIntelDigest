@@ -1545,7 +1545,7 @@ async function handleArticlesEndpoints(req: VercelRequest, res: VercelResponse, 
 
     if (req.method === 'GET') {
       console.log('Fetching articles...');
-      const { id, source, source_ids, limit = '10', offset = '0', search, sortBy = 'newest' } = req.query;
+      const { id, source, source_ids, limit = '10', offset = '0', search, sortBy = 'newest', threatLevels } = req.query;
 
       // Handle single article fetch by ID
       if (id) {
@@ -1663,6 +1663,17 @@ async function handleArticlesEndpoints(req: VercelRequest, res: VercelResponse, 
         // User is authenticated but has NO preferences (e.g. new user)
         // Show NO articles to encourage onboarding/following
         conditions.push(sql`1 = 0`);
+      }
+
+      // Filter by threat levels if provided
+      if (threatLevels) {
+        const levels = (threatLevels as string).split(',').map(level => level.trim()).filter(level => level.length > 0);
+        if (levels.length > 0) {
+          const inClause = levels.map((level: string) => sql`${level}`).reduce((acc: any, curr: any, idx: number) =>
+            idx === 0 ? curr : sql`${acc}, ${curr}`
+          );
+          conditions.push(sql`threat_level IN (${inClause})`);
+        }
       }
       // If no source filter and user has no preferences, show all articles
 

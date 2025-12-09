@@ -85,6 +85,7 @@ export default function Home() {
       sortBy,
       limit: showBookmarks ? '1000' : ARTICLES_PER_PAGE, // Increase limit significantly when viewing bookmarks
       offset: page * (showBookmarks ? 1000 : ARTICLES_PER_PAGE),
+      threatLevels: threatFilters.length === 3 ? undefined : threatFilters.join(','), // Only send if not all are selected
     }],
   });
 
@@ -277,10 +278,10 @@ export default function Home() {
       }
     }
 
-    // Threat level filter
-    if (!threatFilters.includes(article.threatLevel)) {
-      return false;
-    }
+    // Threat level filter - now handled by API
+    // if (!threatFilters.includes(article.threatLevel)) {
+    //   return false;
+    // }
 
     return true;
   });

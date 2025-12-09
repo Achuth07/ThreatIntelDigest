@@ -1,11 +1,6 @@
 // Vendor & Private Threat Research
 export const VENDOR_THREAT_RESEARCH = [
-  {
-    name: "Google Mandiant Threat Intelligence",
-    url: "https://cloud.google.com/blog/topics/threat-intelligence/rss.xml",
-    icon: "fas fa-shield-alt",
-    color: "#4285f4",
-  },
+
   {
     name: "Cisco Talos Intelligence",
     url: "https://feeds.feedburner.com/feedburner/Talos", // Updated URL
@@ -62,12 +57,7 @@ export const VENDOR_THREAT_RESEARCH = [
     icon: "fas fa-shield-alt",
     color: "#4285f4",
   },
-  {
-    name: "AT&T Cybersecurity",
-    url: "https://cybersecurity.att.com/site/blog-all-rss",
-    icon: "fas fa-network-wired",
-    color: "#1ba0d7",
-  },
+
   {
     name: "Bitdefender Labs",
     url: "https://www.bitdefender.com/blog/api/rss/labs/",
@@ -117,12 +107,7 @@ export const VENDOR_THREAT_RESEARCH = [
     icon: "fas fa-globe",
     color: "#3498db",
   },
-  {
-    name: "Fortinet (Threat Research)",
-    url: "http://feeds.feedburner.com/fortinet/blog/threat-research",
-    icon: "fas fa-fortress",
-    color: "#ee3124",
-  },
+
   {
     name: "Google Online Security",
     url: "https://googleonlinesecurity.blogspot.com/atom.xml",
@@ -177,14 +162,7 @@ export const VENDOR_THREAT_RESEARCH = [
     icon: "fas fa-newspaper",
     color: "#dc2626",
   },
-  // Commented out all Recorded Future feeds - all return 404
-  // Commenting out RiskIQ as it's not providing a valid RSS feed
-  // {
-  //   name: "RiskIQ",
-  //   url: "https://www.riskiq.com/blog/feed/",
-  //   icon: "fas fa-globe",
-  //   color: "#3498db",
-  // },
+
   {
     name: "SensePost (Orange)",
     url: "https://sensepost.com/rss.xml",
@@ -263,12 +241,7 @@ export const VENDOR_THREAT_RESEARCH = [
 
 // Government & Agency Alerts
 export const GOVERNMENT_ALERTS = [
-  {
-    name: "CISA Alerts (US)",
-    url: "https://www.cisa.gov/news-events/alerts/rss",
-    icon: "fas fa-flag-usa",
-    color: "#1e40af",
-  },
+
   {
     name: "NCSC Threat Reports (UK)",
     url: "https://www.ncsc.gov.uk/collection/threat-reports/rss",
@@ -282,12 +255,7 @@ export const GOVERNMENT_ALERTS = [
     icon: "fas fa-shield-alt",
     color: "#1e40af",
   },
-  {
-    name: "DHS (Automated Indicator Sharing)",
-    url: "https://www.cisa.gov/automated-indicator-sharing-ais.xml", // Fixed URL
-    icon: "fas fa-flag-usa",
-    color: "#1e40af",
-  },
+
   {
     name: "NIST Cybersecurity Insights",
     url: "https://www.nist.gov/blogs/cybersecurity-insights/rss.xml",
@@ -340,13 +308,7 @@ export const MALWARE_RESEARCH = [
     icon: "fas fa-search",
     color: "#16a34a",
   },
-  // Commenting out Malware.News Analysis as the URL is not valid
-  // {
-  //   name: "Malware.News Analysis",
-  //   url: "https://malware.news/c/malware-analysis/6.rss",
-  //   icon: "fas fa-virus",
-  //   color: "#dc2626",
-  // },
+
   // Additional Malware/Analysis sources
   {
     name: "Malware Traffic Analysis",
@@ -376,12 +338,7 @@ export const GENERAL_SECURITY_NEWS = [
     icon: "fas fa-user-tie",
     color: "#059669",
   },
-  {
-    name: "Dark Reading",
-    url: "https://www.darkreading.com/rss.xml",
-    icon: "fas fa-eye",
-    color: "#8b5cf6",
-  },
+
   {
     name: "SecurityWeek",
     url: "https://feeds.feedburner.com/securityweek",
