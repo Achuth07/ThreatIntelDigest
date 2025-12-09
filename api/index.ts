@@ -2186,7 +2186,7 @@ async function handleBookmarksEndpoints(req: VercelRequest, res: VercelResponse,
         console.log('DELETE request pathname:', pathname);
 
         // Extract article ID from path like /api/bookmarks/article-id
-        const pathParts = pathname.split('/');
+        const pathParts = pathname.split('/').filter(p => p.length > 0);
         const lastPart = pathParts[pathParts.length - 1];
 
         // Validate that we have an article ID

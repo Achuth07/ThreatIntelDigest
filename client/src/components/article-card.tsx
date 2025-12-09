@@ -32,24 +32,24 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
       if (!user) {
         throw new Error('Authentication required');
       }
-      
+
       if (isBookmarked) {
-        // Use query parameter instead of path parameter for DELETE request
-        return apiRequest('DELETE', `/api/bookmarks/?articleId=${article.id}`);
+        // Use path parameter for DELETE request for better compatibility
+        return apiRequest('DELETE', `/api/bookmarks/${article.id}`);
       } else {
-        return apiRequest('POST', '/api/bookmarks/', { articleId: article.id });
+        return apiRequest('POST', '/api/bookmarks', { articleId: article.id });
       }
     },
     onSuccess: () => {
       setIsBookmarked(!isBookmarked);
       // Invalidate all queries related to bookmarks to ensure UI updates
-      queryClient.invalidateQueries({ queryKey: ['/api/bookmarks/'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/bookmarks'] });
       // Also invalidate articles query to update bookmark status in article list
-      queryClient.invalidateQueries({ queryKey: ['/api/articles/'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
       toast({
         title: isBookmarked ? "Bookmark Removed" : "Article Bookmarked",
-        description: isBookmarked ? 
-          "Article removed from bookmarks" : 
+        description: isBookmarked ?
+          "Article removed from bookmarks" :
           "Article saved to bookmarks for later reading",
       });
     },
@@ -86,10 +86,10 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
     const now = new Date();
     const articleDate = new Date(date);
     const diffInHours = Math.floor((now.getTime() - articleDate.getTime()) / (1000 * 60 * 60));
-    
+
     if (diffInHours < 1) return 'Just now';
     if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
-    
+
     const diffInDays = Math.floor(diffInHours / 24);
     return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
   };
@@ -100,8 +100,8 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
         <div className="flex items-start justify-between mb-3 lg:mb-4">
           <div className="flex items-center space-x-2 lg:space-x-3 min-w-0 flex-1">
             <div className="flex-shrink-0">
-              <img 
-                src={getFaviconUrl(article.sourceUrl, 32)} 
+              <img
+                src={getFaviconUrl(article.sourceUrl, 32)}
                 alt={`${article.source} favicon`}
                 className="w-6 h-6 rounded-sm"
                 onError={(e) => {
@@ -110,13 +110,13 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
                 }}
               />
             </div>
-            <span 
-              className="text-xs lg:text-sm font-medium text-slate-300 truncate" 
+            <span
+              className="text-xs lg:text-sm font-medium text-slate-300 truncate"
               data-testid={`text-source-${article.id}`}
             >
               {article.source}
             </span>
-            <Badge 
+            <Badge
               className={`text-xs px-1.5 lg:px-2 py-0.5 lg:py-1 rounded-full flex-shrink-0 ${getThreatLevelColor(article.threatLevel)}`}
               data-testid={`badge-threat-level-${article.id}`}
             >
@@ -124,7 +124,7 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
             </Badge>
           </div>
           <div className="flex items-center space-x-1 lg:space-x-2 flex-shrink-0 ml-2">
-            <span 
+            <span
               className="text-xs lg:text-sm text-slate-400 hidden sm:block"
               data-testid={`text-publish-time-${article.id}`}
             >
@@ -133,9 +133,8 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
             <Button
               variant="ghost"
               size="sm"
-              className={`p-1.5 lg:p-1 transition-colors touch-manipulation ${
-                isBookmarked ? 'text-whatcyber-teal' : 'text-slate-400 hover:text-whatcyber-teal'
-              }`}
+              className={`p-1.5 lg:p-1 transition-colors touch-manipulation ${isBookmarked ? 'text-whatcyber-teal' : 'text-slate-400 hover:text-whatcyber-teal'
+                }`}
               onClick={() => bookmarkMutation.mutate()}
               disabled={bookmarkMutation.isPending}
               data-testid={`button-bookmark-${article.id}`}
@@ -145,29 +144,27 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
             </Button>
           </div>
         </div>
-        
+
         {/* Mobile time display */}
         <div className="sm:hidden mb-2">
-          <span 
+          <span
             className="text-xs text-slate-400"
             data-testid={`text-publish-time-mobile-${article.id}`}
           >
             {formatTimeAgo(article.publishedAt)}
           </span>
         </div>
-        
-        <h2 className={`font-semibold text-slate-100 mb-2 lg:mb-3 group-hover:text-whatcyber-teal transition-colors line-clamp-2 ${
-          isFeatured ? 'text-lg lg:text-xl' : 'text-base lg:text-lg'
-        }`} data-testid={`text-title-${article.id}`}>
+
+        <h2 className={`font-semibold text-slate-100 mb-2 lg:mb-3 group-hover:text-whatcyber-teal transition-colors line-clamp-2 ${isFeatured ? 'text-lg lg:text-xl' : 'text-base lg:text-lg'
+          }`} data-testid={`text-title-${article.id}`}>
           {article.title}
         </h2>
-        
-        <p className={`text-slate-300 text-sm leading-relaxed mb-3 lg:mb-4 ${
-          isFeatured ? 'line-clamp-3' : 'line-clamp-2'
-        }`} data-testid={`text-summary-${article.id}`}>
+
+        <p className={`text-slate-300 text-sm leading-relaxed mb-3 lg:mb-4 ${isFeatured ? 'line-clamp-3' : 'line-clamp-2'
+          }`} data-testid={`text-summary-${article.id}`}>
           {article.summary}
         </p>
-        
+
         <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">
           <div className="flex items-center space-x-3 lg:space-x-4">
             <div className="flex items-center space-x-1 lg:space-x-2 text-xs lg:text-sm text-slate-400">

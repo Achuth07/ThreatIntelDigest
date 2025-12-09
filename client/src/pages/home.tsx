@@ -93,9 +93,7 @@ export default function Home() {
   const { data: bookmarks = [], refetch: refetchBookmarks, isLoading: bookmarksLoading, error: bookmarksError } = useQuery<Bookmark[]>({
     queryKey: ['/api/bookmarks'],
     enabled: !!user && !!user.token, // Only fetch bookmarks if user is authenticated and has a token
-    // Refetch bookmarks every 30 seconds to ensure count is accurate
-    refetchInterval: 30000,
-    // Also refetch on window focus
+    // Refetch on window focus for robustness
     refetchOnWindowFocus: true,
     // Disable caching to ensure we always get fresh data
     staleTime: 0,
