@@ -61,7 +61,7 @@ export async function fetchCisaKevData() {
         }
 
         // Process in batches
-        const BATCH_SIZE = 100;
+        const BATCH_SIZE = 500;
         console.log(`Processing ${allKevs.length} KEVs in batches of ${BATCH_SIZE}...`);
 
         for (let i = 0; i < allKevs.length; i += BATCH_SIZE) {
