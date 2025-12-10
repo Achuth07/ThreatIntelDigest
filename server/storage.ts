@@ -76,12 +76,14 @@ export interface IStorage {
   getKnownExploitedVulnerabilities(params?: { limit?: number; offset?: number; vendorProject?: string; knownRansomwareCampaignUse?: string; sort?: string }): Promise<KnownExploitedVulnerability[]>;
   getKnownExploitedVulnerability(cveID: string): Promise<KnownExploitedVulnerability | undefined>;
   createKnownExploitedVulnerability(kev: InsertKnownExploitedVulnerability): Promise<KnownExploitedVulnerability>;
+  batchCreateKnownExploitedVulnerabilities(kevs: InsertKnownExploitedVulnerability[]): Promise<KnownExploitedVulnerability[]>;
   kevExists(cveID: string): Promise<boolean>;
   getKevVendors(): Promise<{ vendorProject: string; count: number }[]>;
   getRelatedArticlesForKev(params: { cveID: string; product?: string; vendor?: string; vulnerabilityName?: string; limit?: number }): Promise<Article[]>;
 
   // Email Authentication
   getUserByEmail(email: string): Promise<any | undefined>;
+
   getUserByVerificationToken(token: string): Promise<any | undefined>;
   getUserByResetToken(token: string): Promise<any | undefined>;
   createEmailUser(user: {
@@ -641,6 +643,10 @@ export class MemStorage implements IStorage {
   }
 
   async createKnownExploitedVulnerability(kev: InsertKnownExploitedVulnerability): Promise<KnownExploitedVulnerability> {
+    throw new Error("Not implemented in MemStorage");
+  }
+
+  async batchCreateKnownExploitedVulnerabilities(kevs: InsertKnownExploitedVulnerability[]): Promise<KnownExploitedVulnerability[]> {
     throw new Error("Not implemented in MemStorage");
   }
 

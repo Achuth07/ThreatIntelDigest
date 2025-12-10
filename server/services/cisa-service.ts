@@ -37,9 +37,12 @@ export async function fetchCisaKevData() {
         let processedCount = 0;
         let errorCount = 0;
 
+        const allKevs: InsertKnownExploitedVulnerability[] = [];
+
+        // Prepare all KEV objects
         for (const item of data.vulnerabilities) {
             try {
-                const kev: InsertKnownExploitedVulnerability = {
+                allKevs.push({
                     cveID: item.cveID,
                     vendorProject: item.vendorProject,
                     product: item.product,
@@ -50,14 +53,28 @@ export async function fetchCisaKevData() {
                     dueDate: item.dueDate ? new Date(item.dueDate) : undefined,
                     knownRansomwareCampaignUse: item.knownRansomwareCampaignUse,
                     notes: item.notes,
-                };
-
-                // This method handles upsert
-                await storage.createKnownExploitedVulnerability(kev);
-                processedCount++;
+                });
             } catch (err) {
-                console.error(`Error processing KEV item ${item.cveID}:`, err);
+                console.error(`Error parsing KEV item ${item.cveID}:`, err);
                 errorCount++;
+            }
+        }
+
+        // Process in batches
+        const BATCH_SIZE = 100;
+        console.log(`Processing ${allKevs.length} KEVs in batches of ${BATCH_SIZE}...`);
+
+        for (let i = 0; i < allKevs.length; i += BATCH_SIZE) {
+            const batch = allKevs.slice(i, i + BATCH_SIZE);
+            try {
+                await storage.batchCreateKnownExploitedVulnerabilities(batch);
+                processedCount += batch.length;
+                if ((i + BATCH_SIZE) % 500 === 0) {
+                    console.log(`Processed ${Math.min(i + BATCH_SIZE, allKevs.length)} items...`);
+                }
+            } catch (err) {
+                console.error(`Error processing batch starting at index ${i}:`, err);
+                errorCount += batch.length;
             }
         }
 

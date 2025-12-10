@@ -1,4 +1,4 @@
-import { and, desc, asc, ilike, inArray, eq, or } from 'drizzle-orm';
+import { and, desc, asc, ilike, inArray, eq, or, sql } from 'drizzle-orm';
 import { getDb } from './db.js';
 import { articles, bookmarks, rssSources, vulnerabilities, users, userSourcePreferences, userPreferences, knownExploitedVulnerabilities } from '../shared/schema.js';
 import type { IStorage, CVE, InsertCVE } from './storage.js';
@@ -856,6 +856,41 @@ export class PostgresStorage implements IStorage {
       return result[0];
     } catch (error) {
       console.error('Error creating/updating KEV:', error);
+      throw error;
+    }
+  }
+
+  async batchCreateKnownExploitedVulnerabilities(kevs: InsertKnownExploitedVulnerability[]): Promise<KnownExploitedVulnerability[]> {
+    try {
+      if (kevs.length === 0) return [];
+
+      // Drizzle supports batch insert with values array
+      const result = await this.db.insert(knownExploitedVulnerabilities)
+        .values(kevs.map(kev => ({
+          ...kev,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        })))
+        .onConflictDoUpdate({
+          target: knownExploitedVulnerabilities.cveID,
+          set: {
+            vendorProject: sql`excluded.vendor_project`,
+            product: sql`excluded.product`,
+            vulnerabilityName: sql`excluded.vulnerability_name`,
+            dateAdded: sql`excluded.date_added`,
+            shortDescription: sql`excluded.short_description`,
+            requiredAction: sql`excluded.required_action`,
+            dueDate: sql`excluded.due_date`,
+            knownRansomwareCampaignUse: sql`excluded.known_ransomware_campaign_use`,
+            notes: sql`excluded.notes`,
+            updatedAt: new Date()
+          }
+        })
+        .returning();
+
+      return result;
+    } catch (error) {
+      console.error('Error batch creating/updating KEVs:', error);
       throw error;
     }
   }
