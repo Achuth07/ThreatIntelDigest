@@ -546,7 +546,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/cron/fetch-kev', async (req, res) => {
     try {
-      const result = await fetchCisaKevData();
+      const result = await fetchCisaKevData(storage);
       res.json(result);
     } catch (error) {
       console.error('Error in KEV cron:', error);
