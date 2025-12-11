@@ -4674,11 +4674,19 @@ async function handleKevEndpoints(req: VercelRequest, res: VercelResponse, actio
       // Vercel Cron requests include 'Authorization' header with 'Bearer <CRON_SECRET>' if configured.
 
       const { fetchCisaKevData } = await import('../server/services/cisa-service.js');
-      const result = await fetchCisaKevData();
+      const result = await fetchCisaKevData(storage);
       return res.json(result);
     } catch (error) {
-      console.error('Error in KEV cron:', error);
-      return res.status(500).json({ error: 'Failed to fetch KEV data' });
+      console.error('CRITICAL ERROR in KEV cron:', error);
+      if (error instanceof Error) {
+        console.error('Error name:', error.name);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+      }
+      return res.status(500).json({
+        error: 'Failed to fetch KEV data',
+        details: error instanceof Error ? error.message : String(error)
+      });
     }
   }
 

@@ -1,5 +1,5 @@
 
-import { storage } from "../storage";
+import { storage as defaultStorage, IStorage } from "../storage";
 import { InsertKnownExploitedVulnerability } from "@shared/schema";
 import axios from "axios";
 
@@ -26,7 +26,8 @@ interface CisaKevResponse {
     vulnerabilities: CisaKevItem[];
 }
 
-export async function fetchCisaKevData() {
+export async function fetchCisaKevData(storageOverride?: IStorage) {
+    const storage = storageOverride || defaultStorage;
     console.log("Fetching CISA KEV data...");
     try {
         const response = await axios.get<CisaKevResponse>(CISA_KEV_URL);
