@@ -73,7 +73,7 @@ export interface IStorage {
   cveExists(id: string): Promise<boolean>;
 
   // Known Exploited Vulnerabilities (KEV)
-  getKnownExploitedVulnerabilities(params?: { limit?: number; offset?: number; vendorProject?: string; knownRansomwareCampaignUse?: string; sort?: string }): Promise<KnownExploitedVulnerability[]>;
+  getKnownExploitedVulnerabilities(params?: { limit?: number; offset?: number; vendorProject?: string; knownRansomwareCampaignUse?: string; sort?: string }): Promise<(KnownExploitedVulnerability & { cvssV3Score: number | null, cvssV3Severity: string | null })[]>;
   getKnownExploitedVulnerability(cveID: string): Promise<KnownExploitedVulnerability | undefined>;
   createKnownExploitedVulnerability(kev: InsertKnownExploitedVulnerability): Promise<KnownExploitedVulnerability>;
   batchCreateKnownExploitedVulnerabilities(kevs: InsertKnownExploitedVulnerability[]): Promise<KnownExploitedVulnerability[]>;
@@ -634,7 +634,7 @@ export class MemStorage implements IStorage {
     throw new Error('updateUserOnboarding not implemented in MemStorage');
   }
   // KEV (stubs)
-  async getKnownExploitedVulnerabilities(params?: { limit?: number; offset?: number; vendorProject?: string; knownRansomwareCampaignUse?: string; sort?: string }): Promise<KnownExploitedVulnerability[]> {
+  async getKnownExploitedVulnerabilities(params?: { limit?: number; offset?: number; vendorProject?: string; knownRansomwareCampaignUse?: string; sort?: string }): Promise<(KnownExploitedVulnerability & { cvssV3Score: number | null, cvssV3Severity: string | null })[]> {
     return [];
   }
 

@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from 'drizzle-orm';
+import { storage } from '../server/storage.js';
 
 // Consolidated API handler that handles all endpoints through action-based routing
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -91,6 +92,97 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // IndexNow endpoint
     if (pathname.startsWith('/api/admin/indexnow/submit')) {
       return handleIndexNowEndpoint(req, res);
+    }
+
+    // Backfill endpoint to fetch missing NVD data for KEVs
+    if (pathname === '/api/admin/backfill-nvd' && req.method === 'GET') {
+      try {
+        console.log('Starting NVD backfill for KEVs...');
+        const { drizzle } = await import('drizzle-orm/neon-serverless');
+        const { Pool } = await import('@neondatabase/serverless');
+        const { sql } = await import('drizzle-orm');
+
+        if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL missing');
+        const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+        const db = drizzle(pool);
+
+        // Get KEVs
+        const kevsResult = await db.execute(sql`SELECT cve_id FROM known_exploited_vulnerabilities`);
+        const kevIds = kevsResult.rows.map((r: any) => r.cve_id as string);
+
+        // Get existing NVDs
+        const nvdResult = await db.execute(sql`SELECT id FROM vulnerabilities`);
+        const nvdIds = new Set(nvdResult.rows.map((r: any) => r.id as string));
+
+        // Find missing
+        const missing = kevIds.filter(id => !nvdIds.has(id));
+        console.log(`Found ${missing.length} KEVs missing NVD data`);
+
+        if (missing.length === 0) {
+          return res.json({ message: 'All KEVs have NVD data', missing: 0 });
+        }
+
+        // Process batch of 10
+        const batch = missing.slice(0, 10);
+        let processed = 0;
+        const errors = [];
+
+        for (const cveId of batch) {
+          try {
+            // Fetch from NVD
+            console.log(`Fetching ${cveId} from NVD...`);
+            const nvdRes = await fetch(`https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=${cveId}`, {
+              headers: {
+                'apiKey': process.env.NVD_API_KEY || '',
+                'User-Agent': 'ThreatIntelDigest/1.0'
+              }
+            });
+
+            if (!nvdRes.ok) throw new Error(`Status ${nvdRes.status}`);
+            const data = await nvdRes.json();
+            const vuln = data.vulnerabilities?.[0]?.cve;
+
+            if (vuln) {
+              // Simplified Upsert Logic
+              const description = vuln.descriptions?.find((d: any) => d.lang === 'en')?.value || 'No description';
+
+              let cvssV3Score = null, cvssV3Severity = null;
+              const metrics = vuln.metrics;
+              if (metrics?.cvssMetricV31?.[0]) {
+                cvssV3Score = metrics.cvssMetricV31[0].cvssData.baseScore;
+                cvssV3Severity = metrics.cvssMetricV31[0].cvssData.baseSeverity;
+              } else if (metrics?.cvssMetricV30?.[0]) {
+                cvssV3Score = metrics.cvssMetricV30[0].cvssData.baseScore;
+                cvssV3Severity = metrics.cvssMetricV30[0].cvssData.baseSeverity;
+              }
+
+              // Upsert
+              await db.execute(sql`
+                  INSERT INTO vulnerabilities (id, description, published_date, last_modified_date, vuln_status, cvss_v3_score, cvss_v3_severity)
+                  VALUES (${cveId}, ${description}, ${vuln.published}, ${vuln.lastModified}, ${vuln.vulnStatus}, ${cvssV3Score ? String(cvssV3Score) : null}, ${cvssV3Severity})
+                  ON CONFLICT (id) DO UPDATE SET
+                    cvss_v3_score = EXCLUDED.cvss_v3_score,
+                    cvss_v3_severity = EXCLUDED.cvss_v3_severity
+                `);
+              processed++;
+            }
+            // Rate limit
+            await new Promise(r => setTimeout(r, 600));
+          } catch (e) {
+            console.error(`Error processing ${cveId}:`, e);
+            errors.push({ id: cveId, error: String(e) });
+          }
+        }
+
+        return res.json({
+          message: `Processed ${processed} CVEs`,
+          remaining: missing.length - batch.length,
+          errors
+        });
+
+      } catch (err) {
+        return res.status(500).json({ error: String(err) });
+      }
     }
 
     // KEV endpoints

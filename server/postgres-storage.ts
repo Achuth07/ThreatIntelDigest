@@ -782,10 +782,28 @@ export class PostgresStorage implements IStorage {
     }
   }
   // CISA KEV
-  async getKnownExploitedVulnerabilities(params?: { limit?: number; offset?: number; vendorProject?: string; knownRansomwareCampaignUse?: string; sort?: string }): Promise<KnownExploitedVulnerability[]> {
+  async getKnownExploitedVulnerabilities(params?: { limit?: number; offset?: number; vendorProject?: string; knownRansomwareCampaignUse?: string; sort?: string }): Promise<(KnownExploitedVulnerability & { cvssV3Score: number | null, cvssV3Severity: string | null })[]> {
     console.log('getKnownExploitedVulnerabilities called with params:', params);
     try {
-      let queryBuilder = this.db.select().from(knownExploitedVulnerabilities);
+      let queryBuilder = this.db.select({
+        cveID: knownExploitedVulnerabilities.cveID,
+        vendorProject: knownExploitedVulnerabilities.vendorProject,
+        product: knownExploitedVulnerabilities.product,
+        vulnerabilityName: knownExploitedVulnerabilities.vulnerabilityName,
+        dateAdded: knownExploitedVulnerabilities.dateAdded,
+        shortDescription: knownExploitedVulnerabilities.shortDescription,
+        requiredAction: knownExploitedVulnerabilities.requiredAction,
+        dueDate: knownExploitedVulnerabilities.dueDate,
+        knownRansomwareCampaignUse: knownExploitedVulnerabilities.knownRansomwareCampaignUse,
+        notes: knownExploitedVulnerabilities.notes,
+        createdAt: knownExploitedVulnerabilities.createdAt,
+        updatedAt: knownExploitedVulnerabilities.updatedAt,
+        cvssV3Score: vulnerabilities.cvssV3Score,
+        cvssV3Severity: vulnerabilities.cvssV3Severity
+      })
+        .from(knownExploitedVulnerabilities)
+        .leftJoin(vulnerabilities, eq(knownExploitedVulnerabilities.cveID, vulnerabilities.id));
+
       const conditions = [];
 
       if (params?.vendorProject) {
@@ -797,25 +815,32 @@ export class PostgresStorage implements IStorage {
       }
 
       if (conditions.length > 0) {
-        queryBuilder = queryBuilder.where(and(...conditions)) as typeof queryBuilder;
+        // @ts-ignore - complex query builder types
+        queryBuilder.where(and(...conditions));
       }
 
       // Sort
       const sort = params?.sort || 'newest';
+      // @ts-ignore
       if (sort === 'oldest') {
-        queryBuilder = queryBuilder.orderBy(asc(knownExploitedVulnerabilities.dateAdded)) as typeof queryBuilder;
+        queryBuilder.orderBy(asc(knownExploitedVulnerabilities.dateAdded));
       } else {
-        queryBuilder = queryBuilder.orderBy(desc(knownExploitedVulnerabilities.dateAdded)) as typeof queryBuilder;
+        queryBuilder.orderBy(desc(knownExploitedVulnerabilities.dateAdded));
       }
 
       // Pagination
       const limit = params?.limit || 50;
       const offset = params?.offset || 0;
-      queryBuilder = queryBuilder.limit(limit).offset(offset) as typeof queryBuilder;
+      // @ts-ignore
+      queryBuilder.limit(limit).offset(offset);
 
-      const result = await queryBuilder;
-      console.log('getKnownExploitedVulnerabilities result count:', result.length);
-      return result;
+      const rows = await queryBuilder;
+
+      // Parse decimal scores to numbers
+      return rows.map(row => ({
+        ...row,
+        cvssV3Score: row.cvssV3Score ? parseFloat(row.cvssV3Score as unknown as string) : null
+      }));
     } catch (error) {
       console.error('Error fetching KEVs:', error);
       return [];
