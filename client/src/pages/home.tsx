@@ -5,7 +5,7 @@ import { Sidebar } from '@/components/sidebar';
 import { ArticleCard } from '@/components/article-card';
 import { ArticleViewer } from '@/components/article-viewer';
 import { CVEList } from '@/components/cve-list';
-import { KevDashboard } from '@/components/kev-dashboard';
+
 import { FollowSourcesView } from '@/components/follow-sources-view';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -24,15 +24,19 @@ export default function Home() {
   const queryClient = useQueryClient();
 
   // State management
-  const [selectedSource, setSelectedSource] = useState('all');
+  const urlParams = new URLSearchParams(window.location.search);
+  const initialSource = urlParams.get('source') || 'all';
+  const initialView = urlParams.get('view');
+
+  const [selectedSource, setSelectedSource] = useState(initialSource);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [timeFilter, setTimeFilter] = useState('all');
   const [threatFilters, setThreatFilters] = useState(['CRITICAL', 'HIGH', 'MEDIUM']);
-  const [showBookmarks, setShowBookmarks] = useState(false);
-  const [showVulnerabilities, setShowVulnerabilities] = useState(false);
-  const [showKev, setShowKev] = useState(false);
-  const [showFollowSources, setShowFollowSources] = useState(false);
+
+  const [showBookmarks, setShowBookmarks] = useState(initialView === 'bookmarks');
+  const [showVulnerabilities, setShowVulnerabilities] = useState(initialView === 'cve' || initialView === 'cveList');
+  const [showFollowSources, setShowFollowSources] = useState(initialView === 'follow' || initialView === 'followSources');
   const [page, setPage] = useState(0);
   const [selectedArticleUrl, setSelectedArticleUrl] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -158,10 +162,7 @@ export default function Home() {
     if (showVulnerabilities) {
       setShowVulnerabilities(false);
     }
-    // Exit KEV page when selecting a source
-    if (showKev) {
-      setShowKev(false);
-    }
+
     // Exit follow sources page when selecting a source
     if (showFollowSources) {
       setShowFollowSources(false);
@@ -220,8 +221,8 @@ export default function Home() {
   };
 
   const handleVulnerabilitiesClick = () => {
+
     setShowVulnerabilities(true);
-    setShowKev(false);
     setShowBookmarks(false);
     handleSidebarClose(); // Auto-close sidebar on mobile
   };
@@ -230,16 +231,7 @@ export default function Home() {
     setShowVulnerabilities(false);
   };
 
-  const handleKevClick = () => {
-    setShowKev(true);
-    setShowVulnerabilities(false);
-    setShowBookmarks(false);
-    handleSidebarClose();
-  };
 
-  const handleKevClose = () => {
-    setShowKev(false);
-  };
 
   const handleFollowSourcesClick = () => {
     setShowFollowSources(true);
@@ -324,11 +316,7 @@ export default function Home() {
     hour12: true,
   });
 
-  const seoProps = showKev ? {
-    title: "Exploited Vulnerabilities (KEV) | WhatCyber",
-    description: "CISA Known Exploited Vulnerabilities catalog dashboard. Track active threats, ransomware campaigns, and remediation deadlines.",
-    keywords: "CISA KEV, exploited vulnerabilities, active exploitation, ransomware, cve, security dashboard"
-  } : {
+  const seoProps = {
     title: "Live Cybersecurity News Feed | WhatCyber",
     description: "Your live, aggregated feed of the latest cybersecurity news. Stay updated on vulnerabilities, threat intel, and breaking stories from around the web.",
     keywords: "cybersecurity news, threat intelligence, vulnerability feed, security alerts, cyber threats, security updates"
@@ -371,7 +359,7 @@ export default function Home() {
             onThreatFilterChange={handleThreatFilterChange}
             onClose={handleSidebarClose}
             onVulnerabilitiesClick={handleVulnerabilitiesClick}
-            onKevClick={handleKevClick}
+
             onFollowSourcesClick={handleFollowSourcesClick}
             onBookmarksClick={handleBookmarksSidebarClick} // Add this prop
           />
@@ -381,8 +369,6 @@ export default function Home() {
         <main className="flex-1 overflow-y-auto bg-whatcyber-darker">
           {showVulnerabilities ? (
             <CVEList onClose={handleVulnerabilitiesClose} />
-          ) : showKev ? (
-            <KevDashboard onClose={handleKevClose} />
           ) : showFollowSources ? (
             <FollowSourcesView
               userSources={userSources}

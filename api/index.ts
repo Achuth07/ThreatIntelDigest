@@ -4735,6 +4735,36 @@ async function handleKevEndpoints(req: VercelRequest, res: VercelResponse, actio
     }
   }
 
+  // GET /api/kev/:cveId
+  const singleCveMatch = pathname.match(/^\/api\/kev\/([\w-]+(?:-[\w-]+)*)\/?$/);
+  if (singleCveMatch && singleCveMatch[1] && method === 'GET') {
+    try {
+      const cveId = singleCveMatch[1];
+      console.log(`Fetching KEV details for: ${cveId}`);
+
+      const kev = await storage.getKnownExploitedVulnerability(cveId);
+
+      if (!kev) {
+        console.log(`KEV entry not found for: ${cveId}`);
+        // Try case-insensitive search or just return 404
+        return res.status(404).json({ error: 'KEV entry not found' });
+      }
+
+      // Also fetch NVD data for richer context
+      let nvd = null;
+      try {
+        nvd = await storage.getCVE(cveId);
+      } catch (err) {
+        console.error(`Error fetching NVD data for ${cveId}:`, err);
+      }
+
+      return res.json({ kev, nvd });
+    } catch (error) {
+      console.error('Error fetching KEV entry:', error);
+      return res.status(500).json({ error: 'Failed to fetch KEV entry' });
+    }
+  }
+
   // GET /api/kev/:cveId/related-articles
   const relatedArticlesMatch = pathname.match(/^\/api\/kev\/([\w-]+(?:-[\w-]+)*)\/related-articles\/?$/);
   if (relatedArticlesMatch && relatedArticlesMatch[1] && method === 'GET') {

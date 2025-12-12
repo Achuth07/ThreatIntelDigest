@@ -29,7 +29,7 @@ interface SidebarProps {
   onVulnerabilitiesClick?: () => void;
   onFollowSourcesClick?: () => void;
   onBookmarksClick?: () => void;
-  onKevClick?: () => void;
+
 }
 
 export function Sidebar({
@@ -43,9 +43,9 @@ export function Sidebar({
   onVulnerabilitiesClick,
   onFollowSourcesClick,
   onBookmarksClick,
-  onKevClick,
+
 }: SidebarProps) {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showAddSourcesDialog, setShowAddSourcesDialog] = useState(false);
@@ -585,7 +585,7 @@ export function Sidebar({
               {exportBookmarksMutation.isPending ? 'Exporting...' : 'Export Bookmarks'}
             </Button>
 
-            {/* New Bookmarks Button */}
+
             <Button
               variant="ghost"
               size="sm"
@@ -739,20 +739,24 @@ export function Sidebar({
             </button>
 
             <button
-              className="w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors hover:bg-slate-700"
-              onClick={onKevClick}
-              data-testid="button-kev"
+              className={`w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${location.startsWith('/exploited-vulnerabilities') ? 'bg-slate-700' : 'hover:bg-slate-700'}`}
+              onClick={() => {
+                setLocation('/exploited-vulnerabilities');
+                onClose?.();
+              }}
             >
               <div className="flex items-center space-x-3">
                 <div className="w-5 h-5 bg-orange-500 rounded-sm flex items-center justify-center text-white text-xs">
                   KEV
                 </div>
-                <span className="font-medium text-slate-100">Exploited Vulnerabilities</span>
+                <span className={`font-medium ${location.startsWith('/exploited-vulnerabilities') ? 'text-whatcyber-teal' : 'text-slate-100'}`}>Exploited Vulnerabilities</span>
               </div>
               <span className="bg-whatcyber-teal text-whatcyber-dark text-xs px-2 py-1 rounded-full font-bold animate-pulse">
                 NEW
               </span>
             </button>
+
+
           </div>
         </div>
 

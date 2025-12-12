@@ -77,7 +77,10 @@ export function KEVCard({ kev, onRelatedNewsClick }: KEVCardProps) {
                     variant="secondary"
                     size="sm"
                     className="bg-whatcyber-teal/10 text-whatcyber-teal hover:bg-whatcyber-teal/20 hover:text-whatcyber-teal border border-whatcyber-teal/20"
-                    onClick={() => onRelatedNewsClick(kev.cveID)}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onRelatedNewsClick(kev.cveID);
+                    }}
                 >
                     <Newspaper className="w-3 h-3 mr-2" />
                     See Related News

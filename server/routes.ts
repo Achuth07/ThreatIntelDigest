@@ -515,6 +515,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get single KEV by ID
+  app.get('/api/kev/:cveId', async (req, res) => {
+    const { mockReq, mockRes } = createMockHandlers(req, res, `/api/kev/${req.params.cveId}`);
+    await consolidatedApiHandler(mockReq as any, mockRes as any);
+  });
+
   // Get related articles for a specific KEV entry (smart matching)
   app.get('/api/kev/:cveId/related-articles', async (req, res) => {
     try {

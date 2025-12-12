@@ -56,7 +56,7 @@ export const vulnerabilities = pgTable("vulnerabilities", {
   cvssV2Score: decimal("cvss_v2_score", { precision: 3, scale: 1 }),
   cvssV2Severity: text("cvss_v2_severity"),
   weaknesses: jsonb("weaknesses").$type<string[]>().default([]), // CWE IDs
-  configurations: jsonb("configurations").$type<any[]>().default([]), // CPE configurations
+
   vendors: jsonb("vendors").$type<string[]>().default([]), // Extracted vendors
   referenceUrls: jsonb("reference_urls").$type<{ url: string; source: string; tags?: string[] }[]>().default([]),
   createdAt: timestamp("created_at").default(sql`now()`),

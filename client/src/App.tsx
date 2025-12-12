@@ -29,6 +29,8 @@ import ReportBugs from "@/pages/report-bugs";
 import ArticlePage from "@/pages/ArticlePage";
 import ThreatActorsPage from "@/pages/threat-actors";
 import ThreatActorDetailPage from "@/pages/threat-actor-detail";
+import ExploitedVulnerabilitiesPage from "@/pages/exploited-vulnerabilities";
+import CVEDetailPage from "@/pages/cve-detail";
 
 
 // Import context from separate file to prevent HMR issues
@@ -95,6 +97,8 @@ function Router() {
 
         <Route path="/threat-actors" component={ThreatActorsPage} />
         <Route path="/threat-actors/:id" component={ThreatActorDetailPage} />
+        <Route path="/exploited-vulnerabilities" component={ExploitedVulnerabilitiesPage} />
+        <Route path="/exploited-vulnerabilities/:id" component={CVEDetailPage} />
         <Route component={NotFound} />
       </Switch>
     </>

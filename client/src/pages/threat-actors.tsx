@@ -86,16 +86,16 @@ export default function ThreatActorsPage() {
                     } fixed left-0 top-16 h-[calc(100vh-4rem)] z-30 lg:relative lg:translate-x-0 lg:z-10 lg:top-0 lg:h-full transition-transform duration-300 ease-in-out`}>
                     <Sidebar
                         selectedSource={selectedSource}
-                        onSourceSelect={() => handleNavigation('/threatfeed')}
+                        onSourceSelect={(source) => handleNavigation(`/threatfeed?source=${encodeURIComponent(source)}`)}
                         timeFilter={timeFilter}
-                        onTimeFilterChange={() => { }}
+                        onTimeFilterChange={(filter) => handleNavigation(`/threatfeed?timeFilter=${filter}`)}
                         threatFilters={threatFilters}
-                        onThreatFilterChange={() => { }}
+                        onThreatFilterChange={(filters) => handleNavigation(`/threatfeed?threatFilters=${filters.join(',')}`)}
                         onClose={handleSidebarClose}
-                        onVulnerabilitiesClick={() => handleNavigation('/threatfeed')}
-                        onKevClick={() => handleNavigation('/threatfeed')}
-                        onFollowSourcesClick={() => handleNavigation('/threatfeed')}
-                        onBookmarksClick={() => handleNavigation('/threatfeed')}
+                        onVulnerabilitiesClick={() => handleNavigation('/threatfeed?view=cveList')}
+
+                        onFollowSourcesClick={() => handleNavigation('/threatfeed?view=followSources')}
+                        onBookmarksClick={() => handleNavigation('/threatfeed?view=bookmarks')}
                     />
                 </div>
 
