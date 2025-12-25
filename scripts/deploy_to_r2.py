@@ -17,7 +17,7 @@ SECRET_ACCESS_KEY = os.environ.get('R2_SECRET_ACCESS_KEY')
 BUCKET_NAME = os.environ.get('R2_BUCKET_NAME')
 
 # Fail fast if environment is not configured
-if not all():
+if not all([ACCOUNT_ID, ACCESS_KEY_ID, SECRET_ACCESS_KEY, BUCKET_NAME]):
     print("CRITICAL ERROR: Missing one or more required environment variables.")
     print(f"Status: AccountID={'OK' if ACCOUNT_ID else 'MISSING'}, "
           f"KeyID={'OK' if ACCESS_KEY_ID else 'MISSING'}, "
