@@ -4,7 +4,7 @@ import { eq, and, gte, desc, sql } from 'drizzle-orm';
 import { sendWeeklyDigestEmail } from '../email-service.js';
 
 export const digestService = {
-    async generateWeeklyDigest(options: { excludeEmails?: string[] } = {}) {
+    async generateWeeklyDigest(options: { excludeEmails?: string[]; limitToEmails?: string[] } = {}) {
         const db = getDb();
         if (!db) throw new Error("Database not initialized");
 
@@ -30,6 +30,13 @@ export const digestService = {
         if (options.excludeEmails?.length) {
             const excludedSet = new Set(options.excludeEmails.map(e => e.toLowerCase()));
             recipients = recipients.filter(r => !excludedSet.has(r.email.toLowerCase()));
+        }
+
+        // Apply allowlist if present (for testing)
+        if (options.limitToEmails?.length) {
+            const allowedSet = new Set(options.limitToEmails.map(e => e.toLowerCase()));
+            recipients = recipients.filter(r => allowedSet.has(r.email.toLowerCase()));
+            console.log(`⚠️ Limiting digest to ${recipients.length} allowed recipients only.`);
         }
 
         console.log(`Found ${recipients.length} recipients for weekly digest.`);

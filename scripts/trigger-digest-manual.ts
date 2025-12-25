@@ -9,11 +9,7 @@ async function main() {
         const start = Date.now();
 
         // Exclude users who already received it today
-        const excludeEmails = [
-            'james.danbury@michelmores.com',
-            'cduck@sibanking.com',
-            'achuth@umd.edu' // Testing email
-        ];
+        const excludeEmails: string[] = [];
 
         const result = await digestService.generateWeeklyDigest({ excludeEmails });
         const duration = ((Date.now() - start) / 1000).toFixed(2);
