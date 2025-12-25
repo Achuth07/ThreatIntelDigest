@@ -1,0 +1,54 @@
+name: Phase 1 - R2 Infrastructure Deployment
+
+# Trigger Strategy:
+# We trigger on push to main to ensure continuous delivery.
+# We also enable workflow_dispatch for manual debugging.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy-assets:
+    name: Deploy Artifacts to Cloudflare R2
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Check out the code from the repository
+      - name: Checkout Source Code
+        uses: actions/checkout@v3
+
+      # 2. Prepare the Python Runtime
+      # Reference: 
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          cache: 'pip' # Enable caching to speed up subsequent runs
+
+      # 3. Install the Boto3 Library
+      # We verify the installation to ensure the environment is ready
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # 4. Create a Dummy Artifact (For Testing Phase 1)
+      # In a real scenario, this might be the output of a build step
+      - name: Generate Test Artifact
+        run: |
+          echo "Phase 1 Deployment Timestamp: $(date)" > deployment_log.txt
+          echo "Infrastructure Status: Active" >> deployment_log.txt
+
+      # 5. Execute the Upload Script
+      # We explicitly map the Secrets to Environment Variables here.
+      # Reference: [13]
+      - name: Upload to R2
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+        run: |
+          python scripts/deploy_to_r2.py deployment_log.txt
