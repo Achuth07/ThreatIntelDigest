@@ -24,6 +24,7 @@ export const articles = pgTable("articles", {
   publishedAt: timestamp("published_at").notNull(),
   threatLevel: text("threat_level").notNull().default("MEDIUM"),
   tags: jsonb("tags").$type<string[]>().default([]),
+  targetedIndustries: jsonb("targeted_industries").$type<string[]>().default([]),
   readTime: integer("read_time").default(5),
   createdAt: timestamp("created_at").default(sql`now()`),
 });

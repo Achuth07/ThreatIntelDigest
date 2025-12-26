@@ -118,17 +118,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     await consolidatedApiHandler(mockReq as any, mockRes as any);
   });
 
-  // Attack Vector Stats (Sunburst Chart)
-  app.get('/api/stats/attack-vectors', async (req, res) => {
+  // Top 25 CWEs Stats
+  app.get('/api/stats/top-cwes', async (req, res) => {
     try {
-      // Only run this if we are not in Vercel Edge/Serverless context or if we want to run directly
-      // But typically we route through consolidated handler.
-      // However, let's just use storage directly here for simplicity as it is an internal API.
-
-      const stats = await storage.getAttackVectorStats();
+      const stats = await storage.getTop25CWEs();
       res.json(stats);
     } catch (error) {
-      console.error("Error fetching attack vector stats:", error);
+      console.error("Error fetching Top 25 CWEs:", error);
+      res.status(500).json({ error: "Failed to fetch stats" });
+    }
+  });
+
+  // Targeted Industries Stats
+  app.get('/api/stats/industries', async (req, res) => {
+    try {
+      const stats = await storage.getIndustryStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching industry stats:", error);
       res.status(500).json({ error: "Failed to fetch stats" });
     }
   });

@@ -1,0 +1,29 @@
+name: Test Weekly Digest (Manual)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-digest:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Test Digest Script
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          # Add other env vars if needed by your DB connection (e.g. PGHOST etc if not full URL)
+          # Usually DATABASE_URL is sufficient for Neon/Postgres
+        run: npx tsx scripts/test-digest-workflow.ts

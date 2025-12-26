@@ -60,6 +60,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return handleVisitorCountEndpoints(req, res, action);
     }
 
+    // Stats endpoints
+    if (pathname.startsWith('/api/stats/top-cwes')) {
+      try {
+        const stats = await storage.getTop25CWEs();
+        return res.status(200).json(stats);
+      } catch (error) {
+        console.error("Error fetching Top 25 CWEs:", error);
+        return res.status(500).json({ error: "Failed to fetch stats" });
+      }
+    }
+
     // Vulnerabilities endpoints
     if (pathname.startsWith('/api/vulnerabilities/vendors')) {
       return handleVulnerabilitiesVendorsEndpoint(req, res);

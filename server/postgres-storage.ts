@@ -1070,4 +1070,89 @@ export class PostgresStorage implements IStorage {
       return [];
     }
   }
+
+  async getTop25CWEs(): Promise<{
+    cweId: string;
+    name: string;
+    cveCount: number;
+    kevCount: number;
+    kevToCveRatio: number;
+  }[]> {
+    try {
+      // Complex query to get Top 25 CWEs
+      // 1. Unnest vulnerabilities to get (cve_id, cwe_id) pairs
+      // 2. Join with cwe_categories to get names
+      // 3. Count total CVEs per CWE
+      // 4. Count KEVs by joining with known_exploited_vulnerabilities
+      // 5. Calculate ratio and return top 25 by CVE count
+
+      const result = await this.db.execute(sql`
+        WITH cve_cwe AS (
+          SELECT 
+            v.id as cve_id,
+            unnest(v.weaknesses) as cwe_id
+          FROM ${vulnerabilities} v
+        ),
+        cwe_stats AS (
+          SELECT 
+            cc.id as cwe_id,
+            cc.name as cwe_name,
+            COUNT(DISTINCT cc_vuln.cve_id)::int as cve_count,
+            COUNT(DISTINCT kv.cve_id)::int as kev_count
+          FROM ${cweCategories} cc
+          JOIN cve_cwe cc_vuln ON cc.id = cc_vuln.cwe_id
+          LEFT JOIN ${knownExploitedVulnerabilities} kv ON cc_vuln.cve_id = kv.cve_id
+          GROUP BY cc.id, cc.name
+        )
+        SELECT 
+          cwe_id,
+          cwe_name,
+          cve_count,
+          kev_count,
+          CASE 
+            WHEN cve_count > 0 THEN (kev_count::float / cve_count::float) 
+            ELSE 0 
+          END as kev_ratio
+        FROM cwe_stats
+        ORDER BY cve_count DESC
+        LIMIT 25;
+      `);
+
+      return result.rows.map(row => ({
+        cweId: row.cwe_id as string,
+        name: row.cwe_name as string,
+        cveCount: row.cve_count as number,
+        kevCount: row.kev_count as number,
+        kevToCveRatio: row.kev_ratio as number
+      }));
+    } catch (error) {
+      console.error("Error fetching Top 25 CWEs:", error);
+      return [];
+    }
+  }
+
+  async getIndustryStats(): Promise<{ name: string; value: number }[]> {
+    try {
+      const result = await this.db.execute(sql`
+        SELECT 
+          industry as name,
+          COUNT(*)::int as value
+        FROM (
+          SELECT jsonb_array_elements_text(targeted_industries) as industry 
+          FROM ${articles}
+        ) t
+        GROUP BY industry
+        ORDER BY value DESC
+        LIMIT 10;
+      `);
+
+      return result.rows.map(row => ({
+        name: row.name as string,
+        value: row.value as number
+      }));
+    } catch (error) {
+      console.error("Error fetching industry stats:", error);
+      return [];
+    }
+  }
 }

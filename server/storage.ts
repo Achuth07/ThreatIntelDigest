@@ -104,6 +104,14 @@ export interface IStorage {
 
   // Stats
   getAttackVectorStats(): Promise<{ name: string; value: number; category: string }[]>;
+  getTop25CWEs(): Promise<{
+    cweId: string;
+    name: string;
+    cveCount: number;
+    kevCount: number;
+    kevToCveRatio: number;
+  }[]>;
+  getIndustryStats(): Promise<{ name: string; value: number }[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -291,6 +299,7 @@ export class MemStorage implements IStorage {
       tags: (insertArticle.tags ? [...(insertArticle.tags as string[])] : null) as string[] | null,
       readTime: insertArticle.readTime ?? null,
       threatLevel: insertArticle.threatLevel ?? "MEDIUM",
+      targetedIndustries: (insertArticle.targetedIndustries ? [...(insertArticle.targetedIndustries as string[])] : []) as string[] | null,
       id,
       createdAt: new Date(),
     };
@@ -668,6 +677,22 @@ export class MemStorage implements IStorage {
   async getAttackVectorStats(): Promise<{ name: string; value: number; category: string }[]> {
     return [];
   }
+
+  async getTop25CWEs(): Promise<{
+    cweId: string;
+    name: string;
+    cveCount: number;
+    kevCount: number;
+    kevToCveRatio: number;
+  }[]> {
+    return [];
+  }
+
+  async getIndustryStats(): Promise<{ name: string; value: number }[]> {
+    // In-memory implementation would need to aggregate from articles
+    // For now, returning empty array as this is primarily for dev/test
+    return [];
+  }
 }
 
 // Import PostgresStorage dynamically to avoid circular dependency
@@ -689,7 +714,7 @@ const initStorage = async (): Promise<IStorage> => {
     storageInstance = new MemStorage();
   }
 
-  return storageInstance;
+  return storageInstance!;
 };
 
 // Initialize storage synchronously - will use MemStorage until initStorage is called
