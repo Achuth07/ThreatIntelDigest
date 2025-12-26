@@ -1,0 +1,46 @@
+name: Seed Database Data
+
+on:
+  workflow_dispatch:
+    inputs:
+      seed_cwe:
+        description: 'Seed CWE Categories?'
+        required: true
+        default: true
+        type: boolean
+      analyze_industries:
+        description: 'Analyze Articles for Industries?'
+        required: true
+        default: true
+        type: boolean
+
+jobs:
+  seed_data:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests psycopg2-binary spacy python-dotenv
+        python -m spacy download en_core_web_sm
+
+    - name: Seed CWE Categories
+      if: ${{ inputs.seed_cwe }}
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      run: python scripts/ingest_attack_types.py
+
+    - name: Analyze Industries
+      if: ${{ inputs.analyze_industries }}
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      run: python scripts/analyze_industries.py
