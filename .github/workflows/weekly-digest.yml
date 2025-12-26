@@ -1,0 +1,32 @@
+name: Weekly Threat Intel Digest
+
+on:
+  schedule:
+    # Runs at 13:00 UTC every Monday (8:00 AM EST)
+    - cron: '0 13 * * 1'
+  workflow_dispatch:
+
+jobs:
+  generate-digest:
+    name: Generate & Send Digest
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Digest Script
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          # Mapped from existing secrets
+        run: npx tsx scripts/trigger-digest-manual.ts

@@ -17,10 +17,6 @@
     {
       "path": "/api/cron/fetch-kev",
       "schedule": "0 0 * * *"
-    },
-    {
-      "path": "/api/cron/weekly-digest",
-      "schedule": "0 13 * * 1"
     }
   ],
   "redirects": [
