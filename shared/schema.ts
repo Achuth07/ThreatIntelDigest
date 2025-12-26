@@ -275,7 +275,14 @@ export const insertArticleThreatGroupSchema = createInsertSchema(articleThreatGr
   createdAt: true,
 });
 
-export type InsertThreatGroup = z.infer<typeof insertThreatGroupSchema>;
 export type ThreatGroup = typeof threatGroups.$inferSelect;
 export type InsertArticleThreatGroup = z.infer<typeof insertArticleThreatGroupSchema>;
 export type ArticleThreatGroup = typeof articleThreatGroups.$inferSelect;
+
+export const cweCategories = pgTable("cwe_categories", {
+  id: varchar("id").primaryKey(), // e.g., "CWE-79"
+  name: text("name").notNull(),
+  category: text("category").notNull(), // e.g., "Software Flaw"
+  description: text("description"),
+  lastUpdated: timestamp("last_updated").default(sql`now()`),
+});

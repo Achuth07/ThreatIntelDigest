@@ -10,3 +10,8 @@ vite.config.ts.*
 .env
 .env.local
 .env.*.local
+
+# Python
+venv/
+__pycache__/
+*.pyc

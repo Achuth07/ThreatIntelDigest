@@ -3399,15 +3399,15 @@ async function handleFetchCvesEndpoints(req: VercelRequest, res: VercelResponse,
       });
     }
 
-    // Cleanup old CVEs (older than 90 days)
+    // Cleanup old CVEs (older than 365 days / 1 year)
     try {
       console.log('Cleaning up old CVEs...');
-      const ninetyDaysAgo = new Date();
-      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+      const oneYearAgo = new Date();
+      oneYearAgo.setDate(oneYearAgo.getDate() - 365);
 
       const cleanupResult = await db.execute(sql`
         DELETE FROM vulnerabilities 
-        WHERE published_date < ${ninetyDaysAgo}
+        WHERE published_date < ${oneYearAgo}
       `);
 
       console.log(`Cleaned up ${cleanupResult.rowCount || 0} old CVEs`);

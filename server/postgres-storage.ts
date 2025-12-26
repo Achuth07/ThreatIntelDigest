@@ -1,6 +1,6 @@
 import { and, desc, asc, ilike, inArray, eq, or, sql } from 'drizzle-orm';
 import { getDb } from './db.js';
-import { articles, bookmarks, rssSources, vulnerabilities, users, userSourcePreferences, userPreferences, knownExploitedVulnerabilities } from '../shared/schema.js';
+import { articles, bookmarks, rssSources, vulnerabilities, users, userSourcePreferences, userPreferences, knownExploitedVulnerabilities, cweCategories } from '../shared/schema.js';
 import type { IStorage, CVE, InsertCVE } from './storage.js';
 import type { Article, InsertArticle, Bookmark, InsertBookmark, RssSource, InsertRssSource } from '../shared/schema.js';
 import type { User, InsertUser, UserSourcePreference, InsertUserSourcePreference, UserPreferences, InsertUserPreferences, KnownExploitedVulnerability, InsertKnownExploitedVulnerability } from '../shared/schema.js';
@@ -1039,6 +1039,34 @@ export class PostgresStorage implements IStorage {
       return result as Article[];
     } catch (error) {
       console.error('Error fetching related articles for KEV:', error);
+      return [];
+    }
+  }
+
+  async getAttackVectorStats(): Promise<{ name: string; value: number; category: string }[]> {
+    try {
+      // Aggregate vulnerabilities by Unnesting the weaknesses array and joining with cwe_categories table.
+      const result = await this.db.execute(sql`
+            SELECT 
+                cc.name, 
+                cc.category,
+                COUNT(*)::int as value
+            FROM ${vulnerabilities} v
+            CROSS JOIN LATERAL unnest(v.weaknesses) as w_id
+            JOIN ${cweCategories} cc ON cc.id = w_id
+            GROUP BY cc.name, cc.category
+            ORDER BY count(*) DESC
+            LIMIT 50;
+         `);
+
+      return result.rows.map(row => ({
+        name: row.name as string,
+        value: row.value as number,
+        category: row.category as string
+      }));
+
+    } catch (error) {
+      console.error("Error aggregating attack vector stats", error);
       return [];
     }
   }

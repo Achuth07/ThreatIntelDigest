@@ -101,6 +101,9 @@ export interface IStorage {
 
   // Onboarding
   updateUserOnboarding(userId: number, data: { role: string; topics: string[] }): Promise<User>;
+
+  // Stats
+  getAttackVectorStats(): Promise<{ name: string; value: number; category: string }[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -659,6 +662,10 @@ export class MemStorage implements IStorage {
   }
 
   async getRelatedArticlesForKev(params: { cveID: string; product?: string; vendor?: string; vulnerabilityName?: string; limit?: number }): Promise<Article[]> {
+    return [];
+  }
+
+  async getAttackVectorStats(): Promise<{ name: string; value: number; category: string }[]> {
     return [];
   }
 }

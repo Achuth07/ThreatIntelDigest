@@ -19,6 +19,7 @@ import { LoginPopup } from "@/components/login-popup";
 import { getAuthenticatedUser, updateAuthToken } from "@/lib/auth";
 import { SEO } from "@/components/seo";
 import LandingPage from "@/pages/landing-page";
+import Dashboard from "@/pages/dashboard";
 import AboutPage from "@/pages/AboutPage";
 import SourcesPage from "@/pages/SourcesPage";
 import ContactPage from "@/pages/contact";
@@ -56,6 +57,7 @@ function Router() {
       <ScrollToTop />
       <Switch>
         <Route path="/" component={LandingPage} />
+        <Route path="/dashboard" component={Dashboard} />
         <Route path="/threatfeed" component={Home} />
         <Route path="/login" component={LoginPage} />
         <Route path="/register" component={RegisterPage} />
