@@ -3,6 +3,9 @@ import os
 import sys
 import mimetypes
 from botocore.exceptions import ClientError, NoCredentialsError
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ---------------------------------------------------------------------------
 # CONFIGURATION & ENVIRONMENT VALIDATION

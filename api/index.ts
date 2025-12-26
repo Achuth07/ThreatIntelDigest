@@ -71,6 +71,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    if (pathname.startsWith('/api/stats/industries')) {
+      try {
+        const stats = await storage.getIndustryStats();
+        return res.status(200).json(stats);
+      } catch (error) {
+        console.error("Error fetching industry stats:", error);
+        return res.status(500).json({ error: "Failed to fetch stats" });
+      }
+    }
+
+    if (pathname.startsWith('/api/stats/top-malware')) {
+      try {
+        const days = req.query.days ? parseInt(req.query.days as string) : 7;
+        const stats = await storage.getTopMalware(days);
+        return res.status(200).json(stats);
+      } catch (error) {
+        console.error("Error fetching top malware:", error);
+        return res.status(500).json({ error: "Failed to fetch top malware" });
+      }
+    }
+
     // Vulnerabilities endpoints
     if (pathname.startsWith('/api/vulnerabilities/vendors')) {
       return handleVulnerabilitiesVendorsEndpoint(req, res);
