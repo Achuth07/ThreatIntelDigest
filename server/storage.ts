@@ -112,6 +112,7 @@ export interface IStorage {
     kevToCveRatio: number;
   }[]>;
   getIndustryStats(): Promise<{ name: string; value: number }[]>;
+  getTopMalware(days?: number): Promise<{ name: string; value: number }[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -689,9 +690,26 @@ export class MemStorage implements IStorage {
   }
 
   async getIndustryStats(): Promise<{ name: string; value: number }[]> {
-    // In-memory implementation would need to aggregate from articles
-    // For now, returning empty array as this is primarily for dev/test
-    return [];
+    // Stub implementation for development/testing
+    // In a real scenario, this would aggregate data from articles
+    return [
+      { name: "Technology", value: 45 },
+      { name: "Finance", value: 30 },
+      { name: "Healthcare", value: 25 },
+      { name: "Government", value: 20 },
+      { name: "Retail", value: 15 }
+    ];
+  }
+
+  async getTopMalware(days: number = 7): Promise<{ name: string; value: number }[]> {
+    // Stub implementation
+    return [
+      { name: "CobaltStrike", value: 150 },
+      { name: "RedLine", value: 120 },
+      { name: "Mirai", value: 90 },
+      { name: "Emotet", value: 80 },
+      { name: "AgentTesla", value: 60 }
+    ];
   }
 }
 

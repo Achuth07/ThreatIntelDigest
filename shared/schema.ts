@@ -287,3 +287,25 @@ export const cweCategories = pgTable("cwe_categories", {
   description: text("description"),
   lastUpdated: timestamp("last_updated").default(sql`now()`),
 });
+
+export const malwareDailyStats = pgTable("malware_daily_stats", {
+  id: serial("id").primaryKey(),
+  date: timestamp("date").default(sql`CURRENT_DATE`),
+  familyName: varchar("family_name", { length: 100 }),
+  sampleCount: integer("sample_count"),
+  malwareType: varchar("malware_type", { length: 50 }),
+  createdAt: timestamp("created_at").default(sql`now()`),
+});
+
+export const insertMalwareDailyStatsSchema = createInsertSchema(malwareDailyStats, {
+  date: z.date().optional(),
+  familyName: z.string().min(1).max(100),
+  sampleCount: z.number().int().nonnegative(),
+  malwareType: z.string().max(50).optional(),
+}).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type MalwareDailyStat = typeof malwareDailyStats.$inferSelect;
+export type InsertMalwareDailyStat = z.infer<typeof insertMalwareDailyStatsSchema>;

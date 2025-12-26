@@ -1,9 +1,9 @@
 import { and, desc, asc, ilike, inArray, eq, or, sql } from 'drizzle-orm';
 import { getDb } from './db.js';
-import { articles, bookmarks, rssSources, vulnerabilities, users, userSourcePreferences, userPreferences, knownExploitedVulnerabilities, cweCategories } from '../shared/schema.js';
+import { articles, bookmarks, rssSources, vulnerabilities, users, userSourcePreferences, userPreferences, knownExploitedVulnerabilities, cweCategories, malwareDailyStats } from '../shared/schema.js';
 import type { IStorage, CVE, InsertCVE } from './storage.js';
 import type { Article, InsertArticle, Bookmark, InsertBookmark, RssSource, InsertRssSource } from '../shared/schema.js';
-import type { User, InsertUser, UserSourcePreference, InsertUserSourcePreference, UserPreferences, InsertUserPreferences, KnownExploitedVulnerability, InsertKnownExploitedVulnerability } from '../shared/schema.js';
+import type { User, InsertUser, UserSourcePreference, InsertUserSourcePreference, UserPreferences, InsertUserPreferences, KnownExploitedVulnerability, InsertKnownExploitedVulnerability, MalwareDailyStat } from '../shared/schema.js';
 
 export class PostgresStorage implements IStorage {
   private db = getDb();
@@ -207,6 +207,33 @@ export class PostgresStorage implements IStorage {
       }));
     } catch (error) {
       console.error('Error fetching bookmarks with articles:', error);
+      return [];
+    }
+  }
+
+  // Malware Stats
+  async getTopMalware(days: number = 7): Promise<{ name: string; value: number }[]> {
+    try {
+      // Calculate start date
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - days);
+
+      const result = await this.db.select({
+        name: malwareDailyStats.familyName,
+        value: sql<number>`SUM(${malwareDailyStats.sampleCount})::int`
+      })
+        .from(malwareDailyStats)
+        .where(sql`${malwareDailyStats.date} >= ${startDate}`)
+        .groupBy(malwareDailyStats.familyName)
+        .orderBy(desc(sql`SUM(${malwareDailyStats.sampleCount})`))
+        .limit(10);
+
+      return result.map(row => ({
+        name: row.name as string,
+        value: row.value
+      }));
+    } catch (error) {
+      console.error('Error fetching top malware:', error);
       return [];
     }
   }

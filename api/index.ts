@@ -1648,7 +1648,7 @@ async function handleArticlesEndpoints(req: VercelRequest, res: VercelResponse, 
 
     if (req.method === 'GET') {
       console.log('Fetching articles...');
-      const { id, source, source_ids, limit = '10', offset = '0', search, sortBy = 'newest', threatLevels } = req.query;
+      const { id, source, source_ids, limit = '10', offset = '0', search, sortBy = 'newest', threatLevels, industry } = req.query;
 
       // Handle single article fetch by ID
       if (id) {
@@ -1777,6 +1777,17 @@ async function handleArticlesEndpoints(req: VercelRequest, res: VercelResponse, 
           );
           conditions.push(sql`threat_level IN (${inClause})`);
         }
+      }
+
+      // Filter by industry if provided
+      if (industry) {
+        // targeted_industries is a JSONB array of strings
+        // We want to find articles where this array contains the requested industry
+        // We use the JSONB containment operator @>
+        // Note: The industry needs to be a JSON string inside a JSON array string for the operator to work correctly with some drivers,
+        // but typically with drizzle/postgres we might need a specific SQL construction.
+        // Let's try matching a JSON array containing the string.
+        conditions.push(sql`targeted_industries @> ${JSON.stringify([industry])}`);
       }
       // If no source filter and user has no preferences, show all articles
 

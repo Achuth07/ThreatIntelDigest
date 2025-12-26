@@ -140,11 +140,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // User Source Preferences API
-  app.get('/api/user-source-preferences', async (req, res) => {
-    const { mockReq, mockRes } = createMockHandlers(req, res, '/api/user-source-preferences');
-    await consolidatedApiHandler(mockReq as any, mockRes as any);
+  app.get("/api/stats/top-malware", async (req, res) => {
+    try {
+      const days = req.query.days ? parseInt(req.query.days as string) : 7;
+      const stats = await storage.getTopMalware(days);
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching top malware:", error);
+      res.status(500).json({ error: "Failed to fetch top malware" });
+    }
   });
+
+  // User Source Preferences API
 
   app.post('/api/user-source-preferences', async (req, res) => {
     const { mockReq, mockRes } = createMockHandlers(req, res, '/api/user-source-preferences');
