@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
 import { useState } from "react";
 import { IndustryNewsList } from "@/components/industry-news-list";
+import { MalwareNewsList } from "@/components/malware-news-list";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -147,12 +148,23 @@ function MalwareWidget() {
                             />
                             <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
                                 {malwareStats?.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill="#f59e0b" />
+                                    <Cell key={`cell-${index}`} fill="#10b981" />
                                 ))}
                             </Bar>
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
+
+                {malwareStats && malwareStats.length > 0 && (
+                    <div className="mt-8 space-y-6">
+                        <h3 className="text-lg font-semibold text-slate-100 border-b border-slate-700 pb-2">Recent News on Top Threats</h3>
+                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                            {malwareStats.slice(0, 4).map((malware) => (
+                                <MalwareNewsList key={malware.name} malwareFamily={malware.name} />
+                            ))}
+                        </div>
+                    </div>
+                )}
             </CardContent>
         </Card>
     );
