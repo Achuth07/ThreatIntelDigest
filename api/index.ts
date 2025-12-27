@@ -1,9 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from 'drizzle-orm';
-import { storage } from '../server/storage.js';
+import { storage, initializeStorage } from '../server/storage.js';
 
 // Consolidated API handler that handles all endpoints through action-based routing
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // IMPORTANT: Initialize storage to switch from MemStorage to PostgresStorage
+  // This is required for Vercel serverless functions
+  await initializeStorage();
+
   const { pathname } = new URL(req.url!, `https://${req.headers.host}`);
   const action = req.query.action as string || '';
 
