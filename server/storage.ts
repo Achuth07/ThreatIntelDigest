@@ -724,7 +724,7 @@ const initStorage = async (): Promise<IStorage> => {
 
   if (process.env.DATABASE_URL) {
     if (!PostgresStorage) {
-      const module = await import('./postgres-storage');
+      const module = await import('./postgres-storage.js');
       PostgresStorage = module.PostgresStorage;
     }
     storageInstance = new PostgresStorage();
