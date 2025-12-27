@@ -614,7 +614,9 @@ export function Sidebar({
                     description: "Login to use bookmark feature and personalize your experiences.",
                   });
                 } else {
+                  setLocation('/threatfeed?view=bookmarks');
                   onBookmarksClick?.();
+                  if (onClose) onClose();
                 }
               }}
               data-testid="button-sidebar-bookmarks"
@@ -644,12 +646,16 @@ export function Sidebar({
         {/* Follow Sources Section - Moved to its own section */}
         <div className="mb-6">
           <div
-            className="w-full flex items-center justify-between p-2 cursor-pointer hover:bg-slate-700 rounded-lg"
-            onClick={onFollowSourcesClick}
+            className={`w-full flex items-center justify-between p-2 cursor-pointer hover:bg-slate-700 rounded-lg ${location === '/threatfeed' && new URLSearchParams(window.location.search).get('view') === 'follow' ? 'bg-whatcyber-teal/20' : ''}`}
+            onClick={() => {
+              setLocation('/threatfeed?view=follow');
+              onFollowSourcesClick?.();
+              if (onClose) onClose();
+            }}
             data-testid="button-follow-sources"
           >
-            <h3 className="text-lg font-semibold text-slate-100 flex items-center">
-              <Plus className="w-5 h-5 text-green-500 mr-2" />
+            <h3 className={`text-lg font-semibold flex items-center ${location === '/threatfeed' && new URLSearchParams(window.location.search).get('view') === 'follow' ? 'text-whatcyber-teal' : 'text-slate-100'}`}>
+              <Plus className={`w-5 h-5 mr-2 ${location === '/threatfeed' && new URLSearchParams(window.location.search).get('view') === 'follow' ? 'text-whatcyber-teal' : 'text-green-500'}`} />
               Follow Sources
             </h3>
           </div>
@@ -672,9 +678,13 @@ export function Sidebar({
           <CollapsibleContent className="space-y-2">
             {/* All Sources */}
             <button
-              className={`w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${selectedSource === 'all' ? 'bg-whatcyber-teal/20 border border-whatcyber-teal/30' : 'hover:bg-whatcyber-gray/50'
+              className={`w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${selectedSource === 'all' && !new URLSearchParams(window.location.search).get('view') ? 'bg-whatcyber-teal/20 border border-whatcyber-teal/30' : 'hover:bg-whatcyber-gray/50'
                 }`}
-              onClick={() => onSourceSelect('all')}
+              onClick={() => {
+                setLocation('/threatfeed?source=all');
+                onSourceSelect('all');
+                if (onClose) onClose();
+              }}
               data-testid="button-source-all"
             >
               <div className="flex items-center space-x-3">
@@ -696,7 +706,11 @@ export function Sidebar({
               >
                 <button
                   className="flex-1 flex items-center space-x-3 text-left"
-                  onClick={() => onSourceSelect(source.name)}
+                  onClick={() => {
+                    setLocation(`/threatfeed?source=${encodeURIComponent(source.name)}`);
+                    onSourceSelect(source.name);
+                    if (onClose) onClose();
+                  }}
                 >
                   {renderSourceFavicon(source)}
                   <span className="text-slate-300 group-hover:text-slate-100 transition-colors">
@@ -742,15 +756,19 @@ export function Sidebar({
 
           <div className="space-y-2">
             <button
-              className="w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors hover:bg-slate-700"
-              onClick={onVulnerabilitiesClick}
+              className={`w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${location === '/threatfeed' && new URLSearchParams(window.location.search).get('view') === 'cve' ? 'bg-slate-700' : 'hover:bg-slate-700'}`}
+              onClick={() => {
+                setLocation('/threatfeed?view=cve');
+                onVulnerabilitiesClick?.();
+                if (onClose) onClose();
+              }}
               data-testid="button-vulnerabilities"
             >
               <div className="flex items-center space-x-3">
                 <div className="w-5 h-5 bg-red-500 rounded-sm flex items-center justify-center text-white text-xs">
                   CVE
                 </div>
-                <span className="font-medium text-slate-100">Latest CVEs</span>
+                <span className={`font-medium ${location === '/threatfeed' && new URLSearchParams(window.location.search).get('view') === 'cve' ? 'text-whatcyber-teal' : 'text-slate-100'}`}>Latest CVEs</span>
               </div>
 
             </button>

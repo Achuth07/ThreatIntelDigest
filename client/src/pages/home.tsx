@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Header } from '@/components/header';
 import { Sidebar } from '@/components/sidebar';
@@ -22,6 +23,7 @@ import { Helmet } from "react-helmet-async";
 export default function Home() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [location] = useLocation();
 
   // State management
   const urlParams = new URLSearchParams(window.location.search);
@@ -147,6 +149,42 @@ export default function Home() {
       refetchBookmarks();
     }
   }, [user, showBookmarks, refetchBookmarks]);
+
+  // Sync state with URL parameters
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const source = params.get('source');
+    const view = params.get('view');
+
+    if (source) {
+      setSelectedSource(source);
+      setShowBookmarks(false);
+      setShowVulnerabilities(false);
+      setShowFollowSources(false);
+      setPage(0);
+    } else if (view) {
+      if (view === 'bookmarks') {
+        setShowBookmarks(true);
+        setShowVulnerabilities(false);
+        setShowFollowSources(false);
+      } else if (view === 'cve' || view === 'cveList') {
+        setShowVulnerabilities(true);
+        setShowBookmarks(false);
+        setShowFollowSources(false);
+      } else if (view === 'follow' || view === 'followSources') {
+        setShowFollowSources(true);
+        setShowBookmarks(false);
+        setShowVulnerabilities(false);
+      }
+      setPage(0);
+    } else {
+      // Default state if no params
+      setSelectedSource('all');
+      setShowBookmarks(false);
+      setShowVulnerabilities(false);
+      setShowFollowSources(false);
+    }
+  }, [location, window.location.search]);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
