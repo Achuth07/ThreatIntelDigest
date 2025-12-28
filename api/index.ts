@@ -96,6 +96,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    // Global Threat Map Data (R2 Proxy)
+    if (pathname === '/api/map-data') {
+      try {
+        const { S3Client, GetObjectCommand } = await import('@aws-sdk/client-s3');
+
+        const r2 = new S3Client({
+          region: 'auto',
+          endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+          credentials: {
+            accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
+            secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
+          },
+        });
+
+        const command = new GetObjectCommand({
+          Bucket: process.env.R2_BUCKET_NAME,
+          Key: 'threat-map/data.json',
+        });
+
+        const response = await r2.send(command);
+
+        if (!response.Body) {
+          throw new Error('No body in R2 response');
+        }
+
+        res.setHeader('Content-Type', 'application/json');
+        const str = await response.Body.transformToString();
+        return res.send(str);
+
+      } catch (error) {
+        console.error("Error fetching map data from R2:", error);
+        // Fallback: If R2 fails (e.g. file doesn't exist yet), return empty array
+        return res.json([]);
+      }
+    }
+
     // Vulnerabilities endpoints
     if (pathname.startsWith('/api/vulnerabilities/vendors')) {
       return handleVulnerabilitiesVendorsEndpoint(req, res);
