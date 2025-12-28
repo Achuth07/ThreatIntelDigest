@@ -30,7 +30,7 @@ export function KEVCard({ kev, onRelatedNewsClick }: KEVCardProps) {
     const offset = circumference - (score / 10) * circumference;
 
     return (
-        <Card className="bg-slate-800 border-slate-700 hover:border-slate-600 transition-all duration-200 h-full flex flex-col">
+        <Card className="bg-slate-800 border-slate-700 hover:border-whatcyber-teal/50 hover:shadow-[0_0_20px_rgba(45,212,191,0.1)] hover:-translate-y-1 transition-all duration-300 h-full flex flex-col cursor-pointer group">
             <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
                     <div className="space-y-1">

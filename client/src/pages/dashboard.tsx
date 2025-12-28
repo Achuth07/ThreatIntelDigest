@@ -6,6 +6,7 @@ import { Header } from "@/components/header";
 import { useState } from "react";
 import { IndustryNewsList } from "@/components/industry-news-list";
 import { MalwareNewsList } from "@/components/malware-news-list";
+import { GlobalThreatMap } from "@/components/global-threat-map";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -218,12 +219,17 @@ export default function Dashboard() {
                                 <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
                             </div>
                         ) : (
-                            <Tabs defaultValue="cwe" className="space-y-6">
+                            <Tabs defaultValue="map" className="space-y-6">
                                 <TabsList className="bg-slate-800 border-slate-700">
+                                    <TabsTrigger value="map" className="data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-400">Global Threat Map</TabsTrigger>
                                     <TabsTrigger value="cwe" className="data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-400">CWE</TabsTrigger>
                                     <TabsTrigger value="industries" className="data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-400">Targeted Industries</TabsTrigger>
                                     <TabsTrigger value="malware" className="data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-400">Malware Landscape</TabsTrigger>
                                 </TabsList>
+
+                                <TabsContent value="map">
+                                    <GlobalThreatMap />
+                                </TabsContent>
 
                                 <TabsContent value="cwe" className="space-y-6">
                                     <Card className="bg-slate-800 border-slate-700 backdrop-blur-sm shadow-xl">

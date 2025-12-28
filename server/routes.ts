@@ -140,6 +140,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Global Threat Map Data (R2 Proxy)
+  app.get('/api/map-data', async (req, res) => {
+    try {
+      const { S3Client, GetObjectCommand } = await import('@aws-sdk/client-s3');
+
+      const r2 = new S3Client({
+        region: 'auto',
+        endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+        credentials: {
+          accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
+          secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',
+        },
+      });
+
+      const command = new GetObjectCommand({
+        Bucket: process.env.R2_BUCKET_NAME,
+        Key: 'threat-map/data.json',
+      });
+
+      const response = await r2.send(command);
+
+      if (!response.Body) {
+        throw new Error('No body in R2 response');
+      }
+
+      res.setHeader('Content-Type', 'application/json');
+      // Convert web stream to node stream if necessary, or just read it
+      // For simple JSON, reading to string is easiest if it's not huge (it's ~500 points, so small)
+      const str = await response.Body.transformToString();
+      res.send(str);
+
+    } catch (error) {
+      console.error("Error fetching map data from R2:", error);
+      // Fallback: If R2 fails (e.g. file doesn't exist yet), return empty array
+      res.json([]);
+    }
+  });
+
   app.get("/api/stats/top-malware", async (req, res) => {
     try {
       const days = req.query.days ? parseInt(req.query.days as string) : 7;
