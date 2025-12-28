@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { ArticleViewer } from "@/components/article-viewer";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { Sidebar } from "@/components/sidebar";
@@ -24,7 +25,11 @@ interface IndustryStat {
     value: number;
 }
 
-function IndustryWidget() {
+interface IndustryWidgetProps {
+    onArticleClick: (url: string) => void;
+}
+
+function IndustryWidget({ onArticleClick }: IndustryWidgetProps) {
     const { data: industries, isLoading } = useQuery<IndustryStat[]>({
         queryKey: ["/api/stats/industries"],
     });
@@ -76,7 +81,11 @@ function IndustryWidget() {
                         <h3 className="text-lg font-semibold text-slate-100 border-b border-slate-700 pb-2">Top Industry News</h3>
                         <div className="grid gap-6 md:grid-cols-2">
                             {industries.slice(0, 10).map((industry) => (
-                                <IndustryNewsList key={industry.name} industry={industry.name} />
+                                <IndustryNewsList
+                                    key={industry.name}
+                                    industry={industry.name}
+                                    onArticleClick={onArticleClick}
+                                />
                             ))}
                         </div>
                     </div>
@@ -91,7 +100,11 @@ interface MalwareStat {
     value: number;
 }
 
-function MalwareWidget() {
+interface MalwareWidgetProps {
+    onArticleClick: (url: string) => void;
+}
+
+function MalwareWidget({ onArticleClick }: MalwareWidgetProps) {
     const [timeRange, setTimeRange] = useState("7");
 
     const { data: malwareStats, isLoading } = useQuery<MalwareStat[]>({
@@ -161,7 +174,11 @@ function MalwareWidget() {
                         <h3 className="text-lg font-semibold text-slate-100 border-b border-slate-700 pb-2">Recent News on Top Threats</h3>
                         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                             {malwareStats.slice(0, 4).map((malware) => (
-                                <MalwareNewsList key={malware.name} malwareFamily={malware.name} />
+                                <MalwareNewsList
+                                    key={malware.name}
+                                    malwareFamily={malware.name}
+                                    onArticleClick={onArticleClick}
+                                />
                             ))}
                         </div>
                     </div>
@@ -173,6 +190,7 @@ function MalwareWidget() {
 
 export default function Dashboard() {
     const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [selectedArticleUrl, setSelectedArticleUrl] = useState<string | null>(null);
 
     const { data: topCwes, isLoading } = useQuery<TopCWE[]>({
         queryKey: ["/api/stats/top-cwes"],
@@ -316,17 +334,21 @@ export default function Dashboard() {
                                 </TabsContent>
 
                                 <TabsContent value="industries">
-                                    <IndustryWidget />
+                                    <IndustryWidget onArticleClick={setSelectedArticleUrl} />
                                 </TabsContent>
 
                                 <TabsContent value="malware">
-                                    <MalwareWidget />
+                                    <MalwareWidget onArticleClick={setSelectedArticleUrl} />
                                 </TabsContent>
                             </Tabs>
                         )}
                     </div>
                 </main>
             </div >
+            <ArticleViewer
+                articleUrl={selectedArticleUrl}
+                onClose={() => setSelectedArticleUrl(null)}
+            />
         </div >
     );
 }

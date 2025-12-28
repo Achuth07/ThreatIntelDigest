@@ -17,9 +17,10 @@ interface Article {
 
 interface IndustryNewsListProps {
     industry: string;
+    onArticleClick?: (url: string) => void;
 }
 
-export function IndustryNewsList({ industry }: IndustryNewsListProps) {
+export function IndustryNewsList({ industry, onArticleClick }: IndustryNewsListProps) {
     const { data: articles, isLoading, error } = useQuery<Article[]>({
         queryKey: [`/api/articles?industry=${encodeURIComponent(industry)}&limit=5`],
         refetchOnWindowFocus: false,
@@ -70,7 +71,13 @@ export function IndustryNewsList({ industry }: IndustryNewsListProps) {
                                 href={article.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="block space-y-1"
+                                className="block space-y-1 cursor-pointer"
+                                onClick={(e) => {
+                                    if (onArticleClick) {
+                                        e.preventDefault();
+                                        onArticleClick(article.url);
+                                    }
+                                }}
                             >
                                 <h4 className="text-sm font-medium text-slate-200 group-hover:text-emerald-400 transition-colors line-clamp-1">
                                     {article.title}

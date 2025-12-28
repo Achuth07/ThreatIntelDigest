@@ -377,12 +377,6 @@ export const GENERAL_SECURITY_NEWS = [
     color: "#059669",
   },
   {
-    name: "HackRead",
-    url: "https://www.hackread.com/feed/",
-    icon: "fas fa-book",
-    color: "#3498db",
-  },
-  {
     name: "Infosecurity Magazine (news)",
     url: "http://www.infosecurity-magazine.com/rss/news/",
     icon: "fas fa-newspaper",

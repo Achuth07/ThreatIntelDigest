@@ -150,13 +150,6 @@ export class MemStorage implements IStorage {
         isActive: true,
       },
       {
-        name: "Dark Reading",
-        url: "https://www.darkreading.com/rss_simple.asp",
-        icon: "fas fa-eye",
-        color: "#8b5cf6",
-        isActive: true,
-      },
-      {
         name: "CrowdStrike Blog",
         url: "https://www.crowdstrike.com/blog/feed/",
         icon: "fas fa-crow",
