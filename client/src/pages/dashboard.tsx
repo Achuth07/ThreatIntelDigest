@@ -172,7 +172,7 @@ function MalwareWidget({ onArticleClick }: MalwareWidgetProps) {
                 {malwareStats && malwareStats.length > 0 && (
                     <div className="mt-8 space-y-6">
                         <h3 className="text-lg font-semibold text-slate-100 border-b border-slate-700 pb-2">Recent News on Top Threats</h3>
-                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
                             {malwareStats.slice(0, 4).map((malware) => (
                                 <MalwareNewsList
                                     key={malware.name}

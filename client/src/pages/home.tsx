@@ -224,8 +224,17 @@ export default function Home() {
     setPage(0);
   };
 
-  const handleLoadMore = () => {
+  const handleNextPage = () => {
     setPage(prev => prev + 1);
+    // Scroll to top of the list when changing pages
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handlePreviousPage = () => {
+    if (page > 0) {
+      setPage(prev => prev - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const handleBookmarksClick = () => {
@@ -527,17 +536,33 @@ export default function Home() {
                     </div>
                   )}
 
-                  {/* Load More Button */}
-                  {!showBookmarks && displayArticles.length > 0 && displayArticles.length >= ARTICLES_PER_PAGE && (
-                    <div className="flex justify-center mt-8">
+                  {/* Pagination Controls */}
+                  {!showBookmarks && (
+                    <div className="flex justify-center items-center mt-8 space-x-4">
                       <Button
                         variant="outline"
-                        onClick={handleLoadMore}
-                        className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-slate-100 border-slate-600"
-                        data-testid="button-load-more"
+                        onClick={handlePreviousPage}
+                        disabled={page === 0}
+                        className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-100 border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        data-testid="button-previous-page"
                       >
-                        <ChevronDown className="w-4 h-4 mr-2" />
-                        Load More Articles
+                        <ChevronDown className="w-4 h-4 mr-2 rotate-90" />
+                        Previous
+                      </Button>
+
+                      <span className="text-slate-400 font-medium">
+                        Page {page + 1}
+                      </span>
+
+                      <Button
+                        variant="outline"
+                        onClick={handleNextPage}
+                        disabled={displayArticles.length < ARTICLES_PER_PAGE}
+                        className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-100 border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        data-testid="button-next-page"
+                      >
+                        Next
+                        <ChevronDown className="w-4 h-4 ml-2 -rotate-90" />
                       </Button>
                     </div>
                   )}
