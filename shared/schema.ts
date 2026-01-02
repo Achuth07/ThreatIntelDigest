@@ -9,7 +9,8 @@ import {
   boolean as pgBoolean,
   decimal,
   jsonb,
-  uuid
+  uuid,
+  unique
 } from 'drizzle-orm/pg-core';
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -295,6 +296,10 @@ export const malwareDailyStats = pgTable("malware_daily_stats", {
   sampleCount: integer("sample_count"),
   malwareType: varchar("malware_type", { length: 50 }),
   createdAt: timestamp("created_at").default(sql`now()`),
+}, (table) => {
+  return {
+    dateFamilyUnique: unique('date_family_unique').on(table.date, table.familyName),
+  };
 });
 
 export const insertMalwareDailyStatsSchema = createInsertSchema(malwareDailyStats, {
