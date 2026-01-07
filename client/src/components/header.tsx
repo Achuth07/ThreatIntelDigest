@@ -299,6 +299,32 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
                         </button>
                       </Link>
                     )}
+                    {user && user.email === 'achuthchandra07@gmail.com' && (
+                      <a href="https://whatcyber-studio.sanity.studio" target="_blank" rel="noopener noreferrer">
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-whatcyber-gray hover:text-slate-100"
+                          onClick={() => setIsSettingsOpen(false)}
+                        >
+                          <div className="flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-pen-tool w-4 h-4 mr-2"><path d="m12 19 7-7 3 3-7 7-3-3z" /><path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-7z" /><path d="m2 2 7.586 7.586" /><circle cx="11" cy="11" r="2" /></svg>
+                            Manage Blog
+                          </div>
+                        </button>
+                      </a>
+                    )}
+                    {user && user.email === 'achuthchandra07@gmail.com' && (
+                      <Link href="/blog">
+                        <button
+                          className="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-whatcyber-gray hover:text-slate-100"
+                          onClick={() => setIsSettingsOpen(false)}
+                        >
+                          <div className="flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-newspaper w-4 h-4 mr-2"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2" /><path d="M18 14h-8" /><path d="M15 18h-5" /><path d="M10 6h8v4h-8V6Z" /></svg>
+                            View Blog
+                          </div>
+                        </button>
+                      </Link>
+                    )}
                     <Link href="/settings/">
                       <button
                         className="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-whatcyber-gray hover:text-slate-100"

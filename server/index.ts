@@ -23,6 +23,7 @@ if (process.env.NODE_ENV === 'development') {
 
 // Import passport after environment variables are loaded
 import passport from "./auth/google-auth";
+import sitemapRouter from "./routes/sitemap";
 
 const app = express();
 app.use(express.json());
@@ -51,14 +52,13 @@ const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
   res.status(401).json({ message: 'Unauthorized' });
 };
 
-// Serve robots.txt and sitemap.xml
+// Serve robots.txt
 app.get('/robots.txt', (req, res) => {
   res.sendFile(path.join(__dirname, '../client/public/robots.txt'));
 });
 
-app.get('/sitemap.xml', (req, res) => {
-  res.sendFile(path.join(__dirname, '../client/public/sitemap.xml'));
-});
+// Use dynamic sitemap router
+app.use(sitemapRouter);
 
 // Redirect middleware to enforce authoritative URL standard
 app.use((req, res, next) => {
