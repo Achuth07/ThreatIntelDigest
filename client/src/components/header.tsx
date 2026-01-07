@@ -300,7 +300,7 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
                       </Link>
                     )}
                     {user && user.email === 'achuthchandra07@gmail.com' && (
-                      <a href="https://whatcyber-studio.sanity.studio" target="_blank" rel="noopener noreferrer">
+                      <a href="https://whatcyber.sanity.studio" target="_blank" rel="noopener noreferrer">
                         <button
                           className="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-whatcyber-gray hover:text-slate-100"
                           onClick={() => setIsSettingsOpen(false)}
