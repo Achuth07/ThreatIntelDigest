@@ -267,6 +267,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return handleThreatGroupsEndpoints(req, res, action);
     }
 
+    // WhatCyber Blog RSS Endpoint
+    if (pathname === '/api/rss/whatcyber') {
+      return handleWhatCyberRssEndpoint(req, res);
+    }
+
     // Weekly Digest Cron endpoint
     if (pathname === '/api/cron/weekly-digest') {
       return handleWeeklyDigestCronEndpoint(req, res, action);
@@ -3966,51 +3971,45 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
       let success = false;
 
       while (retryCount <= maxRetries && !success) {
+        let timeoutId: NodeJS.Timeout | undefined;
+        let controller: AbortController | undefined;
+        let fetchErrorHandled = false;
+        let response: Response | undefined;
+        let feedUrl: string | undefined;
+
         try {
-          console.log(`Fetching feed from ${source.name} (${source.url})${retryCount > 0 ? ` (retry ${retryCount})` : ''}...`);
+          // Resolve relative URLs to absolute URLs
+          feedUrl = source.url as string;
+          if (feedUrl.startsWith('/')) {
+            const protocol = req.headers['x-forwarded-proto'] || 'http';
+            const host = req.headers.host;
+            if (host) {
+              feedUrl = `${protocol}://${host}${feedUrl}`;
+              console.log(`Resolved relative URL ${source.url} to ${feedUrl} (Protocol: ${protocol}, Host: ${host})`);
+            } else {
+              console.warn(`Could not resolve relative URL ${source.url}: Host header missing. Headers:`, req.headers);
+            }
+          }
+
+          console.log(`Fetching feed from ${source.name} (${feedUrl})${retryCount > 0 ? ` (retry ${retryCount})` : ''}...`);
 
           // Add timeout and handle SSL certificate issues by using fetch with custom options
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+          controller = new AbortController();
+          timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
-          let fetchErrorHandled = false;
-          let response;
-          try {
-            response = await fetch(source.url as string, {
-              signal: controller.signal,
-              headers: {
-                'User-Agent': process.env.RSS_USER_AGENT || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'Cache-Control': 'no-cache',
-                'Pragma': 'no-cache'
-              }
-            });
-            clearTimeout(timeoutId);
-          } catch (fetchError) {
-            clearTimeout(timeoutId);
-            // Handle SSL certificate errors specifically
-            if (fetchError instanceof Error && (fetchError.message.includes('unable to verify') || fetchError.message.includes('certificate'))) {
-              console.error(`SSL Certificate error for ${source.name}:`, fetchError.message);
-              sourceResult.errors.push(`SSL Certificate error: ${fetchError.message}`);
-              // Skip to next source instead of failing completely
-              break;
+          // Try to fetch
+          response = await fetch(feedUrl, {
+            signal: controller.signal,
+            headers: {
+              'User-Agent': process.env.RSS_USER_AGENT || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+              'Accept-Language': 'en-US,en;q=0.9',
+              'Accept-Encoding': 'gzip, deflate, br',
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache'
             }
-            // Handle timeout errors
-            else if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-              console.error(`Timeout error for ${source.name}: Request timed out`);
-              sourceResult.errors.push(`Timeout error: Request timed out`);
-              break;
-            } else {
-              throw fetchError;
-            }
-          }
-
-          // If we handled an error, skip to the next source
-          if (fetchErrorHandled) {
-            break;
-          }
+          });
+          if (timeoutId) clearTimeout(timeoutId);
 
           // At this point, response should be defined
           if (response && !response.ok) {
@@ -4114,6 +4113,7 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
           success = true; // Mark as successful
 
         } catch (feedError) {
+          if (timeoutId) clearTimeout(timeoutId);
           console.error(`Error fetching feed for ${source.name}:`, feedError);
           console.error('Feed URL:', source.url);
           console.error('Error details:', feedError instanceof Error ? feedError.message : feedError);
@@ -4192,6 +4192,125 @@ async function handleFetchArticleEndpoints(req: VercelRequest, res: VercelRespon
       new URL(url);
     } catch {
       return res.status(400).json({ message: 'Invalid URL format' });
+    }
+
+    // Special handling for WhatCyber Blog articles to fetch content directly from Sanity
+    if (url.includes('whatcyber.com/blog/')) {
+      try {
+        // Extract slug from URL
+        const urlObj = new URL(url);
+        const pathSegments = urlObj.pathname.split('/').filter(Boolean);
+        const slug = pathSegments[pathSegments.length - 1]; // Last segment is usually the slug
+
+        console.log(`Intercepted WhatCyber blog request for slug: ${slug}`);
+
+        const { createClient } = await import('@sanity/client');
+        const { default: imageUrlBuilder } = await import('@sanity/image-url');
+
+        const client = createClient({
+          projectId: '0odjb7zx',
+          dataset: 'production',
+          useCdn: false, // Ensure fresh data
+          apiVersion: '2024-03-13',
+        });
+
+        const builder = imageUrlBuilder(client);
+        function urlFor(source: any) {
+          return builder.image(source);
+        }
+
+        // Query valid for fields defined in schemaTypes/post.ts and blockContent.ts
+        const query = `*[_type == "post" && slug.current == $slug][0]{
+            title,
+            publishedAt,
+            excerpt,
+            body,
+            "author": author->name,
+            mainImage
+          }`;
+
+        const post = await client.fetch(query, { slug });
+
+        if (!post) {
+          console.log(`Post not found in Sanity for slug: ${slug}`);
+          // If not found in Sanity, fall through to normal scraping as a fallback
+          throw new Error('Post not found in Sanity');
+        }
+
+        // Helper functions to serialize Portable Text to HTML
+        const serializeBlock = (block: any) => {
+          if (block._type === 'block') {
+            const style = block.style || 'normal';
+
+            // Helper to serialize children (spans)
+            const serializeSpan = (span: any) => {
+              let text = span.text;
+              if (!text) return '';
+              if (span.marks && span.marks.length > 0) {
+                span.marks.forEach((mark: string) => {
+                  if (mark === 'strong') text = `<strong>${text}</strong>`;
+                  else if (mark === 'em') text = `<em>${text}</em>`;
+                  else if (mark === 'code') text = `<code>${text}</code>`;
+                  else if (mark === 'underline') text = `<u>${text}</u>`;
+                  else {
+                    // Check for link annotations
+                    const markDef = block.markDefs?.find((def: any) => def._key === mark);
+                    if (markDef && markDef._type === 'link') {
+                      text = `<a href="${markDef.href}" target="_blank" rel="noopener noreferrer">${text}</a>`;
+                    }
+                  }
+                });
+              }
+              return text;
+            };
+
+            const content = block.children?.map(serializeSpan).join('') || '';
+
+            switch (style) {
+              case 'h1': return `<h1>${content}</h1>`;
+              case 'h2': return `<h2>${content}</h2>`;
+              case 'h3': return `<h3>${content}</h3>`;
+              case 'h4': return `<h4>${content}</h4>`;
+              case 'blockquote': return `<blockquote>${content}</blockquote>`;
+              case 'normal': return `<p>${content}</p>`;
+              default: return `<p>${content}</p>`;
+            }
+          } else if (block._type === 'image') {
+            const imageUrl = block.asset ? urlFor(block).width(800).url() : '';
+            return imageUrl ? `<figure><img src="${imageUrl}" alt="${block.alt || ''}" /></figure>` : '';
+          }
+          return '';
+        };
+
+        let htmlContent = '';
+        if (post.body) {
+          htmlContent = post.body.map(serializeBlock).join('');
+        }
+
+        // Prepend main image if exists
+        if (post.mainImage) {
+          const mainImageUrl = urlFor(post.mainImage).width(800).url();
+          htmlContent = `<figure><img src="${mainImageUrl}" alt="${post.title}" /></figure>` + htmlContent;
+        }
+
+        // Return formatted article object matching Readability format
+        return res.json({
+          title: post.title,
+          content: htmlContent, // Full HTML content
+          textContent: post.excerpt || '', // Fallback text content
+          length: htmlContent.length,
+          excerpt: post.excerpt,
+          byline: post.author,
+          dir: 'ltr',
+          siteName: 'WhatCyber Blog',
+          lang: 'en'
+        });
+
+      } catch (sanityError) {
+        console.error('Error fetching/serializing from Sanity:', sanityError);
+        console.error('Stack:', sanityError instanceof Error ? sanityError.stack : 'No stack');
+        // Deliberately fall through to normal scraping if Sanity fails
+      }
     }
 
     // Fetch the article HTML with more realistic browser headers
@@ -5230,5 +5349,102 @@ async function handleWeeklyDigestCronEndpoint(req: VercelRequest, res: VercelRes
   }
 }
 
-// Start the server
+
+async function handleWhatCyberRssEndpoint(req: VercelRequest, res: VercelResponse) {
+  try {
+    const { createClient } = await import('@sanity/client');
+    const { default: imageUrlBuilder } = await import('@sanity/image-url');
+
+    const client = createClient({
+      projectId: "0odjb7zx",
+      dataset: "production",
+      useCdn: true, // set to `false` to bypass the edge cache
+      apiVersion: "2024-01-01",
+    });
+
+    const builder = imageUrlBuilder(client);
+    const urlFor = (source: any) => builder.image(source);
+
+    // Fetch posts
+    const query = `*[_type == "post"] | order(publishedAt desc) {
+      title,
+      "slug": slug.current,
+      publishedAt,
+      excerpt,
+      "author": author->name,
+      mainImage
+    }`;
+
+    const posts = await client.fetch(query);
+    console.log(`WhatCyber RSS: Fetched ${posts.length} posts from Sanity`);
+
+    // Helper to escape XML special chars
+    const escapeXml = (unsafe: string) => {
+      return unsafe.replace(/[<>&'"]/g, (c) => {
+        switch (c) {
+          case '<': return '&lt;';
+          case '>': return '&gt;';
+          case '&': return '&amp;';
+          case '\'': return '&apos;';
+          case '"': return '&quot;';
+          default: return c;
+        }
+      });
+    };
+
+    // Generate RSS XML
+    const rssItems = posts.map((post: any) => {
+      const postUrl = `https://www.whatcyber.com/blog/${post.slug}`;
+      let imageUrl = post.mainImage ? urlFor(post.mainImage).width(800).url() : '';
+
+      // Escape URL for XML attribute
+      if (imageUrl) {
+        imageUrl = escapeXml(imageUrl);
+      }
+
+      // Use CDATA for text content to avoid parsing issues, but still safer to basic escape the CDATA closing tag if it exists (very rare)
+      const safeTitle = (post.title || '').replace(/]]>/g, ']]]]><![CDATA[>');
+      const safeDescription = (post.excerpt || '').replace(/]]>/g, ']]]]><![CDATA[>');
+      const safeAuthor = (post.author || '').replace(/]]>/g, ']]]]><![CDATA[>');
+
+      // URL needs to be just text, already safe if it's a slug but good to be careful
+      const safeUrl = (postUrl || '').replace(/[<>"']/g, ''); // URLs shouldn't have these chars
+
+      return `
+    <item>
+      <title><![CDATA[${safeTitle}]]></title>
+      <link>${safeUrl}</link>
+      <guid>${safeUrl}</guid>
+      <pubDate>${new Date(post.publishedAt).toUTCString()}</pubDate>
+      <description><![CDATA[${safeDescription}]]></description>
+      ${safeAuthor ? `<dc:creator><![CDATA[${safeAuthor}]]></dc:creator>` : ''}
+      ${imageUrl ? `<media:content url="${imageUrl}" medium="image" />` : ''}
+    </item>`;
+    }).join('');
+
+    const rssXml = `<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">
+  <channel>
+    <title>WhatCyber Blog</title>
+    <link>https://www.whatcyber.com/blog</link>
+    <description>Latest insights and updates from WhatCyber</description>
+    <language>en-us</language>
+    <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
+    <atom:link href="https://www.whatcyber.com/api/rss/whatcyber" rel="self" type="application/rss+xml" />
+    ${rssItems}
+  </channel>
+</rss>`;
+
+    // Log the generated XML for debugging
+    console.log('Generated WhatCyber RSS XML:', rssXml);
+
+    res.setHeader('Content-Type', 'application/xml');
+    res.send(rssXml);
+
+  } catch (error) {
+    console.error('Error generating WhatCyber RSS:', error);
+    res.status(500).send('Error generating RSS feed');
+  }
+}
+
 

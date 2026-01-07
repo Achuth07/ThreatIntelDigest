@@ -321,6 +321,12 @@ export const MALWARE_RESEARCH = [
 // General Security News
 export const GENERAL_SECURITY_NEWS = [
   {
+    name: "WhatCyber Blog",
+    url: "/api/rss/whatcyber",
+    icon: "fas fa-shield-alt",
+    color: "#00f2ea",
+  },
+  {
     name: "The Hacker News",
     url: "http://feeds.feedburner.com/TheHackersNews?format=xml",
     icon: "fas fa-user-secret",

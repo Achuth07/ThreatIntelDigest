@@ -228,6 +228,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     await consolidatedApiHandler(mockReq as any, mockRes as any);
   });
 
+  // WhatCyber Blog RSS
+  app.get('/api/rss/whatcyber', async (req, res) => {
+    const { mockReq, mockRes } = createMockHandlers(req, res, '/api/rss/whatcyber');
+    await consolidatedApiHandler(mockReq as any, mockRes as any);
+  });
+
   // Fetch feeds API
   app.post('/api/fetch-feeds', async (req, res) => {
     const { mockReq, mockRes } = createMockHandlers(req, res, '/api/fetch-feeds');
