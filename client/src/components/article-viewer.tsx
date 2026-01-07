@@ -4,6 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { X, ExternalLink, Clock, AlertCircle } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
+import { ShareButton } from '@/components/share-button';
 
 interface ArticleContent {
   title: string;
@@ -42,9 +43,9 @@ export function ArticleViewer({ articleUrl, onClose }: ArticleViewerProps) {
 
   return (
     <Sheet open={!!articleUrl} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent 
-        side="right" 
-        className="bg-slate-900 border-slate-700 overflow-y-auto p-4 sm:p-6"
+      <SheetContent
+        side="right"
+        className="bg-slate-900 border-slate-700 overflow-y-auto p-4 sm:p-6 [&>button]:hidden"
         style={{
           width: 'var(--sheet-width)',
           maxWidth: 'var(--sheet-max-width)',
@@ -86,6 +87,13 @@ export function ArticleViewer({ articleUrl, onClose }: ArticleViewerProps) {
               <X className="w-4 h-4" />
             </Button>
             <div className="flex items-center space-x-2">
+              {article && articleUrl && (
+                <ShareButton
+                  articleUrl={articleUrl}
+                  articleTitle={article.title}
+                  className="text-slate-400 hover:text-slate-100"
+                />
+              )}
               {articleUrl && (
                 <Button
                   variant="outline"
@@ -127,12 +135,12 @@ export function ArticleViewer({ articleUrl, onClose }: ArticleViewerProps) {
                 Failed to Load Article
               </h3>
               <p className="text-slate-400 text-sm sm:text-base max-w-md mb-4">
-                {articleUrl?.includes('checkpoint.com') 
-                  ? 'Checkpoint Research articles are often protected and cannot be accessed directly. Please read the article on the Checkpoint website.' 
-                  : (error as any)?.message === 'Access denied - the website may be blocking automated requests' 
-                  ? 'This website is blocking automated access to its content. Please read the article directly on the original site.' 
-                  : (error as any)?.message || 
-                 'Unable to fetch the article content. The article may be behind a paywall or the website may be blocking automated requests.'}
+                {articleUrl?.includes('checkpoint.com')
+                  ? 'Checkpoint Research articles are often protected and cannot be accessed directly. Please read the article on the Checkpoint website.'
+                  : (error as any)?.message === 'Access denied - the website may be blocking automated requests'
+                    ? 'This website is blocking automated access to its content. Please read the article directly on the original site.'
+                    : (error as any)?.message ||
+                    'Unable to fetch the article content. The article may be behind a paywall or the website may be blocking automated requests.'}
               </p>
               {articleUrl && (
                 <Button
@@ -153,7 +161,7 @@ export function ArticleViewer({ articleUrl, onClose }: ArticleViewerProps) {
                 <SheetTitle className="text-xl sm:text-2xl font-bold text-slate-100 leading-tight">
                   {article.title}
                 </SheetTitle>
-                
+
                 <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm text-slate-400">
                   {article.byline && (
                     <span>By {article.byline}</span>
@@ -174,7 +182,7 @@ export function ArticleViewer({ articleUrl, onClose }: ArticleViewerProps) {
                 )}
               </header>
 
-              <div 
+              <div
                 className="prose prose-invert prose-slate max-w-none prose-headings:text-slate-100 prose-p:text-slate-300 prose-a:text-cyber-cyan prose-a:no-underline hover:prose-a:underline prose-strong:text-slate-200 prose-em:text-slate-300 prose-blockquote:border-l-cyber-cyan prose-blockquote:text-slate-300 prose-code:text-cyber-cyan prose-code:bg-slate-800 prose-pre:bg-slate-800 prose-pre:border prose-pre:border-slate-700 prose-img:rounded-lg prose-img:w-full prose-img:h-auto"
                 dangerouslySetInnerHTML={{ __html: article.content }}
                 data-testid="article-content"

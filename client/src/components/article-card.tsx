@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { getFaviconUrl } from '@/lib/favicon-utils';
 import type { ArticleWithSource } from '@shared/schema';
+import { ShareButton } from '@/components/share-button';
 
 interface ArticleCardProps {
   article: ArticleWithSource;
@@ -130,6 +131,11 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
             >
               {formatTimeAgo(article.publishedAt)}
             </span>
+            <ShareButton
+              articleUrl={article.url}
+              articleTitle={article.title}
+              className="text-slate-400 hover:text-whatcyber-teal transition-colors"
+            />
             <Button
               variant="ghost"
               size="sm"
