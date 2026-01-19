@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Check, Globe, Rss, Filter, Zap, RefreshCw, Download, Plus, Minus, Shield, ChevronDown, ChevronUp, X, Bookmark, Bug, Settings, Home, LifeBuoy, Users } from 'lucide-react';
+import { Check, Globe, Rss, Filter, Zap, RefreshCw, Download, Plus, Minus, Shield, ChevronDown, ChevronUp, X, Bookmark, Bug, Settings, Home, LifeBuoy, Users, BookOpen } from 'lucide-react';
 import { useLocation } from "wouter";
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -852,6 +852,15 @@ export function Sidebar({
             >
               <Home className="w-5 h-5 mr-3" />
               <span className="font-medium">Visit Homepage</span>
+            </button>
+
+            <button
+              className="w-full flex items-center p-3 rounded-lg cursor-pointer transition-colors hover:bg-slate-700 text-slate-300 hover:text-slate-100"
+              onClick={() => setLocation("/blog")}
+              data-testid="button-blog"
+            >
+              <BookOpen className="w-5 h-5 mr-3" />
+              <span className="font-medium">Blog</span>
             </button>
           </div>
         </div>

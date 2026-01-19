@@ -203,12 +203,54 @@ export default function BlogPost() {
         }]
     };
 
+    // Smart Keyword Generation
+    const generateKeywords = (post: PostDetail) => {
+        const stopWords = new Set(['a', 'an', 'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'can', 'could', 'may', 'might', 'must', 'from', 'about', 'this', 'that', 'these', 'those', 'such', 'into', 'over', 'under', 'between', 'how', 'what', 'why', 'when', 'where', 'which', 'who', 'whom']);
+
+        // Helper to clean and split text
+        const extractWords = (text: string) => {
+            if (!text) return [];
+            return text
+                .toLowerCase()
+                .replace(/[^\w\s-]/g, '') // Keep hyphens for things like CVE-2024-1234
+                .split(/\s+/)
+                .filter(word => word.length > 2 && !stopWords.has(word) && !/^\d+$/.test(word)); // Filter pure numbers
+        };
+
+        // 1. Extract from Title (High priority)
+        const titleWords = extractWords(post.title);
+
+        // 2. Extract from Excerpt (Medium priority)
+        const excerptWords = extractWords(post.excerpt);
+
+        // 3. Simple Named Entity Recognition (Find capitalized words in excerpt not starting sentences)
+        // This regex looks for Capitalized words that follow a space (not start of string)
+        const potentialEntities = (post.excerpt?.match(/(?<= )\b[A-Z][a-zA-Z0-9-]+\b/g) || [])
+            .map(w => w.toLowerCase())
+            .filter(w => !stopWords.has(w) && w.length > 2);
+
+        // 4. Get Categories (Highest Priority)
+        const categoryWords = post.categories?.map(c => c.title.toLowerCase()) || [];
+
+        // Combine weighted strategy: Categories > Title > Entities > Excerpt common words
+        // We use a Set to dedupe while preserving order of insertion
+        const keywordsSet = new Set([
+            ...categoryWords,
+            ...potentialEntities,
+            ...titleWords,
+            ...excerptWords.slice(0, 10) // Only take top 10 distinct words from excerpt to avoid noise
+        ]);
+
+        return Array.from(keywordsSet).join(', ');
+    };
+
     const seoProps = {
         title: post.seoTitle || post.title,
         description: post.seoDescription || post.excerpt,
         image: post.mainImage ? urlFor(post.mainImage).width(1200).height(630).url() : undefined,
         url: `https://www.whatcyber.com/blog/${post.slug.current}`,
         type: "article",
+        keywords: generateKeywords(post),
         structuredData
     };
 
