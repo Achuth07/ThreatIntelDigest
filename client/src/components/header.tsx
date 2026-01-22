@@ -7,6 +7,7 @@ import { getAuthenticatedUser, updateAuthToken } from '@/lib/auth';
 import { useLoginPopup } from '@/contexts/login-popup-context';
 import { useToast } from '@/hooks/use-toast';
 import logoImage from '@/assets/logo/android-chrome-512x512.png';
+import { CommandPalette } from './command-palette';
 
 interface User {
   id: string;
@@ -27,8 +28,7 @@ interface HeaderProps {
 }
 
 export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarToggle, isSidebarOpen }: HeaderProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -147,18 +147,8 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
     }
   };
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchQuery(value);
-    onSearch(value);
-  };
-
   const toggleSearch = () => {
-    setIsSearchExpanded(!isSearchExpanded);
-    if (isSearchExpanded && searchQuery) {
-      setSearchQuery('');
-      onSearch('');
-    }
+    setIsCommandPaletteOpen(true);
   };
 
   // Check if we're on a route where login popup should be shown
@@ -208,18 +198,16 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
 
           {/* Desktop Search Bar */}
           <div className="hidden lg:flex flex-1 max-w-lg mx-8">
-            <div className="relative w-full">
+            <div className="relative w-full cursor-pointer" onClick={() => setIsCommandPaletteOpen(true)}>
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Search className="w-5 h-5 text-slate-400" />
               </div>
-              <Input
-                type="text"
-                placeholder="Search threat intelligence articles..."
-                className="w-full pl-10 pr-4 py-2 bg-whatcyber-gray border border-whatcyber-light-gray rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-whatcyber-teal focus:border-transparent"
-                value={searchQuery}
-                onChange={handleSearchChange}
-                data-testid="input-search"
-              />
+              <div className="w-full pl-10 pr-4 py-2 bg-whatcyber-gray border border-whatcyber-light-gray rounded-lg text-slate-400 flex justify-between items-center hover:border-whatcyber-teal/50 transition-colors">
+                <span>Search articles, CVEs, threat actors...</span>
+                <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border border-whatcyber-light-gray bg-whatcyber-dark px-1.5 font-mono text-[10px] font-medium text-slate-400 opacity-100 sm:flex">
+                  <span className="text-xs">⌘</span>K
+                </kbd>
+              </div>
             </div>
           </div>
 
@@ -420,26 +408,9 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
           </div>
         </div>
 
-        {/* Mobile Search Bar */}
-        {isSearchExpanded && (
-          <div className="lg:hidden pb-4">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="w-5 h-5 text-slate-400" />
-              </div>
-              <Input
-                type="text"
-                placeholder="Search threat intelligence articles..."
-                className="w-full pl-10 pr-4 py-2 bg-whatcyber-gray border border-whatcyber-light-gray rounded-lg text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-whatcyber-teal focus:border-transparent"
-                value={searchQuery}
-                onChange={handleSearchChange}
-                data-testid="input-search-mobile"
-                autoFocus
-              />
-            </div>
-          </div>
-        )}
+        {/* Mobile Search Bar - removed as we use modal now */}
       </div>
+      <CommandPalette open={isCommandPaletteOpen} setOpen={setIsCommandPaletteOpen} />
     </header>
   );
 }

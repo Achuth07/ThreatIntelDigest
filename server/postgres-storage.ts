@@ -1,9 +1,9 @@
 import { and, desc, asc, ilike, inArray, eq, or, sql } from 'drizzle-orm';
 import { getDb } from './db.js';
-import { articles, bookmarks, rssSources, vulnerabilities, users, userSourcePreferences, userPreferences, knownExploitedVulnerabilities, cweCategories, malwareDailyStats } from '../shared/schema.js';
+import { articles, bookmarks, rssSources, vulnerabilities, users, userSourcePreferences, userPreferences, knownExploitedVulnerabilities, cweCategories, malwareDailyStats, threatGroups } from '../shared/schema.js';
 import type { IStorage, CVE, InsertCVE } from './storage.js';
 import type { Article, InsertArticle, Bookmark, InsertBookmark, RssSource, InsertRssSource } from '../shared/schema.js';
-import type { User, InsertUser, UserSourcePreference, InsertUserSourcePreference, UserPreferences, InsertUserPreferences, KnownExploitedVulnerability, InsertKnownExploitedVulnerability, MalwareDailyStat } from '../shared/schema.js';
+import type { User, InsertUser, UserSourcePreference, InsertUserSourcePreference, UserPreferences, InsertUserPreferences, KnownExploitedVulnerability, InsertKnownExploitedVulnerability, MalwareDailyStat, ThreatGroup } from '../shared/schema.js';
 
 export class PostgresStorage implements IStorage {
   private db = getDb();
@@ -1173,6 +1173,102 @@ export class PostgresStorage implements IStorage {
     } catch (error) {
       console.error("Error fetching industry stats:", error);
       return [];
+    }
+  }
+  async globalSearch(query: string): Promise<{
+    articles: Article[];
+    cves: CVE[];
+    kevs: KnownExploitedVulnerability[];
+    threat_actors: ThreatGroup[];
+  }> {
+    try {
+      const searchTerm = `%${query.toLowerCase()}%`;
+
+      const [articlesResult, cvesResult, kevsResult, threatGroupsResult] = await Promise.all([
+        // Articles
+        this.db.select({
+          id: articles.id,
+          title: articles.title,
+          summary: articles.summary,
+          url: articles.url,
+          source: articles.source,
+          publishedAt: articles.publishedAt,
+          threatLevel: articles.threatLevel,
+          tags: articles.tags,
+          targetedIndustries: articles.targetedIndustries,
+          readTime: articles.readTime,
+          createdAt: articles.createdAt,
+          // sourceIcon: sql`NULL`, // Excluded to avoid "column does not exist" error
+        }).from(articles).where(
+          or(
+            ilike(articles.title, searchTerm),
+            ilike(articles.summary, searchTerm)
+          )
+        ).limit(5),
+
+        // CVEs
+        this.db.select().from(vulnerabilities).where(
+          or(
+            ilike(vulnerabilities.id, searchTerm),
+            ilike(vulnerabilities.description, searchTerm)
+          )
+        ).limit(5),
+
+        // KEVs
+        this.db.select().from(knownExploitedVulnerabilities).where(
+          or(
+            ilike(knownExploitedVulnerabilities.cveID, searchTerm),
+            ilike(knownExploitedVulnerabilities.product, searchTerm),
+            ilike(knownExploitedVulnerabilities.vendorProject, searchTerm),
+            ilike(knownExploitedVulnerabilities.vulnerabilityName, searchTerm)
+          )
+        ).limit(5),
+
+        // Threat Groups
+        this.db.select().from(threatGroups).where(
+          or(
+            ilike(threatGroups.name, searchTerm),
+            // simplistic search for aliases in json text representation
+            sql`${threatGroups.aliases}::text ILIKE ${searchTerm}`
+          )
+        ).limit(5)
+      ]);
+
+      // Map CVEs to CVE interface format
+      const mappedCves: CVE[] = cvesResult.map(vuln => ({
+        id: vuln.id,
+        description: vuln.description,
+        publishedDate: vuln.publishedDate,
+        lastModifiedDate: vuln.lastModifiedDate,
+        vulnStatus: vuln.vulnStatus,
+        cvssV3Score: vuln.cvssV3Score ? parseFloat(vuln.cvssV3Score as any) : null,
+        cvssV3Severity: vuln.cvssV3Severity,
+        cvssV2Score: vuln.cvssV2Score ? parseFloat(vuln.cvssV2Score as any) : null,
+        cvssV2Severity: vuln.cvssV2Severity,
+        weaknesses: vuln.weaknesses || [],
+        references: vuln.referenceUrls ? vuln.referenceUrls.map(url => ({
+          url: url.url,
+          source: url.source,
+          tags: url.tags
+        })) : [],
+        createdAt: vuln.createdAt || new Date()
+      }));
+
+      return {
+        articles: articlesResult,
+        cves: mappedCves,
+        kevs: kevsResult,
+        threat_actors: threatGroupsResult
+      };
+
+    } catch (error) {
+      console.error('Error performing global search:', error);
+      return {
+        articles: [],
+        cves: [],
+        kevs: [],
+        threat_actors: []
+      };
     }
   }
 }

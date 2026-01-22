@@ -1,4 +1,4 @@
-import { type Article, type InsertArticle, type Bookmark, type InsertBookmark, type RssSource, type InsertRssSource, type UserSourcePreference, type InsertUserSourcePreference, type UserPreferences, type InsertUserPreferences, type User, type KnownExploitedVulnerability, type InsertKnownExploitedVulnerability } from "@shared/schema.js";
+import { type Article, type InsertArticle, type Bookmark, type InsertBookmark, type RssSource, type InsertRssSource, type UserSourcePreference, type InsertUserSourcePreference, type UserPreferences, type InsertUserPreferences, type User, type KnownExploitedVulnerability, type InsertKnownExploitedVulnerability, type ThreatGroup } from "@shared/schema.js";
 import { randomUUID } from "crypto";
 
 // Define CVE types for in-memory storage
@@ -32,7 +32,7 @@ interface InsertCVE {
 }
 
 // Re-export types for use in other files
-export { type Article, type InsertArticle, type Bookmark, type InsertBookmark, type RssSource, type InsertRssSource, type UserSourcePreference, type InsertUserSourcePreference, type UserPreferences, type InsertUserPreferences, type CVE, type InsertCVE, type KnownExploitedVulnerability, type InsertKnownExploitedVulnerability };
+export { type Article, type InsertArticle, type Bookmark, type InsertBookmark, type RssSource, type InsertRssSource, type UserSourcePreference, type InsertUserSourcePreference, type UserPreferences, type InsertUserPreferences, type CVE, type InsertCVE, type KnownExploitedVulnerability, type InsertKnownExploitedVulnerability, type ThreatGroup };
 
 export interface IStorage {
   // Articles
@@ -113,6 +113,14 @@ export interface IStorage {
   }[]>;
   getIndustryStats(): Promise<{ name: string; value: number }[]>;
   getTopMalware(days?: number): Promise<{ name: string; value: number }[]>;
+
+  // Global Search
+  globalSearch(query: string): Promise<{
+    articles: Article[];
+    cves: CVE[];
+    kevs: KnownExploitedVulnerability[];
+    threat_actors: ThreatGroup[];
+  }>;
 }
 
 export class MemStorage implements IStorage {
@@ -703,6 +711,40 @@ export class MemStorage implements IStorage {
       { name: "Emotet", value: 80 },
       { name: "AgentTesla", value: 60 }
     ];
+  }
+
+
+  async globalSearch(query: string): Promise<{
+    articles: Article[];
+    cves: CVE[];
+    kevs: KnownExploitedVulnerability[];
+    threat_actors: ThreatGroup[];
+  }> {
+    const searchTerm = query.toLowerCase();
+
+    // Search Articles
+    const articles = Array.from(this.articles.values())
+      .filter(a =>
+        a.title.toLowerCase().includes(searchTerm) ||
+        (a.summary && a.summary.toLowerCase().includes(searchTerm))
+      )
+      .slice(0, 5);
+
+    // Search CVEs
+    const cves = Array.from(this.cves.values())
+      .filter(c =>
+        c.id.toLowerCase().includes(searchTerm) ||
+        c.description.toLowerCase().includes(searchTerm)
+      )
+      .slice(0, 5);
+
+    // KEVs and Threat Groups generally not in MemStorage significantly, returning empty
+    return {
+      articles,
+      cves,
+      kevs: [],
+      threat_actors: []
+    };
   }
 }
 

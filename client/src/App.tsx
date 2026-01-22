@@ -32,6 +32,7 @@ import ThreatActorsPage from "@/pages/threat-actors";
 import ThreatActorDetailPage from "@/pages/threat-actor-detail";
 import ExploitedVulnerabilitiesPage from "@/pages/exploited-vulnerabilities";
 import CVEDetailPage from "@/pages/cve-detail";
+import VulnerabilitiesPage from '@/pages/vulnerabilities';
 import Blog from "@/pages/blog";
 import BlogPost from "@/pages/blog-post";
 
@@ -103,6 +104,8 @@ function Router() {
         <Route path="/threat-actors/:id" component={ThreatActorDetailPage} />
         <Route path="/exploited-vulnerabilities" component={ExploitedVulnerabilitiesPage} />
         <Route path="/exploited-vulnerabilities/:id" component={CVEDetailPage} />
+        <Route path="/vulnerabilities" component={VulnerabilitiesPage} />
+        <Route path="/vulnerabilities/:id" component={CVEDetailPage} />
         <Route path="/blog" component={Blog} />
         <Route path="/blog/:slug" component={BlogPost} />
         <Route component={NotFound} />

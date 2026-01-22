@@ -30,8 +30,9 @@ export default function Home() {
   const initialSource = urlParams.get('source') || 'all';
   const initialView = urlParams.get('view');
 
+  const initialSearch = urlParams.get('search') || '';
   const [selectedSource, setSelectedSource] = useState(initialSource);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [sortBy, setSortBy] = useState('newest');
   const [timeFilter, setTimeFilter] = useState('all');
   const [threatFilters, setThreatFilters] = useState(['CRITICAL', 'HIGH', 'MEDIUM']);
@@ -176,6 +177,12 @@ export default function Home() {
         setShowBookmarks(false);
         setShowVulnerabilities(false);
       }
+      setPage(0);
+    } else if (params.get('search')) {
+      setSearchQuery(params.get('search') || '');
+      setShowBookmarks(false);
+      setShowVulnerabilities(false);
+      setShowFollowSources(false);
       setPage(0);
     } else {
       // Default state if no params

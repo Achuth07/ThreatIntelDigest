@@ -588,10 +588,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get single KEV by ID
+  // Get single KEV by ID (Delegated to consolidated handler, but overridden here for local consistency if needed)
   app.get('/api/kev/:cveId', async (req, res) => {
-    const { mockReq, mockRes } = createMockHandlers(req, res, `/api/kev/${req.params.cveId}`);
-    await consolidatedApiHandler(mockReq as any, mockRes as any);
+    // We can also route this to our new generic handler logic or keep it delegated if we trust api/index.ts fix.
+    // Let's implement it directly to ensure the fix works locally regardless of restart issues.
+    const { cveId } = req.params;
+    try {
+      const kev = await storage.getKnownExploitedVulnerability(cveId);
+
+      let nvd = null;
+      try {
+        nvd = await storage.getCVE(cveId);
+      } catch (err) {
+        console.error(`Error fetching NVD data for ${cveId}:`, err);
+      }
+
+      if (!kev && !nvd) {
+        return res.status(404).json({ error: 'KEV entry not found' });
+      }
+
+      res.json({ kev: kev || null, nvd });
+    } catch (error) {
+      console.error('Error fetching KEV:', error);
+      res.status(500).json({ error: 'Failed to fetch KEV' });
+    }
   });
 
   // Get related articles for a specific KEV entry (smart matching)
@@ -623,6 +643,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generic Vulnerability Endpoint (Handles search results)
+  app.get('/api/vulnerabilities/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      console.log(`Fetching vulnerability details for: ${id}`);
+
+      // 1. Try to find as KEV first
+      const kev = await storage.getKnownExploitedVulnerability(id);
+
+      // 2. Always fetch NVD data for generic info
+      let nvd = null;
+      try {
+        nvd = await storage.getCVE(id);
+      } catch (err) {
+        console.error(`Error fetching NVD data for ${id}:`, err);
+      }
+
+      if (!kev && !nvd) {
+        return res.status(404).json({ error: 'Vulnerability not found' });
+      }
+
+      res.json({ kev: kev || null, nvd });
+    } catch (error) {
+      console.error('Error fetching vulnerability:', error);
+      res.status(500).json({ error: 'Failed to fetch vulnerability' });
+    }
+  });
+
   app.get('/api/cron/fetch-kev', async (req, res) => {
     try {
       const result = await fetchCisaKevData(storage);
@@ -641,6 +689,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/threat-groups/:id', async (req, res) => {
     const { mockReq, mockRes } = createMockHandlers(req, res, `/api/threat-groups/${req.params.id}`);
+    await consolidatedApiHandler(mockReq as any, mockRes as any);
+  });
+
+  // Global Search
+  app.get('/api/global-search', async (req, res) => {
+    const { mockReq, mockRes } = createMockHandlers(req, res, '/api/global-search');
     await consolidatedApiHandler(mockReq as any, mockRes as any);
   });
 

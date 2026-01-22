@@ -756,10 +756,9 @@ export function Sidebar({
 
           <div className="space-y-2">
             <button
-              className={`w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${location === '/threatfeed' && new URLSearchParams(window.location.search).get('view') === 'cve' ? 'bg-slate-700' : 'hover:bg-slate-700'}`}
+              className={`w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${location === '/vulnerabilities' ? 'bg-slate-700' : 'hover:bg-slate-700'}`}
               onClick={() => {
-                setLocation('/threatfeed?view=cve');
-                onVulnerabilitiesClick?.();
+                setLocation('/vulnerabilities');
                 if (onClose) onClose();
               }}
               data-testid="button-vulnerabilities"
@@ -768,7 +767,7 @@ export function Sidebar({
                 <div className="w-5 h-5 bg-red-500 rounded-sm flex items-center justify-center text-white text-xs">
                   CVE
                 </div>
-                <span className={`font-medium ${location === '/threatfeed' && new URLSearchParams(window.location.search).get('view') === 'cve' ? 'text-whatcyber-teal' : 'text-slate-100'}`}>Latest CVEs</span>
+                <span className={`font-medium ${location === '/vulnerabilities' ? 'text-whatcyber-teal' : 'text-slate-100'}`}>Latest CVEs</span>
               </div>
 
             </button>

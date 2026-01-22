@@ -277,6 +277,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return handleWeeklyDigestCronEndpoint(req, res, action);
     }
 
+    // Global Search
+    if (pathname === '/api/global-search') {
+      try {
+        const q = req.query.q as string || '';
+        if (!q) {
+          return res.status(400).json({ error: 'Query parameter q is required' });
+        }
+        const results = await storage.globalSearch(q);
+        return res.status(200).json(results);
+      } catch (error) {
+        console.error('Error handling global search:', error);
+        return res.status(500).json({ error: 'Internal server error during search' });
+      }
+    }
+
     // Default 404 response
     res.status(404).json({ message: 'API endpoint not found' });
   } catch (error) {
@@ -5165,13 +5180,7 @@ async function handleKevEndpoints(req: VercelRequest, res: VercelResponse, actio
 
       const kev = await storage.getKnownExploitedVulnerability(cveId);
 
-      if (!kev) {
-        console.log(`KEV entry not found for: ${cveId}`);
-        // Try case-insensitive search or just return 404
-        return res.status(404).json({ error: 'KEV entry not found' });
-      }
-
-      // Also fetch NVD data for richer context
+      // Fetch NVD data
       let nvd = null;
       try {
         nvd = await storage.getCVE(cveId);
@@ -5179,7 +5188,12 @@ async function handleKevEndpoints(req: VercelRequest, res: VercelResponse, actio
         console.error(`Error fetching NVD data for ${cveId}:`, err);
       }
 
-      return res.json({ kev, nvd });
+      if (!kev && !nvd) {
+        console.log(`Neither KEV nor NVD entry found for: ${cveId}`);
+        return res.status(404).json({ error: 'Vulnerability not found' });
+      }
+
+      return res.json({ kev: kev || null, nvd });
     } catch (error) {
       console.error('Error fetching KEV entry:', error);
       return res.status(500).json({ error: 'Failed to fetch KEV entry' });
