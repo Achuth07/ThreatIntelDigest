@@ -57,9 +57,13 @@ export const vulnerabilities = pgTable("vulnerabilities", {
   cvssV3Severity: text("cvss_v3_severity"), // CRITICAL, HIGH, MEDIUM, LOW
   cvssV2Score: decimal("cvss_v2_score", { precision: 3, scale: 1 }),
   cvssV2Severity: text("cvss_v2_severity"),
+  cvssVector: text("cvss_vector"), // e.g. CVSS:3.1/AV:N/AC:L...
+  exploitabilityScore: decimal("exploitability_score", { precision: 3, scale: 1 }),
+  impactScore: decimal("impact_score", { precision: 3, scale: 1 }),
   weaknesses: jsonb("weaknesses").$type<string[]>().default([]), // CWE IDs
 
   vendors: jsonb("vendors").$type<string[]>().default([]), // Extracted vendors
+  affectedProducts: jsonb("affected_products").$type<{ vendor: string; product: string; versions?: string[] }[]>().default([]),
   referenceUrls: jsonb("reference_urls").$type<{ url: string; source: string; tags?: string[] }[]>().default([]),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
@@ -159,6 +163,9 @@ export const insertVulnerabilitySchema = createInsertSchema(vulnerabilities, {
   cvssV3Severity: z.enum(["CRITICAL", "HIGH", "MEDIUM", "LOW"]).nullable().optional(),
   cvssV2Score: z.number().min(0).max(10).nullable().optional(),
   cvssV2Severity: z.enum(["CRITICAL", "HIGH", "MEDIUM", "LOW"]).nullable().optional(),
+  cvssVector: z.string().optional(),
+  exploitabilityScore: z.number().optional(),
+  impactScore: z.number().optional(),
   weaknesses: z.array(z.string()).default([]),
   referenceUrls: z.array(z.object({
     url: z.string().url(),
@@ -166,6 +173,11 @@ export const insertVulnerabilitySchema = createInsertSchema(vulnerabilities, {
     tags: z.array(z.string()).optional()
   })).default([]),
   vendors: z.array(z.string()).default([]),
+  affectedProducts: z.array(z.object({
+    vendor: z.string(),
+    product: z.string(),
+    versions: z.array(z.string()).optional()
+  })).default([]),
 }).omit({
   createdAt: true,
 });

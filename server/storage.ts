@@ -12,6 +12,10 @@ interface CVE {
   cvssV3Severity: string | null;
   cvssV2Score: number | null;
   cvssV2Severity: string | null;
+  cvssVector?: string | null;
+  exploitabilityScore?: number | null;
+  impactScore?: number | null;
+  affectedProducts?: { vendor: string; product: string; versions?: string[] }[];
   weaknesses: string[];
   references: { url: string; source: string; tags?: string[] }[];
   createdAt: Date;
@@ -27,6 +31,10 @@ interface InsertCVE {
   cvssV3Severity?: string | null;
   cvssV2Score?: number | null;
   cvssV2Severity?: string | null;
+  cvssVector?: string | null;
+  exploitabilityScore?: number | null;
+  impactScore?: number | null;
+  affectedProducts?: { vendor: string; product: string; versions?: string[] }[];
   weaknesses?: string[];
   references?: { url: string; source: string; tags?: string[] }[];
 }
@@ -583,6 +591,10 @@ export class MemStorage implements IStorage {
       cvssV3Severity: insertCVE.cvssV3Severity ?? null,
       cvssV2Score: insertCVE.cvssV2Score ?? null,
       cvssV2Severity: insertCVE.cvssV2Severity ?? null,
+      cvssVector: insertCVE.cvssVector ?? null,
+      exploitabilityScore: insertCVE.exploitabilityScore ?? null,
+      impactScore: insertCVE.impactScore ?? null,
+      affectedProducts: insertCVE.affectedProducts ?? [],
       weaknesses: insertCVE.weaknesses ?? [],
       references: insertCVE.references ?? [],
       createdAt: new Date(),

@@ -1,0 +1,30 @@
+name: Daily CVE Update
+
+on:
+  schedule:
+    # Run daily at 03:00 UTC (after malware load)
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  update_cves:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run NVD Update Script
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+      run: npx tsx scripts/backfill_nvd.ts --days 2

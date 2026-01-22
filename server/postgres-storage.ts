@@ -511,7 +511,12 @@ export class PostgresStorage implements IStorage {
         cvssV3Severity: result.cvssV3Severity,
         cvssV2Score: result.cvssV2Score ? parseFloat(result.cvssV2Score as any) : null,
         cvssV2Severity: result.cvssV2Severity,
+        cvssVector: result.cvssVector,
+        exploitabilityScore: result.exploitabilityScore ? parseFloat(result.exploitabilityScore as any) : null,
+        impactScore: result.impactScore ? parseFloat(result.impactScore as any) : null,
         weaknesses: result.weaknesses || [],
+        vendors: result.vendors || [],
+        affectedProducts: result.affectedProducts || [],
         references: result.referenceUrls ? result.referenceUrls.map(url => ({
           url: url.url,
           source: url.source,
@@ -541,7 +546,12 @@ export class PostgresStorage implements IStorage {
         cvssV3Severity: vuln.cvssV3Severity,
         cvssV2Score: vuln.cvssV2Score ? parseFloat(vuln.cvssV2Score as any) : null,
         cvssV2Severity: vuln.cvssV2Severity,
+        cvssVector: vuln.cvssVector,
+        exploitabilityScore: vuln.exploitabilityScore ? parseFloat(vuln.exploitabilityScore as any) : null,
+        impactScore: vuln.impactScore ? parseFloat(vuln.impactScore as any) : null,
         weaknesses: vuln.weaknesses || [],
+        vendors: vuln.vendors || [],
+        affectedProducts: vuln.affectedProducts || [],
         references: vuln.referenceUrls ? vuln.referenceUrls.map(url => ({
           url: url.url,
           source: url.source,
@@ -1198,7 +1208,7 @@ export class PostgresStorage implements IStorage {
           targetedIndustries: articles.targetedIndustries,
           readTime: articles.readTime,
           createdAt: articles.createdAt,
-          // sourceIcon: sql`NULL`, // Excluded to avoid "column does not exist" error
+          sourceIcon: sql<string | null>`NULL`, // Explicitly return NULL to satisfy type but avoid missing column error
         }).from(articles).where(
           or(
             ilike(articles.title, searchTerm),
