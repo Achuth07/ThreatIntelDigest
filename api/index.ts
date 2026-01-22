@@ -3230,7 +3230,6 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
         query = sql`
           SELECT 
             id,
-            description,
             published_date,
             last_modified_date,
             vuln_status,
@@ -3239,9 +3238,9 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
             cvss_v2_score,
             cvss_v2_severity,
             weaknesses,
-            reference_urls,
             vendors,
-            created_at
+            created_at,
+            has_r2_backing
           FROM vulnerabilities
           WHERE (cvss_v3_severity = ${severityUpper} OR cvss_v2_severity = ${severityUpper})
           ${vendor ? sql`AND vendors @> ${JSON.stringify([vendor])}` : sql``}
@@ -3254,7 +3253,6 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
         query = sql`
           SELECT 
             id,
-            description,
             published_date,
             last_modified_date,
             vuln_status,
@@ -3263,9 +3261,9 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
             cvss_v2_score,
             cvss_v2_severity,
             weaknesses,
-            reference_urls,
             vendors,
-            created_at
+            created_at,
+            has_r2_backing
           FROM vulnerabilities
           ${vendor ? sql`WHERE vendors @> ${JSON.stringify([vendor])}` : sql``}
           ${sql.raw(orderByClause)}
@@ -3278,7 +3276,6 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
       query = sql`
         SELECT 
           id,
-          description,
           published_date,
           last_modified_date,
           vuln_status,
@@ -3287,9 +3284,9 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
           cvss_v2_score,
           cvss_v2_severity,
           weaknesses,
-          reference_urls,
           vendors,
-          created_at
+          created_at,
+          has_r2_backing
         FROM vulnerabilities
         ${vendor ? sql`WHERE vendors @> ${JSON.stringify([vendor])}` : sql``}
         ${sql.raw(orderByClause)}
@@ -3329,9 +3326,10 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
     const totalCount = Number(countResult.rows[0]?.total || 0);
 
     // Format vulnerabilities data
+    // Format vulnerabilities data
     const vulnerabilities = result.rows.map((row: any) => ({
       id: row.id,
-      description: row.description,
+      description: row.has_r2_backing ? "Click to view full details" : "No description available",
       publishedDate: row.published_date,
       lastModifiedDate: row.last_modified_date,
       vulnStatus: row.vuln_status,
@@ -3341,7 +3339,7 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
       cvssV2Severity: row.cvss_v2_severity,
       weaknesses: row.weaknesses || [],
       vendors: row.vendors || [],
-      references: row.reference_urls || [],
+      references: [], // References are now in R2, not returned in list view
       createdAt: row.created_at,
     }));
 
