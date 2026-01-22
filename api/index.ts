@@ -3490,34 +3490,57 @@ async function handleVulnerabilityDetailEndpoint(req: VercelRequest, res: Vercel
       WHERE id = ${cveId}
     `);
 
-    if (result.rows.length === 0) {
+    // Fetch KEV data if it exists
+    const kevResult = await db.execute(sql`
+      SELECT * FROM known_exploited_vulnerabilities WHERE cve_id = ${cveId}
+    `);
+    const kevData = kevResult.rows.length > 0 ? kevResult.rows[0] : null;
+
+    if (result.rows.length === 0 && !kevData) {
       return res.status(404).json({ message: 'Vulnerability not found' });
     }
 
-    const row = result.rows[0] as any;
-    const vulnerability = {
-      id: row.id,
-      description: row.description,
-      publishedDate: row.published_date,
-      lastModifiedDate: row.last_modified_date,
-      vulnStatus: row.vuln_status,
-      cvssV3Score: row.cvss_v3_score ? parseFloat(row.cvss_v3_score) : null,
-      cvssV3Severity: row.cvss_v3_severity,
-      cvssV2Score: row.cvss_v2_score ? parseFloat(row.cvss_v2_score) : null,
-      cvssV2Severity: row.cvss_v2_severity,
-      cvssVector: row.cvss_vector,
-      weaknesses: row.weaknesses || [],
-      vendors: row.vendors || [],
-      affectedProducts: row.affected_products || [],
-      references: row.reference_urls || [],
-      exploitabilityScore: row.exploitability_score ? parseFloat(row.exploitability_score) : null,
-      impactScore: row.impact_score ? parseFloat(row.impact_score) : null,
-    };
+    let vulnerability = null;
+    if (result.rows.length > 0) {
+      const row = result.rows[0] as any;
+      vulnerability = {
+        id: row.id,
+        description: row.description,
+        publishedDate: row.published_date,
+        lastModifiedDate: row.last_modified_date,
+        vulnStatus: row.vuln_status,
+        cvssV3Score: row.cvss_v3_score ? parseFloat(row.cvss_v3_score) : null,
+        cvssV3Severity: row.cvss_v3_severity,
+        cvssV2Score: row.cvss_v2_score ? parseFloat(row.cvss_v2_score) : null,
+        cvssV2Severity: row.cvss_v2_severity,
+        cvssVector: row.cvss_vector,
+        weaknesses: row.weaknesses || [],
+        vendors: row.vendors || [],
+        affectedProducts: row.affected_products || [],
+        references: row.reference_urls || [],
+        exploitabilityScore: row.exploitability_score ? parseFloat(row.exploitability_score) : null,
+        impactScore: row.impact_score ? parseFloat(row.impact_score) : null,
+      };
+    }
 
     // Cache for 1 hour
     res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
 
-    res.json(vulnerability);
+    // Return structured response as expected by frontend
+    res.json({
+      kev: kevData ? {
+        cveID: kevData.cve_id,
+        vendorProject: kevData.vendor_project,
+        product: kevData.product,
+        vulnerabilityName: kevData.vulnerability_name,
+        dateAdded: kevData.date_added,
+        shortDescription: kevData.short_description,
+        requiredAction: kevData.required_action,
+        dueDate: kevData.due_date,
+        notes: kevData.notes,
+      } : null,
+      nvd: vulnerability
+    });
 
   } catch (error) {
     console.error(`Error fetching details for ${cveId}:`, error);
