@@ -137,6 +137,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return handleVulnerabilitiesVendorsEndpoint(req, res);
     }
 
+    // Check for specific CVE ID in the path
+    const cveIdMatch = pathname.match(/^\/api\/vulnerabilities\/(CVE-\d{4}-\d{4,})$/);
+    if (cveIdMatch) {
+      return handleVulnerabilityDetailEndpoint(req, res, cveIdMatch[1]);
+    }
+
     if (pathname.startsWith('/api/vulnerabilities')) {
       return handleVulnerabilitiesEndpoints(req, res, action);
     }
@@ -3441,6 +3447,87 @@ async function handleVulnerabilitiesVendorsEndpoint(req: VercelRequest, res: Ver
 
 
 // Helper functions for fetch-feeds
+async function handleVulnerabilityDetailEndpoint(req: VercelRequest, res: VercelResponse, cveId: string) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
+
+  try {
+    console.log(`Fetching details for ${cveId}...`);
+
+    if (!process.env.DATABASE_URL) {
+      return res.status(500).json({
+        error: 'DATABASE_URL environment variable is required'
+      });
+    }
+
+    const { drizzle } = await import('drizzle-orm/neon-serverless');
+    const { Pool } = await import('@neondatabase/serverless');
+    const { sql } = await import('drizzle-orm');
+
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const db = drizzle(pool);
+
+    const result = await db.execute(sql`
+      SELECT 
+        id,
+        description,
+        published_date,
+        last_modified_date,
+        vuln_status,
+        cvss_v3_score,
+        cvss_v3_severity,
+        cvss_v2_score,
+        cvss_v2_severity,
+        cvss_vector,
+        weaknesses,
+        vendors,
+        affected_products,
+        reference_urls,
+        exploitability_score,
+        impact_score
+      FROM vulnerabilities
+      WHERE id = ${cveId}
+    `);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Vulnerability not found' });
+    }
+
+    const row = result.rows[0] as any;
+    const vulnerability = {
+      id: row.id,
+      description: row.description,
+      publishedDate: row.published_date,
+      lastModifiedDate: row.last_modified_date,
+      vulnStatus: row.vuln_status,
+      cvssV3Score: row.cvss_v3_score ? parseFloat(row.cvss_v3_score) : null,
+      cvssV3Severity: row.cvss_v3_severity,
+      cvssV2Score: row.cvss_v2_score ? parseFloat(row.cvss_v2_score) : null,
+      cvssV2Severity: row.cvss_v2_severity,
+      cvssVector: row.cvss_vector,
+      weaknesses: row.weaknesses || [],
+      vendors: row.vendors || [],
+      affectedProducts: row.affected_products || [],
+      references: row.reference_urls || [],
+      exploitabilityScore: row.exploitability_score ? parseFloat(row.exploitability_score) : null,
+      impactScore: row.impact_score ? parseFloat(row.impact_score) : null,
+    };
+
+    // Cache for 1 hour
+    res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+
+    res.json(vulnerability);
+
+  } catch (error) {
+    console.error(`Error fetching details for ${cveId}:`, error);
+    res.status(500).json({
+      message: 'Failed to fetch vulnerability details',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
+
 function determineThreatLevel(title: string, content: string): string {
   const text = (title + " " + content).toLowerCase();
   let score = 0;
