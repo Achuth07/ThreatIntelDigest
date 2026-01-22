@@ -3471,7 +3471,6 @@ async function handleVulnerabilityDetailEndpoint(req: VercelRequest, res: Vercel
     const result = await db.execute(sql`
       SELECT 
         id,
-        description,
         published_date,
         last_modified_date,
         vuln_status,
@@ -3482,18 +3481,17 @@ async function handleVulnerabilityDetailEndpoint(req: VercelRequest, res: Vercel
         cvss_vector,
         weaknesses,
         vendors,
-        affected_products,
-        reference_urls,
         exploitability_score,
-        impact_score
+        impact_score,
+        has_r2_backing
       FROM vulnerabilities
       WHERE id = ${cveId}
-    `);
+      `);
 
     // Fetch KEV data if it exists
     const kevResult = await db.execute(sql`
       SELECT * FROM known_exploited_vulnerabilities WHERE cve_id = ${cveId}
-    `);
+      `);
     const kevData = kevResult.rows.length > 0 ? kevResult.rows[0] : null;
 
     if (result.rows.length === 0 && !kevData) {
@@ -3503,24 +3501,60 @@ async function handleVulnerabilityDetailEndpoint(req: VercelRequest, res: Vercel
     let vulnerability = null;
     if (result.rows.length > 0) {
       const row = result.rows[0] as any;
-      vulnerability = {
-        id: row.id,
-        description: row.description,
-        publishedDate: row.published_date,
-        lastModifiedDate: row.last_modified_date,
-        vulnStatus: row.vuln_status,
-        cvssV3Score: row.cvss_v3_score ? parseFloat(row.cvss_v3_score) : null,
-        cvssV3Severity: row.cvss_v3_severity,
-        cvssV2Score: row.cvss_v2_score ? parseFloat(row.cvss_v2_score) : null,
-        cvssV2Severity: row.cvss_v2_severity,
-        cvssVector: row.cvss_vector,
-        weaknesses: row.weaknesses || [],
-        vendors: row.vendors || [],
-        affectedProducts: row.affected_products || [],
-        references: row.reference_urls || [],
-        exploitabilityScore: row.exploitability_score ? parseFloat(row.exploitability_score) : null,
-        impactScore: row.impact_score ? parseFloat(row.impact_score) : null,
-      };
+
+      // Check if data is offloaded to R2
+      if (row.has_r2_backing) {
+        console.log(`Fetching ${cveId} from R2...`);
+        const { fetchCveFromR2 } = await import('../server/services/r2'); // Dynamic import
+        const r2Data = await fetchCveFromR2(cveId);
+
+        if (r2Data) {
+          vulnerability = r2Data;
+        } else {
+          // Fallback if R2 fetch fails but DB says it should be there (consistency issue?)
+          console.error(`R2 backing claimed but fetch failed for ${cveId}`);
+          // We could try to return DB data if we haven't dropped columns yet
+          // For now, construct from DB columns as best effort
+          vulnerability = {
+            id: row.id,
+            description: row.description,
+            publishedDate: row.published_date,
+            lastModifiedDate: row.last_modified_date,
+            vulnStatus: row.vuln_status,
+            cvssV3Score: row.cvss_v3_score ? parseFloat(row.cvss_v3_score) : null,
+            cvssV3Severity: row.cvss_v3_severity,
+            cvssV2Score: row.cvss_v2_score ? parseFloat(row.cvss_v2_score) : null,
+            cvssV2Severity: row.cvss_v2_severity,
+            cvssVector: row.cvss_vector,
+            weaknesses: row.weaknesses || [],
+            vendors: row.vendors || [],
+            affectedProducts: row.affected_products || [],
+            references: row.reference_urls || [],
+            exploitabilityScore: row.exploitability_score ? parseFloat(row.exploitability_score) : null,
+            impactScore: row.impact_score ? parseFloat(row.impact_score) : null,
+          };
+        }
+      } else {
+        // Legacy: Fetch from DB columns
+        vulnerability = {
+          id: row.id,
+          description: row.description,
+          publishedDate: row.published_date,
+          lastModifiedDate: row.last_modified_date,
+          vulnStatus: row.vuln_status,
+          cvssV3Score: row.cvss_v3_score ? parseFloat(row.cvss_v3_score) : null,
+          cvssV3Severity: row.cvss_v3_severity,
+          cvssV2Score: row.cvss_v2_score ? parseFloat(row.cvss_v2_score) : null,
+          cvssV2Severity: row.cvss_v2_severity,
+          cvssVector: row.cvss_vector,
+          weaknesses: row.weaknesses || [],
+          vendors: row.vendors || [],
+          affectedProducts: row.affected_products || [],
+          references: row.reference_urls || [],
+          exploitabilityScore: row.exploitability_score ? parseFloat(row.exploitability_score) : null,
+          impactScore: row.impact_score ? parseFloat(row.impact_score) : null,
+        };
+      }
     }
 
     // Cache for 1 hour
@@ -3543,7 +3577,7 @@ async function handleVulnerabilityDetailEndpoint(req: VercelRequest, res: Vercel
     });
 
   } catch (error) {
-    console.error(`Error fetching details for ${cveId}:`, error);
+    console.error(`Error fetching details for ${cveId}: `, error);
     res.status(500).json({
       message: 'Failed to fetch vulnerability details',
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -3782,7 +3816,7 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
       SELECT id, name, url, icon, color, is_active 
       FROM rss_sources 
       WHERE is_active = true
-    `);
+      `);
 
     const activeSources = sourcesResult.rows;
     console.log(`Found ${activeSources.length} active RSS sources`);
@@ -3793,7 +3827,7 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
     for (const source of activeSources) {
       // Skip disabled sources
       if (source.disabled) {
-        console.log(`Skipping disabled source: ${source.name}`);
+        console.log(`Skipping disabled source: ${source.name} `);
         continue;
       }
 

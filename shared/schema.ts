@@ -49,7 +49,7 @@ export const rssSources = pgTable("rss_sources", {
 
 export const vulnerabilities = pgTable("vulnerabilities", {
   id: varchar("id").primaryKey(), // CVE ID like CVE-2024-1234
-  description: text("description").notNull(),
+  // description: text("description").notNull(), // Dropped in Hybrid Storage Migration
   publishedDate: timestamp("published_date").notNull(),
   lastModifiedDate: timestamp("last_modified_date").notNull(),
   vulnStatus: text("vuln_status").notNull(), // Analyzed, Modified, etc.
@@ -63,8 +63,13 @@ export const vulnerabilities = pgTable("vulnerabilities", {
   weaknesses: jsonb("weaknesses").$type<string[]>().default([]), // CWE IDs
 
   vendors: jsonb("vendors").$type<string[]>().default([]), // Extracted vendors
-  affectedProducts: jsonb("affected_products").$type<{ vendor: string; product: string; versions?: string[] }[]>().default([]),
-  referenceUrls: jsonb("reference_urls").$type<{ url: string; source: string; tags?: string[] }[]>().default([]),
+  // affectedProducts: jsonb("affected_products").$type<{ vendor: string; product: string; versions?: string[] }[]>().default([]), // Dropped
+  // referenceUrls: jsonb("reference_urls").$type<{ url: string; source: string; tags?: string[] }[]>().default([]), // Dropped
+
+  // Hybrid Storage Columns
+  hasR2Backing: pgBoolean("has_r2_backing").default(false),
+  searchVector: text("search_vector"), // Concatenated text for full-text search
+
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
@@ -155,7 +160,7 @@ export const insertRssSourceSchema = createInsertSchema(rssSources, {
 
 export const insertVulnerabilitySchema = createInsertSchema(vulnerabilities, {
   id: z.string().regex(/^CVE-\d{4}-\d{4,}$/),
-  description: z.string().min(1),
+  // description: z.string().min(1),
   publishedDate: z.date(),
   lastModifiedDate: z.date(),
   vulnStatus: z.string().min(1),
@@ -167,17 +172,21 @@ export const insertVulnerabilitySchema = createInsertSchema(vulnerabilities, {
   exploitabilityScore: z.number().optional(),
   impactScore: z.number().optional(),
   weaknesses: z.array(z.string()).default([]),
+  /*
   referenceUrls: z.array(z.object({
     url: z.string().url(),
     source: z.string(),
     tags: z.array(z.string()).optional()
   })).default([]),
+  */
   vendors: z.array(z.string()).default([]),
+  /*
   affectedProducts: z.array(z.object({
     vendor: z.string(),
     product: z.string(),
     versions: z.array(z.string()).optional()
   })).default([]),
+  */
 }).omit({
   createdAt: true,
 });

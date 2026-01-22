@@ -1,6 +1,7 @@
 
 import { sql } from 'drizzle-orm';
 import { getDb } from '../db.js';
+import { uploadCveToR2 } from './r2.js';
 
 export async function fetchAndStoreNvdCves(startDate: Date, endDate: Date, startIndex = 0, resultsPerPage = 1000) {
     const db = getDb();
@@ -145,7 +146,27 @@ export async function fetchAndStoreNvdCves(startDate: Date, endDate: Date, start
                     const vendorsArray = Array.from(vendors);
                     const weaknessesLiteral = '{' + weaknesses.map((w: string) => `"${w?.replace(/"/g, '\\"') || ''}"`).join(',') + '}';
 
-                    valuesChunks.push(sql`(${cveId}, ${description}, ${cve.published}, ${cve.lastModified}, ${cve.vulnStatus}, ${cvssV3Score !== null ? String(cvssV3Score) : null}, ${cvssV3Severity}, ${cvssV2Score !== null ? String(cvssV2Score) : null}, ${cvssV2Severity}, ${weaknessesLiteral}::text[], ${JSON.stringify(references)}::jsonb, ${JSON.stringify(vendorsArray)}::jsonb, ${cvssVector}, ${exploitabilityScore !== null ? String(exploitabilityScore) : null}, ${impactScore !== null ? String(impactScore) : null}, ${JSON.stringify(affectedProducts)}::jsonb)`);
+                    // R2 Upload Construction
+                    const fullData = {
+                        id: cveId,
+                        description,
+                        publishedDate: cve.published,
+                        lastModifiedDate: cve.lastModified,
+                        vulnStatus: cve.vulnStatus,
+                        cvssV3Score, cvssV3Severity, cvssV2Score, cvssV2Severity, cvssVector,
+                        exploitabilityScore, impactScore,
+                        weaknesses, vendors: vendorsArray, affectedProducts, references
+                    };
+
+                    // Search Vector Construction
+                    const searchRef = references.map((r: any) => r.url).join(' ') || '';
+                    const searchProd = affectedProducts.map(p => `${p.vendor} ${p.product}`).join(' ') || '';
+                    const searchVector = `${cveId} ${description} ${searchProd}`.substring(0, 10000);
+
+                    // Perform R2 Upload
+                    await uploadCveToR2(cveId, fullData);
+
+                    valuesChunks.push(sql`(${cveId}, ${description}, ${cve.published}, ${cve.lastModified}, ${cve.vulnStatus}, ${cvssV3Score !== null ? String(cvssV3Score) : null}, ${cvssV3Severity}, ${cvssV2Score !== null ? String(cvssV2Score) : null}, ${cvssV2Severity}, ${weaknessesLiteral}::text[], ${JSON.stringify(references)}::jsonb, ${JSON.stringify(vendorsArray)}::jsonb, ${cvssVector}, ${exploitabilityScore !== null ? String(exploitabilityScore) : null}, ${impactScore !== null ? String(impactScore) : null}, ${JSON.stringify(affectedProducts)}::jsonb, ${true}, ${searchVector})`);
                     processedCount++;
 
                 } catch (err) {
@@ -163,7 +184,8 @@ export async function fetchAndStoreNvdCves(startDate: Date, endDate: Date, start
                     id, description, published_date, last_modified_date, vuln_status,
                     cvss_v3_score, cvss_v3_severity, cvss_v2_score, cvss_v2_severity,
                     weaknesses, reference_urls, vendors,
-                    cvss_vector, exploitability_score, impact_score, affected_products
+                    cvss_vector, exploitability_score, impact_score, affected_products,
+                    has_r2_backing, search_vector
                   )
                   VALUES ${finalValues}
                   ON CONFLICT (id) DO UPDATE SET
@@ -181,7 +203,9 @@ export async function fetchAndStoreNvdCves(startDate: Date, endDate: Date, start
                     cvss_vector = EXCLUDED.cvss_vector,
                     exploitability_score = EXCLUDED.exploitability_score,
                     impact_score = EXCLUDED.impact_score,
-                    affected_products = EXCLUDED.affected_products
+                    affected_products = EXCLUDED.affected_products,
+                    has_r2_backing = EXCLUDED.has_r2_backing,
+                    search_vector = EXCLUDED.search_vector
                 `);
             }
         }
