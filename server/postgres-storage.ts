@@ -503,7 +503,7 @@ export class PostgresStorage implements IStorage {
       const results = await queryBuilder;
       return results.map(result => ({
         id: result.id,
-        description: result.description,
+        description: (result as any).searchVector || "", // Description column dropped, using searchVector as fallback
         publishedDate: result.publishedDate,
         lastModifiedDate: result.lastModifiedDate,
         vulnStatus: result.vulnStatus,
@@ -515,13 +515,8 @@ export class PostgresStorage implements IStorage {
         exploitabilityScore: result.exploitabilityScore ? parseFloat(result.exploitabilityScore as any) : null,
         impactScore: result.impactScore ? parseFloat(result.impactScore as any) : null,
         weaknesses: result.weaknesses || [],
-        vendors: result.vendors || [],
-        affectedProducts: result.affectedProducts || [],
-        references: result.referenceUrls ? result.referenceUrls.map(url => ({
-          url: url.url,
-          source: url.source,
-          tags: url.tags
-        })) : [],
+        affectedProducts: [], // Dropped column
+        references: [], // Dropped column
         createdAt: result.createdAt || new Date()
       }));
     } catch (error) {
@@ -538,7 +533,7 @@ export class PostgresStorage implements IStorage {
       const vuln = result[0];
       return {
         id: vuln.id,
-        description: vuln.description,
+        description: (vuln as any).searchVector || "", // Description column dropped
         publishedDate: vuln.publishedDate,
         lastModifiedDate: vuln.lastModifiedDate,
         vulnStatus: vuln.vulnStatus,
@@ -550,13 +545,8 @@ export class PostgresStorage implements IStorage {
         exploitabilityScore: vuln.exploitabilityScore ? parseFloat(vuln.exploitabilityScore as any) : null,
         impactScore: vuln.impactScore ? parseFloat(vuln.impactScore as any) : null,
         weaknesses: vuln.weaknesses || [],
-        vendors: vuln.vendors || [],
-        affectedProducts: vuln.affectedProducts || [],
-        references: vuln.referenceUrls ? vuln.referenceUrls.map(url => ({
-          url: url.url,
-          source: url.source,
-          tags: url.tags
-        })) : [],
+        affectedProducts: [], // Dropped column
+        references: [], // Dropped column
         createdAt: vuln.createdAt || new Date()
       };
     } catch (error) {
@@ -570,7 +560,7 @@ export class PostgresStorage implements IStorage {
       // Convert references to referenceUrls format and handle decimal types
       const vulnerabilityData: any = {
         id: insertCVE.id,
-        description: insertCVE.description,
+        // description: insertCVE.description, // Dropped
         publishedDate: insertCVE.publishedDate,
         lastModifiedDate: insertCVE.lastModifiedDate,
         vulnStatus: insertCVE.vulnStatus,
@@ -578,8 +568,10 @@ export class PostgresStorage implements IStorage {
         cvssV3Severity: insertCVE.cvssV3Severity,
         cvssV2Score: insertCVE.cvssV2Score !== undefined && insertCVE.cvssV2Score !== null ? String(insertCVE.cvssV2Score) : null,
         cvssV2Severity: insertCVE.cvssV2Severity,
+        cvssVector: insertCVE.cvssVector,
         weaknesses: insertCVE.weaknesses || [],
-        referenceUrls: insertCVE.references || [],
+        vendors: (insertCVE as any).vendors || [],
+        // referenceUrls: insertCVE.references || [], // Dropped
         createdAt: new Date()
       };
 
@@ -588,7 +580,7 @@ export class PostgresStorage implements IStorage {
 
       return {
         id: vuln.id,
-        description: vuln.description,
+        description: insertCVE.description || "", // Use input description as fallback
         publishedDate: vuln.publishedDate,
         lastModifiedDate: vuln.lastModifiedDate,
         vulnStatus: vuln.vulnStatus,
@@ -596,12 +588,12 @@ export class PostgresStorage implements IStorage {
         cvssV3Severity: vuln.cvssV3Severity,
         cvssV2Score: vuln.cvssV2Score ? parseFloat(vuln.cvssV2Score as any) : null,
         cvssV2Severity: vuln.cvssV2Severity,
+        cvssVector: vuln.cvssVector,
+        exploitabilityScore: vuln.exploitabilityScore ? parseFloat(vuln.exploitabilityScore as any) : null,
+        impactScore: vuln.impactScore ? parseFloat(vuln.impactScore as any) : null,
         weaknesses: vuln.weaknesses || [],
-        references: vuln.referenceUrls ? vuln.referenceUrls.map(url => ({
-          url: url.url,
-          source: url.source,
-          tags: url.tags
-        })) : [],
+        affectedProducts: [], // Dropped column
+        references: [], // Dropped column
         createdAt: vuln.createdAt || new Date()
       };
     } catch (error) {
@@ -1247,7 +1239,7 @@ export class PostgresStorage implements IStorage {
       // Map CVEs to CVE interface format
       const mappedCves: CVE[] = cvesResult.map(vuln => ({
         id: vuln.id,
-        description: vuln.description,
+        description: (vuln as any).searchVector || "",
         publishedDate: vuln.publishedDate,
         lastModifiedDate: vuln.lastModifiedDate,
         vulnStatus: vuln.vulnStatus,
@@ -1256,11 +1248,9 @@ export class PostgresStorage implements IStorage {
         cvssV2Score: vuln.cvssV2Score ? parseFloat(vuln.cvssV2Score as any) : null,
         cvssV2Severity: vuln.cvssV2Severity,
         weaknesses: vuln.weaknesses || [],
-        references: vuln.referenceUrls ? vuln.referenceUrls.map(url => ({
-          url: url.url,
-          source: url.source,
-          tags: url.tags
-        })) : [],
+
+        affectedProducts: [], // Dropped column
+        references: [], // Dropped column
         createdAt: vuln.createdAt || new Date()
       }));
 
