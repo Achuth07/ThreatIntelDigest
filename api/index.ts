@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from 'drizzle-orm';
 import { storage, initializeStorage } from '../server/storage.js';
+import { fetchCveFromR2 } from '../server/services/r2.js';
 
 // Consolidated API handler that handles all endpoints through action-based routing
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -3503,7 +3504,6 @@ async function handleVulnerabilityDetailEndpoint(req: VercelRequest, res: Vercel
       // Check if data is offloaded to R2
       if (row.has_r2_backing) {
         console.log(`Fetching ${cveId} from R2...`);
-        const { fetchCveFromR2 } = await import('../server/services/r2'); // Dynamic import
         const r2Data = await fetchCveFromR2(cveId);
 
         if (r2Data) {

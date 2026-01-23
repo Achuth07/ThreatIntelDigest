@@ -643,32 +643,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Generic Vulnerability Endpoint (Handles search results)
+  // Generic Vulnerability Endpoint - Routes to consolidated API handler with R2 support
   app.get('/api/vulnerabilities/:id', async (req, res) => {
-    try {
-      const { id } = req.params;
-      console.log(`Fetching vulnerability details for: ${id}`);
-
-      // 1. Try to find as KEV first
-      const kev = await storage.getKnownExploitedVulnerability(id);
-
-      // 2. Always fetch NVD data for generic info
-      let nvd = null;
-      try {
-        nvd = await storage.getCVE(id);
-      } catch (err) {
-        console.error(`Error fetching NVD data for ${id}:`, err);
-      }
-
-      if (!kev && !nvd) {
-        return res.status(404).json({ error: 'Vulnerability not found' });
-      }
-
-      res.json({ kev: kev || null, nvd });
-    } catch (error) {
-      console.error('Error fetching vulnerability:', error);
-      res.status(500).json({ error: 'Failed to fetch vulnerability' });
-    }
+    const { mockReq, mockRes } = createMockHandlers(req, res, `/api/vulnerabilities/${req.params.id}`);
+    await consolidatedApiHandler(mockReq as any, mockRes as any);
   });
 
   app.get('/api/cron/fetch-kev', async (req, res) => {
