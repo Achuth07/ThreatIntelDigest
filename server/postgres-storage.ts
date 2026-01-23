@@ -1220,7 +1220,7 @@ export class PostgresStorage implements IStorage {
         this.db.select().from(vulnerabilities).where(
           or(
             ilike(vulnerabilities.id, searchTerm),
-            ilike(vulnerabilities.description, searchTerm)
+            ilike(vulnerabilities.searchVector, searchTerm)
           )
         ).limit(5),
 
