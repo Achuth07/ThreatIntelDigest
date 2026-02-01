@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import {
-  User, Shield, Settings as SettingsIcon, Key, CreditCard, Bell,
-  ChevronRight, Monitor, LogOut, Save, AlertCircle, Eye, EyeOff,
-  RefreshCw, Trash2, Check, X, ArrowLeft
+  User, Shield, Settings as SettingsIcon, Key, Bell, CreditCard,
+  Monitor, LogOut, Save, AlertCircle, Eye, EyeOff,
+  RefreshCw, Trash2, Check, X, ChevronRight
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,11 +13,13 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import { getAuthenticatedUser } from '@/lib/auth';
 import { apiRequest } from '@/lib/queryClient';
 import { Header } from '@/components/header';
+import { Sidebar } from '@/components/sidebar';
 import { SEO } from '@/components/seo';
-import { useLoginPopup } from '@/App';
 
 interface UserSettings {
   displayName?: string;
@@ -51,6 +53,7 @@ export default function Settings() {
   const [displayNameError, setDisplayNameError] = useState('');
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Available IOC types to hide
   const iocTypes = ['MD5', 'SHA1', 'SHA256', 'SHA512', 'IPv4', 'IPv6', 'Domain', 'URL', 'Email'];
@@ -250,544 +253,545 @@ export default function Settings() {
     }));
   };
 
+  const handleSidebarToggle = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
+  const handleSidebarClose = () => {
+    setIsSidebarOpen(false);
+  };
+
+  const handleSourceSelect = (source: string) => {
+    navigate(`/threatfeed?source=${source}`);
+    handleSidebarClose();
+  };
+
   if (!user) {
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-whatcyber-dark">
+    <div className="min-h-screen bg-whatcyber-darker text-slate-100 flex flex-col">
       <SEO
         title="Settings - WhatCyber ThreatFeed"
-        description="Manage your WhatCyber ThreatFeed account settings, preferences, and integrations for cybersecurity threat intelligence."
-        keywords="settings, cybersecurity, threat intelligence, CVE, vulnerabilities, security news, preferences"
+        description="Manage your WhatCyber ThreatFeed account settings, preferences, and integrations."
+        keywords="settings, cybersecurity, threat intelligence, preferences"
       />
       <Header
         onSearch={() => { }}
         bookmarkCount={0}
-        onBookmarksClick={() => { }}
-        onSidebarToggle={() => { }}
-        isSidebarOpen={false}
+        onBookmarksClick={() => navigate('/threatfeed?view=bookmarks')}
+        onSidebarToggle={handleSidebarToggle}
+        isSidebarOpen={isSidebarOpen}
       />
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Page Header */}
-        <div className="mb-8">
-          <Button
-            variant="ghost"
-            className="mb-4 text-slate-400 hover:text-slate-100 pl-0 hover:bg-transparent"
-            onClick={() => navigate("/threatfeed")}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Threat Feed
-          </Button>
-          <h1 className="text-3xl font-bold text-slate-100 mb-2">Settings</h1>
-          <p className="text-slate-400">Manage your account, preferences, and integrations</p>
+      <div className="flex flex-1 min-h-0 relative">
+        {/* Mobile Overlay */}
+        {isSidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
+            onClick={handleSidebarClose}
+          />
+        )}
+
+        {/* Sidebar */}
+        <div className={`${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          } fixed left-0 top-16 h-[calc(100vh-4rem)] z-30 lg:relative lg:translate-x-0 lg:z-10 lg:top-0 lg:h-full transition-transform duration-300 ease-in-out`}>
+          <Sidebar
+            selectedSource="all"
+            onSourceSelect={handleSourceSelect}
+            timeFilter="all"
+            onTimeFilterChange={() => { }}
+            threatFilters={['CRITICAL', 'HIGH', 'MEDIUM']}
+            onThreatFilterChange={() => { }}
+            onClose={handleSidebarClose}
+            onVulnerabilitiesClick={() => navigate('/threatfeed?view=cve')}
+            onFollowSourcesClick={() => navigate('/threatfeed?view=follow')}
+            onBookmarksClick={() => navigate('/threatfeed?view=bookmarks')}
+          />
         </div>
 
-        <div className="space-y-6">
-          {/* 1. Account & Profile */}
-          <Card className="bg-whatcyber-gray border-whatcyber-light-gray">
-            <CardHeader>
-              <div className="flex items-center space-x-2">
-                <User className="w-5 h-5 text-whatcyber-teal" />
-                <CardTitle className="text-slate-100">Account & Profile</CardTitle>
-              </div>
-              <CardDescription className="text-slate-400">
-                Your identity and account information
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center space-x-4">
-                {user.avatar && (
-                  <img
-                    src={user.avatar}
-                    alt={user.name}
-                    className="w-16 h-16 rounded-full border-2 border-whatcyber-light-gray"
-                  />
-                )}
-                <div className="flex-1">
-                  <div className="space-y-3">
-                    <div>
-                      <Label htmlFor="name" className="text-slate-300">Display Name</Label>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Input
-                          id="name"
-                          value={settings.displayName || ''}
-                          onChange={(e) => handleDisplayNameChange(e.target.value)}
-                          className="bg-whatcyber-dark border-whatcyber-light-gray text-slate-100 disabled:opacity-50"
-                          placeholder={user.name || "Enter display name"}
-                          disabled={!isEditingDisplayName}
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto bg-whatcyber-darker p-4 lg:p-8">
+          <div className="max-w-5xl mx-auto">
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold text-slate-100 mb-2">Settings</h1>
+              <p className="text-slate-400">Manage your account settings and preferences.</p>
+            </div>
+
+            <Tabs defaultValue="profile" className="space-y-6">
+              <TabsList className="bg-whatcyber-gray border border-whatcyber-light-gray w-full justify-start overflow-x-auto h-auto p-1">
+                {['Profile', 'Password', 'Notifications', 'Application Preferences', 'API & Integrations', 'Subscription & Billing'].map((tab) => (
+                  <TabsTrigger
+                    key={tab}
+                    value={tab.toLowerCase().replace(' & ', '-').replace(/ /g, '-')}
+                    className="data-[state=active]:bg-whatcyber-dark data-[state=active]:text-white text-slate-400 hover:text-slate-200 whitespace-nowrap"
+                  >
+                    {tab}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+
+              {/* Profile Tab */}
+              <TabsContent value="profile" className="space-y-6">
+                <Card className="bg-whatcyber-gray border-whatcyber-light-gray">
+                  <CardHeader>
+                    <div className="flex items-center space-x-2">
+                      <User className="w-5 h-5 text-whatcyber-teal" />
+                      <CardTitle className="text-slate-100">Profile Details</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center space-x-4">
+                      {user.avatar && (
+                        <img
+                          src={user.avatar}
+                          alt={user.name}
+                          className="w-16 h-16 rounded-full border-2 border-whatcyber-light-gray"
                         />
-                        {!isEditingDisplayName ? (
+                      )}
+                      <div className="flex-1 space-y-4">
+                        <div>
+                          <Label htmlFor="name" className="text-slate-300">Display Name</Label>
+                          <div className="flex items-center space-x-2 mt-1">
+                            <Input
+                              id="name"
+                              value={settings.displayName || ''}
+                              onChange={(e) => handleDisplayNameChange(e.target.value)}
+                              className="bg-whatcyber-dark border-whatcyber-light-gray text-slate-100"
+                              disabled={!isEditingDisplayName}
+                            />
+                            {!isEditingDisplayName ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setIsEditingDisplayName(true)}
+                                className="border-whatcyber-light-gray text-slate-300 hover:bg-whatcyber-dark"
+                              >
+                                Edit
+                              </Button>
+                            ) : (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={handleSaveDisplayName}
+                                  disabled={isSaving || !!displayNameError}
+                                  className="border-green-600 text-green-500 hover:bg-green-600 hover:text-white"
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={handleCancelDisplayName}
+                                  disabled={isSaving}
+                                  className="border-red-600 text-red-500 hover:bg-red-600 hover:text-white"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                          {displayNameError && (
+                            <p className="text-xs text-red-400 mt-1">{displayNameError}</p>
+                          )}
+                          <p className="text-xs text-slate-500 mt-1">
+                            Click Edit to change your display name (letters, numbers, and spaces only, max 50 characters)
+                          </p>
+                        </div>
+
+                        <div>
+                          <Label className="text-slate-300">Full Name</Label>
+                          <div className="flex items-center space-x-2 mt-1">
+                            <Input
+                              value={user.name}
+                              disabled
+                              className="bg-whatcyber-dark/50 border-whatcyber-light-gray text-slate-400 cursor-not-allowed"
+                            />
+                          </div>
+                          <p className="text-xs text-slate-500 mt-1">From your Google account (cannot be changed)</p>
+                        </div>
+
+                        <div>
+                          <Label className="text-slate-300">Email</Label>
+                          <Input
+                            value={user.email}
+                            disabled
+                            className="bg-whatcyber-dark/50 border-whatcyber-light-gray text-slate-400 mt-1"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Password Tab */}
+              <TabsContent value="password" className="space-y-6">
+                <Card className="bg-whatcyber-gray border-whatcyber-light-gray">
+                  <CardHeader>
+                    <div className="flex items-center space-x-2">
+                      <Key className="w-5 h-5 text-whatcyber-teal" />
+                      <CardTitle className="text-slate-100">Password & Security</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div>
+                      <h4 className="text-sm font-medium text-slate-300 mb-3">Change Password</h4>
+                      <Button
+                        variant="outline"
+                        className="border-whatcyber-teal text-whatcyber-teal hover:bg-whatcyber-teal/10"
+                        onClick={() => navigate('/set-password/')}
+                      >
+                        <Key className="w-4 h-4 mr-2" />
+                        Set/Change Password
+                      </Button>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-slate-300 mb-3">Active Sessions</h4>
+                      <div className="bg-whatcyber-dark rounded-lg p-4 border border-whatcyber-light-gray flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <Monitor className="w-5 h-5 text-whatcyber-teal" />
+                          <div>
+                            <p className="text-sm font-medium text-slate-300">Current Session</p>
+                            <p className="text-xs text-slate-500">
+                              {navigator.userAgent.includes('Chrome') ? 'Chrome' : 'Browser'} on macOS
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+                          onClick={handleSignOutEverywhere}
+                        >
+                          <LogOut className="w-4 h-4 mr-2" />
+                          Sign Out Everywhere
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Notifications Tab */}
+              <TabsContent value="notifications" className="space-y-6">
+                <Card className="bg-whatcyber-gray border-whatcyber-light-gray">
+                  <CardHeader>
+                    <div className="flex items-center space-x-2">
+                      <Bell className="w-5 h-5 text-whatcyber-teal" />
+                      <CardTitle className="text-slate-100">Notifications</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="text-slate-300">Weekly Digest</Label>
+                        <p className="text-xs text-slate-500">Receive a weekly summary of top threats</p>
+                      </div>
+                      <Switch
+                        checked={settings.emailWeeklyDigest}
+                        onCheckedChange={(checked) => setSettings({ ...settings, emailWeeklyDigest: checked })}
+                      />
+                    </div>
+                    <Separator className="bg-whatcyber-light-gray" />
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="text-slate-300">Watchlist Alerts</Label>
+                        <p className="text-xs text-slate-500">Email immediately when high-priority keywords are found</p>
+                      </div>
+                      <Switch
+                        checked={settings.emailWatchlistAlerts}
+                        onCheckedChange={(checked) => setSettings({ ...settings, emailWatchlistAlerts: checked })}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Application Preferences Tab */}
+              <TabsContent value="application-preferences" className="space-y-6">
+                <Card className="bg-whatcyber-gray border-whatcyber-light-gray">
+                  <CardHeader>
+                    <div className="flex items-center space-x-2">
+                      <SettingsIcon className="w-5 h-5 text-whatcyber-teal" />
+                      <CardTitle className="text-slate-100">Application Preferences</CardTitle>
+                    </div>
+                    <CardDescription className="text-slate-400">
+                      Customize your threat intelligence experience
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Manage Feeds */}
+                    <div>
+                      <h4 className="text-sm font-medium text-slate-300 mb-2">Manage Feeds</h4>
+                      <Button
+                        variant="outline"
+                        className="border-whatcyber-light-gray text-slate-300 hover:bg-whatcyber-dark"
+                        onClick={() => navigate('/threatfeed?view=follow')}
+                      >
+                        Go to Feed Management
+                        <ChevronRight className="w-4 h-4 ml-2" />
+                      </Button>
+                      <p className="text-xs text-slate-500 mt-2">
+                        Add, remove, and categorize your RSS feeds from the main page
+                      </p>
+                    </div>
+
+                    <Separator className="bg-whatcyber-light-gray" />
+
+                    {/* My Watchlist */}
+                    <div>
+                      <h4 className="text-sm font-medium text-slate-300 mb-2">My Watchlist</h4>
+                      <Label htmlFor="watchlist" className="text-xs text-slate-400">
+                        Keywords to track (e.g., CVE-2025-1234, MyCompanyName, Volt Typhoon)
+                      </Label>
+                      <textarea
+                        id="watchlist"
+                        value={settings.watchlistKeywords}
+                        onChange={(e) => setSettings({ ...settings, watchlistKeywords: e.target.value })}
+                        className="w-full mt-2 p-3 bg-whatcyber-dark border border-whatcyber-light-gray rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-whatcyber-teal min-h-[100px]"
+                        placeholder="Enter keywords, one per line or comma-separated"
+                      />
+                      <p className="text-xs text-slate-500 mt-2">
+                        <AlertCircle className="w-3 h-3 inline mr-1" />
+                        Articles matching these keywords will be highlighted in your feed (Coming soon)
+                      </p>
+                    </div>
+
+                    <Separator className="bg-whatcyber-light-gray" />
+
+                    {/* IOC Preferences */}
+                    <div>
+                      <h4 className="text-sm font-medium text-slate-300 mb-3">IOC Preferences</h4>
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label className="text-slate-300">Auto-run Extraction</Label>
+                            <p className="text-xs text-slate-500">
+                              Automatically extract IOCs on article load
+                            </p>
+                          </div>
+                          <Switch
+                            checked={settings.autoExtractIOCs}
+                            onCheckedChange={(checked) => setSettings({ ...settings, autoExtractIOCs: checked })}
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <Label className="text-slate-300">Auto-enrich IOCs</Label>
+                            <p className="text-xs text-slate-500">
+                              Automatically fetch reputation from VirusTotal, AbuseIPDB, etc.
+                            </p>
+                          </div>
+                          <Switch
+                            checked={settings.autoEnrichIOCs}
+                            onCheckedChange={(checked) => setSettings({ ...settings, autoEnrichIOCs: checked })}
+                          />
+                        </div>
+
+                        <div>
+                          <Label className="text-slate-300 mb-2 block">Hidden IOC Types</Label>
+                          <p className="text-xs text-slate-500 mb-3">
+                            Select IOC types you don't want to see
+                          </p>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {iocTypes.map((iocType) => (
+                              <div key={iocType} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={iocType}
+                                  checked={settings.hiddenIOCTypes?.includes(iocType)}
+                                  onCheckedChange={() => handleIOCTypeToggle(iocType)}
+                                />
+                                <label
+                                  htmlFor={iocType}
+                                  className="text-sm text-slate-300 cursor-pointer"
+                                >
+                                  {iocType}
+                                </label>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-3">
+                        <AlertCircle className="w-3 h-3 inline mr-1" />
+                        IOC extraction feature coming in a future update
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* API & Integrations Tab */}
+              <TabsContent value="api-integrations" className="space-y-6">
+                <Card className="bg-whatcyber-gray border-whatcyber-light-gray">
+                  <CardHeader>
+                    <div className="flex items-center space-x-2">
+                      <Key className="w-5 h-5 text-whatcyber-teal" />
+                      <CardTitle className="text-slate-100">API & Integrations</CardTitle>
+                    </div>
+                    <CardDescription className="text-slate-400">
+                      Connect external services and manage API access
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* My API Key */}
+                    <div>
+                      <h4 className="text-sm font-medium text-slate-300 mb-3">My API Key</h4>
+                      {apiKey ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center space-x-2">
+                            <div className="flex-1 relative">
+                              <Input
+                                value={apiKeyVisible ? apiKey : '•'.repeat(apiKey.length)}
+                                readOnly
+                                className="bg-whatcyber-dark border-whatcyber-light-gray text-slate-100 pr-10 font-mono text-sm"
+                              />
+                              <button
+                                onClick={() => setApiKeyVisible(!apiKeyVisible)}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300"
+                              >
+                                {apiKeyVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              </button>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-whatcyber-light-gray text-slate-300 hover:bg-whatcyber-dark"
+                              onClick={() => {
+                                navigator.clipboard.writeText(apiKey);
+                                toast({ title: "Copied!", description: "API key copied to clipboard" });
+                              }}
+                            >
+                              Copy
+                            </Button>
+                          </div>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setIsEditingDisplayName(true)}
-                            className="border-whatcyber-light-gray text-slate-300 hover:bg-whatcyber-dark"
+                            className="border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                            onClick={handleRevokeApiKey}
                           >
-                            Edit
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Revoke API Key
                           </Button>
-                        ) : (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={handleSaveDisplayName}
-                              disabled={isSaving || !!displayNameError}
-                              className="border-green-600 text-green-500 hover:bg-green-600 hover:text-white disabled:opacity-50"
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={handleCancelDisplayName}
-                              disabled={isSaving}
-                              className="border-red-600 text-red-500 hover:bg-red-600 hover:text-white disabled:opacity-50"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                      {displayNameError && (
-                        <p className="text-xs text-red-400 mt-1">{displayNameError}</p>
+                        </div>
+                      ) : (
+                        <div>
+                          <Button
+                            variant="outline"
+                            className="border-whatcyber-teal/50 text-whatcyber-teal hover:bg-whatcyber-teal/10"
+                            onClick={handleGenerateApiKey}
+                          >
+                            <Key className="w-4 h-4 mr-2" />
+                            Generate API Key
+                          </Button>
+                        </div>
                       )}
-                      {!isEditingDisplayName && (
-                        <p className="text-xs text-slate-500 mt-1">Click Edit to change your display name (letters, numbers, and spaces only, max 50 characters)</p>
-                      )}
+                      <p className="text-xs text-slate-500 mt-2">
+                        Use this key to access your curated feed via our API
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        <AlertCircle className="w-3 h-3 inline mr-1" />
+                        API endpoints coming in a future update
+                      </p>
                     </div>
-                    <div>
-                      <Label className="text-slate-300">Full Name</Label>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Input
-                          value={user.name}
-                          disabled
-                          className="bg-whatcyber-dark/50 border-whatcyber-light-gray text-slate-400 cursor-not-allowed"
-                        />
-                      </div>
-                      <p className="text-xs text-slate-500 mt-1">From your Google account (cannot be changed)</p>
-                    </div>
-                    <div>
-                      <Label className="text-slate-300">Email</Label>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Input
-                          value={user.email}
-                          disabled
-                          className="bg-whatcyber-dark/50 border-whatcyber-light-gray text-slate-400 cursor-not-allowed"
-                        />
-                        <span className="text-xs text-whatcyber-teal font-medium px-2 py-1 bg-whatcyber-teal/10 rounded">
-                          Primary
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-500 mt-1">Used for Google Sign-In</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* 2. Security & Privacy */}
-          <Card className="bg-whatcyber-gray border-whatcyber-light-gray">
-            <CardHeader>
-              <div className="flex items-center space-x-2">
-                <Shield className="w-5 h-5 text-whatcyber-teal" />
-                <CardTitle className="text-slate-100">Security & Privacy</CardTitle>
-              </div>
-              <CardDescription className="text-slate-400">
-                Manage your sessions and security settings
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h4 className="text-sm font-medium text-slate-300 mb-3">Active Sessions</h4>
-                <div className="bg-whatcyber-dark rounded-lg p-4 border border-whatcyber-light-gray">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <Monitor className="w-5 h-5 text-whatcyber-teal" />
-                      <div>
-                        <p className="text-sm font-medium text-slate-300">Current Session</p>
-                        <p className="text-xs text-slate-500">
-                          {navigator.userAgent.includes('Chrome') ? 'Chrome' : 'Browser'} on {
-                            navigator.platform.includes('Mac') ? 'macOS' :
-                              navigator.platform.includes('Win') ? 'Windows' :
-                                navigator.platform.includes('Linux') ? 'Linux' : 'Device'
-                          }
+                    <Separator className="bg-whatcyber-light-gray" />
+
+                    {/* Integration Settings */}
+                    <div>
+                      <h4 className="text-sm font-medium text-slate-300 mb-2">Integration Settings</h4>
+                      <div className="bg-whatcyber-dark rounded-lg p-4 border border-whatcyber-light-gray border-dashed">
+                        <p className="text-sm text-slate-400 text-center">
+                          Third-party integrations (VirusTotal, Shodan, etc.) coming soon
                         </p>
                       </div>
-                    </div>
-                    <span className="text-xs text-green-500 font-medium">Active</span>
-                  </div>
-                </div>
-                <p className="text-xs text-slate-500 mt-2">
-                  <AlertCircle className="w-3 h-3 inline mr-1" />
-                  Multi-session management coming in a future update
-                </p>
-              </div>
-
-              <Separator className="bg-whatcyber-light-gray" />
-
-              <div>
-                <h4 className="text-sm font-medium text-slate-300 mb-3">Password</h4>
-                <Button
-                  variant="outline"
-                  className="border-whatcyber-teal text-whatcyber-teal hover:bg-whatcyber-teal/10"
-                  onClick={() => navigate('/set-password/')}
-                >
-                  <Key className="w-4 h-4 mr-2" />
-                  Set/Change Password
-                </Button>
-                <p className="text-xs text-slate-500 mt-2">
-                  Set or update your account password to enable email/password login
-                </p>
-              </div>
-
-              <Separator className="bg-whatcyber-light-gray" />
-
-              <div>
-                <Button
-                  variant="outline"
-                  className="border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                  onClick={handleSignOutEverywhere}
-                >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Sign Out Everywhere
-                </Button>
-                <p className="text-xs text-slate-500 mt-2">
-                  This will invalidate all other sessions except the current one
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* 3. Application Preferences */}
-          <Card className="bg-whatcyber-gray border-whatcyber-light-gray">
-            <CardHeader>
-              <div className="flex items-center space-x-2">
-                <SettingsIcon className="w-5 h-5 text-whatcyber-teal" />
-                <CardTitle className="text-slate-100">Application Preferences</CardTitle>
-              </div>
-              <CardDescription className="text-slate-400">
-                Customize your threat intelligence experience
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Manage Feeds */}
-              <div>
-                <h4 className="text-sm font-medium text-slate-300 mb-2">Manage Feeds</h4>
-                <Button
-                  variant="outline"
-                  className="border-whatcyber-light-gray text-slate-300 hover:bg-whatcyber-dark"
-                  onClick={() => navigate('/')}
-                >
-                  Go to Feed Management
-                  <ChevronRight className="w-4 h-4 ml-2" />
-                </Button>
-                <p className="text-xs text-slate-500 mt-2">
-                  Add, remove, and categorize your RSS feeds from the main page
-                </p>
-              </div>
-
-              <Separator className="bg-whatcyber-light-gray" />
-
-              {/* My Watchlist */}
-              <div>
-                <h4 className="text-sm font-medium text-slate-300 mb-2">My Watchlist</h4>
-                <Label htmlFor="watchlist" className="text-xs text-slate-400">
-                  Keywords to track (e.g., CVE-2025-1234, MyCompanyName, Volt Typhoon)
-                </Label>
-                <textarea
-                  id="watchlist"
-                  value={settings.watchlistKeywords}
-                  onChange={(e) => setSettings({ ...settings, watchlistKeywords: e.target.value })}
-                  className="w-full mt-2 p-3 bg-whatcyber-dark border border-whatcyber-light-gray rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-whatcyber-teal min-h-[100px]"
-                  placeholder="Enter keywords, one per line or comma-separated"
-                />
-                <p className="text-xs text-slate-500 mt-2">
-                  <AlertCircle className="w-3 h-3 inline mr-1" />
-                  Articles matching these keywords will be highlighted in your feed (Coming soon)
-                </p>
-              </div>
-
-              <Separator className="bg-whatcyber-light-gray" />
-
-              {/* IOC Preferences */}
-              <div>
-                <h4 className="text-sm font-medium text-slate-300 mb-3">IOC Preferences</h4>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-slate-300">Auto-run Extraction</Label>
-                      <p className="text-xs text-slate-500">
-                        Automatically extract IOCs on article load
+                      <p className="text-xs text-slate-500 mt-2">
+                        You'll be able to enter your own API keys for enrichment services
                       </p>
                     </div>
-                    <Switch
-                      checked={settings.autoExtractIOCs}
-                      onCheckedChange={(checked) => setSettings({ ...settings, autoExtractIOCs: checked })}
-                    />
-                  </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-slate-300">Auto-enrich IOCs</Label>
-                      <p className="text-xs text-slate-500">
-                        Automatically fetch reputation from VirusTotal, AbuseIPDB, etc.
-                      </p>
-                    </div>
-                    <Switch
-                      checked={settings.autoEnrichIOCs}
-                      onCheckedChange={(checked) => setSettings({ ...settings, autoEnrichIOCs: checked })}
-                    />
-                  </div>
-
-                  <div>
-                    <Label className="text-slate-300 mb-2 block">Hidden IOC Types</Label>
-                    <p className="text-xs text-slate-500 mb-3">
-                      Select IOC types you don't want to see
-                    </p>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {iocTypes.map((iocType) => (
-                        <div key={iocType} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={iocType}
-                            checked={settings.hiddenIOCTypes?.includes(iocType)}
-                            onCheckedChange={() => handleIOCTypeToggle(iocType)}
-                          />
-                          <label
-                            htmlFor={iocType}
-                            className="text-sm text-slate-300 cursor-pointer"
-                          >
-                            {iocType}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <p className="text-xs text-slate-500 mt-3">
-                  <AlertCircle className="w-3 h-3 inline mr-1" />
-                  IOC extraction feature coming in a future update
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* 4. API & Integrations */}
-          <Card className="bg-whatcyber-gray border-whatcyber-light-gray">
-            <CardHeader>
-              <div className="flex items-center space-x-2">
-                <Key className="w-5 h-5 text-whatcyber-teal" />
-                <CardTitle className="text-slate-100">API & Integrations</CardTitle>
-              </div>
-              <CardDescription className="text-slate-400">
-                Connect external services and manage API access
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* My API Key */}
-              <div>
-                <h4 className="text-sm font-medium text-slate-300 mb-3">My API Key</h4>
-                {apiKey ? (
-                  <div className="space-y-3">
+              {/* Subscription & Billing Tab */}
+              <TabsContent value="subscription-billing" className="space-y-6">
+                <Card className="bg-whatcyber-gray border-whatcyber-light-gray">
+                  <CardHeader>
                     <div className="flex items-center space-x-2">
-                      <div className="flex-1 relative">
-                        <Input
-                          value={apiKeyVisible ? apiKey : '•'.repeat(apiKey.length)}
-                          readOnly
-                          className="bg-whatcyber-dark border-whatcyber-light-gray text-slate-100 pr-10 font-mono text-sm"
-                        />
-                        <button
-                          onClick={() => setApiKeyVisible(!apiKeyVisible)}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300"
-                        >
-                          {apiKeyVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-whatcyber-light-gray text-slate-300 hover:bg-whatcyber-dark"
-                        onClick={() => {
-                          navigator.clipboard.writeText(apiKey);
-                          toast({ title: "Copied!", description: "API key copied to clipboard" });
-                        }}
-                      >
-                        Copy
-                      </Button>
+                      <CreditCard className="w-5 h-5 text-whatcyber-teal" />
+                      <CardTitle className="text-slate-100">Subscription & Billing</CardTitle>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                      onClick={handleRevokeApiKey}
-                    >
-                      <Trash2 className="w-4 h-4 mr-2" />
-                      Revoke API Key
-                    </Button>
-                  </div>
+                    <CardDescription className="text-slate-400">
+                      Manage your subscription and billing information
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="bg-gradient-to-br from-whatcyber-teal/10 to-whatcyber-teal/5 rounded-lg p-6 border border-whatcyber-teal/30">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h4 className="text-lg font-semibold text-slate-100 mb-2">Current Plan: Free</h4>
+                          <ul className="space-y-2 text-sm text-slate-300">
+                            <li className="flex items-center">
+                              <span className="w-1.5 h-1.5 bg-whatcyber-teal rounded-full mr-2"></span>
+                              Unlimited RSS Feeds
+                            </li>
+                            <li className="flex items-center">
+                              <span className="w-1.5 h-1.5 bg-whatcyber-teal rounded-full mr-2"></span>
+                              Full CVE Database Access
+                            </li>
+                            <li className="flex items-center">
+                              <span className="w-1.5 h-1.5 bg-whatcyber-teal rounded-full mr-2"></span>
+                              Unlimited Bookmarks
+                            </li>
+                            <li className="flex items-center">
+                              <span className="w-1.5 h-1.5 bg-whatcyber-teal rounded-full mr-2"></span>
+                              Basic Support
+                            </li>
+                          </ul>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-bold text-whatcyber-teal">$0</p>
+                          <p className="text-xs text-slate-400">forever</p>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-3">
+                      <AlertCircle className="w-3 h-3 inline mr-1" />
+                      Pro plan with advanced features coming soon
+                    </p>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+            </Tabs>
+
+            {/* Global Save Button */}
+            <div className="mt-8 flex justify-end space-x-3">
+              <Button
+                className="bg-whatcyber-teal hover:bg-whatcyber-teal/90 text-whatcyber-dark font-semibold"
+                onClick={handleSaveSettings}
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
                 ) : (
-                  <div>
-                    <Button
-                      variant="outline"
-                      className="border-whatcyber-teal/50 text-whatcyber-teal hover:bg-whatcyber-teal/10"
-                      onClick={handleGenerateApiKey}
-                    >
-                      <Key className="w-4 h-4 mr-2" />
-                      Generate API Key
-                    </Button>
-                  </div>
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Preferences
+                  </>
                 )}
-                <p className="text-xs text-slate-500 mt-2">
-                  Use this key to access your curated feed via our API
-                </p>
-                <p className="text-xs text-slate-500 mt-1">
-                  <AlertCircle className="w-3 h-3 inline mr-1" />
-                  API endpoints coming in a future update
-                </p>
-              </div>
-
-              <Separator className="bg-whatcyber-light-gray" />
-
-              {/* Integration Settings */}
-              <div>
-                <h4 className="text-sm font-medium text-slate-300 mb-2">Integration Settings</h4>
-                <div className="bg-whatcyber-dark rounded-lg p-4 border border-whatcyber-light-gray border-dashed">
-                  <p className="text-sm text-slate-400 text-center">
-                    Third-party integrations (VirusTotal, Shodan, etc.) coming soon
-                  </p>
-                </div>
-                <p className="text-xs text-slate-500 mt-2">
-                  You'll be able to enter your own API keys for enrichment services
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* 5. Subscription & Billing */}
-          <Card className="bg-whatcyber-gray border-whatcyber-light-gray">
-            <CardHeader>
-              <div className="flex items-center space-x-2">
-                <CreditCard className="w-5 h-5 text-whatcyber-teal" />
-                <CardTitle className="text-slate-100">Subscription & Billing</CardTitle>
-              </div>
-              <CardDescription className="text-slate-400">
-                Manage your subscription and billing information
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="bg-gradient-to-br from-whatcyber-teal/10 to-whatcyber-teal/5 rounded-lg p-6 border border-whatcyber-teal/30">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h4 className="text-lg font-semibold text-slate-100 mb-2">Current Plan: Free</h4>
-                    <ul className="space-y-2 text-sm text-slate-300">
-                      <li className="flex items-center">
-                        <span className="w-1.5 h-1.5 bg-whatcyber-teal rounded-full mr-2"></span>
-                        Unlimited RSS Feeds
-                      </li>
-                      <li className="flex items-center">
-                        <span className="w-1.5 h-1.5 bg-whatcyber-teal rounded-full mr-2"></span>
-                        Full CVE Database Access
-                      </li>
-                      <li className="flex items-center">
-                        <span className="w-1.5 h-1.5 bg-whatcyber-teal rounded-full mr-2"></span>
-                        Unlimited Bookmarks
-                      </li>
-                      <li className="flex items-center">
-                        <span className="w-1.5 h-1.5 bg-whatcyber-teal rounded-full mr-2"></span>
-                        Basic Support
-                      </li>
-                    </ul>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-whatcyber-teal">$0</p>
-                    <p className="text-xs text-slate-400">forever</p>
-                  </div>
-                </div>
-              </div>
-              <p className="text-xs text-slate-500 mt-3">
-                <AlertCircle className="w-3 h-3 inline mr-1" />
-                Pro plan with advanced features coming soon
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* 6. Notifications */}
-          <Card className="bg-whatcyber-gray border-whatcyber-light-gray">
-            <CardHeader>
-              <div className="flex items-center space-x-2">
-                <Bell className="w-5 h-5 text-whatcyber-teal" />
-                <CardTitle className="text-slate-100">Notifications</CardTitle>
-              </div>
-              <CardDescription className="text-slate-400">
-                Configure how you receive updates and alerts
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-slate-300">Weekly Digest</Label>
-                  <p className="text-xs text-slate-500">
-                    Receive a weekly summary of top threats
-                  </p>
-                </div>
-                <Switch
-                  checked={settings.emailWeeklyDigest}
-                  onCheckedChange={(checked) => setSettings({ ...settings, emailWeeklyDigest: checked })}
-                />
-              </div>
-
-              <Separator className="bg-whatcyber-light-gray" />
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-slate-300">Watchlist Alerts</Label>
-                  <p className="text-xs text-slate-500">
-                    Email immediately when high-priority keywords are found
-                  </p>
-                </div>
-                <Switch
-                  checked={settings.emailWatchlistAlerts}
-                  onCheckedChange={(checked) => setSettings({ ...settings, emailWatchlistAlerts: checked })}
-                />
-              </div>
-
-              <p className="text-xs text-slate-500 mt-3">
-                <AlertCircle className="w-3 h-3 inline mr-1" />
-                Email notifications will be available in a future update
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Save Button */}
-          <div className="flex justify-end space-x-3 pb-8">
-            <Button
-              variant="outline"
-              className="border-whatcyber-light-gray text-slate-300 hover:bg-whatcyber-dark"
-              onClick={() => navigate('/')}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="bg-whatcyber-teal hover:bg-whatcyber-teal/90 text-whatcyber-dark"
-              onClick={handleSaveSettings}
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Settings
-                </>
-              )}
-            </Button>
+              </Button>
+            </div>
           </div>
-        </div>
+        </main>
       </div>
     </div>
   );
