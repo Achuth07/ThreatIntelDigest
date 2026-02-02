@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { insertArticleSchema, insertBookmarkSchema, insertRssSourceSchema } from "../shared/schema";
+import { insertArticleSchema, insertBookmarkSchema, insertRssSourceSchema, insertWatchlistItemSchema } from "../shared/schema";
 import { storage, type IStorage } from "./storage";
 import { MemStorage, type CVE } from "./storage";
 import Parser from "rss-parser";
@@ -219,6 +219,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/user-preferences', async (req, res) => {
     const { mockReq, mockRes } = createMockHandlers(req, res, '/api/user-preferences');
+    await consolidatedApiHandler(mockReq as any, mockRes as any);
+  });
+
+  // Watchlist API
+  app.get('/api/watchlist', async (req, res) => {
+    const { mockReq, mockRes } = createMockHandlers(req, res, '/api/watchlist');
+    await consolidatedApiHandler(mockReq as any, mockRes as any);
+  });
+
+  app.post('/api/watchlist', async (req, res) => {
+    const { mockReq, mockRes } = createMockHandlers(req, res, '/api/watchlist');
+    await consolidatedApiHandler(mockReq as any, mockRes as any);
+  });
+
+  app.delete('/api/watchlist/:id', async (req, res) => {
+    const { mockReq, mockRes } = createMockHandlers(req, res, `/api/watchlist/${req.params.id}`);
+    await consolidatedApiHandler(mockReq as any, mockRes as any);
+  });
+
+  app.get('/api/watchlist/feed', async (req, res) => {
+    const { mockReq, mockRes } = createMockHandlers(req, res, '/api/watchlist/feed');
     await consolidatedApiHandler(mockReq as any, mockRes as any);
   });
 

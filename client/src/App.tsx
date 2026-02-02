@@ -35,6 +35,7 @@ import CVEDetailPage from "@/pages/cve-detail";
 import VulnerabilitiesPage from '@/pages/vulnerabilities';
 import Blog from "@/pages/blog";
 import BlogPost from "@/pages/blog-post";
+import WatchlistPage from "@/pages/watchlist";
 
 
 // Import context from separate file to prevent HMR issues
@@ -62,6 +63,7 @@ function Router() {
         <Route path="/" component={LandingPage} />
         <Route path="/dashboard" component={Dashboard} />
         <Route path="/threatfeed" component={Home} />
+        <Route path="/watchlist" component={WatchlistPage} />
         <Route path="/login" component={LoginPage} />
         <Route path="/register" component={RegisterPage} />
         <Route path="/onboarding" component={OnboardingPage} />

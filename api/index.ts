@@ -60,6 +60,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return handleUserPreferencesEndpoints(req, res, action);
     }
 
+    // Watchlist endpoints
+    if (pathname.startsWith('/api/watchlist')) {
+      return handleWatchlistEndpoints(req, res, action);
+    }
+
     // Visitor count endpoints
     if (pathname.startsWith('/api/visitor-count')) {
       return handleVisitorCountEndpoints(req, res, action);
@@ -144,8 +149,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return handleVulnerabilityDetailEndpoint(req, res, cveIdMatch[1]);
     }
 
+
     if (pathname.startsWith('/api/vulnerabilities')) {
       return handleVulnerabilitiesEndpoints(req, res, action);
+    }
+
+    // Watchlist endpoints
+    if (pathname.startsWith('/api/watchlist')) {
+      return handleWatchlistEndpoints(req, res, action);
     }
 
 
@@ -3867,7 +3878,7 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
 
           // Add timeout and handle SSL certificate issues by using fetch with custom options
           controller = new AbortController();
-          timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+          timeoutId = setTimeout(() => controller?.abort(), 15000); // 15 second timeout
 
           // Try to fetch
           response = await fetch(feedUrl, {
@@ -5319,3 +5330,86 @@ async function handleWhatCyberRssEndpoint(req: VercelRequest, res: VercelRespons
 }
 
 
+
+// Handler for Watchlist endpoints
+async function handleWatchlistEndpoints(req: VercelRequest, res: VercelResponse, action: string) {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  // GET /api/watchlist/feed
+  if (req.url?.includes('/feed') && req.method === 'GET') {
+    try {
+      // Get user's watchlist items first
+      const items = await storage.getWatchlistItems(userId);
+      const keywords = items.map(item => item.keyword);
+
+      const [articles, cves, kevs] = await Promise.all([
+        storage.getArticlesByKeywords(keywords),
+        storage.getCVEsByKeywords(keywords),
+        storage.getKEVsByKeywords(keywords)
+      ]);
+
+      return res.status(200).json({ articles, cves, kevs });
+    } catch (error) {
+      console.error('Error fetching watchlist feed:', error);
+      return res.status(500).json({ error: 'Failed to fetch watchlist feed' });
+    }
+  }
+
+  // GET /api/watchlist
+  if (req.method === 'GET') {
+    try {
+      const items = await storage.getWatchlistItems(userId);
+      return res.status(200).json(items);
+    } catch (error) {
+      console.error('Error fetching watchlist items:', error);
+      return res.status(500).json({ error: 'Failed to fetch watchlist items' });
+    }
+  }
+
+  // POST /api/watchlist
+  if (req.method === 'POST') {
+    try {
+      const { keyword } = req.body;
+      if (!keyword) {
+        return res.status(400).json({ error: 'Keyword is required' });
+      }
+
+      const newItem = await storage.createWatchlistItem({
+        userId,
+        keyword
+      });
+      return res.status(201).json(newItem);
+    } catch (error) {
+      console.error('Error creating watchlist item:', error);
+      return res.status(500).json({ error: 'Failed to create watchlist item' });
+    }
+  }
+
+  // DELETE /api/watchlist/:id
+  if (req.method === 'DELETE') {
+    try {
+      // Extract ID from URL path or action
+      const pathParts = new URL(req.url!, `https://${req.headers.host}`).pathname.split('/');
+      const id = pathParts[pathParts.length - 1];
+
+      if (!id) {
+        return res.status(400).json({ error: 'ID is required' });
+      }
+
+      const success = await storage.deleteWatchlistItem(id, userId);
+      if (success) {
+        return res.status(200).json({ message: 'Item deleted' });
+      } else {
+        return res.status(404).json({ error: 'Item not found' });
+      }
+    } catch (error) {
+      console.error('Error deleting watchlist item:', error);
+      return res.status(500).json({ error: 'Failed to delete watchlist item' });
+    }
+  }
+
+  return res.status(405).json({ error: 'Method not allowed' });
+}

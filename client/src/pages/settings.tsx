@@ -544,20 +544,17 @@ export default function Settings() {
                     {/* My Watchlist */}
                     <div>
                       <h4 className="text-sm font-medium text-slate-300 mb-2">My Watchlist</h4>
-                      <Label htmlFor="watchlist" className="text-xs text-slate-400">
-                        Keywords to track (e.g., CVE-2025-1234, MyCompanyName, Volt Typhoon)
-                      </Label>
-                      <textarea
-                        id="watchlist"
-                        value={settings.watchlistKeywords}
-                        onChange={(e) => setSettings({ ...settings, watchlistKeywords: e.target.value })}
-                        className="w-full mt-2 p-3 bg-whatcyber-dark border border-whatcyber-light-gray rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-whatcyber-teal min-h-[100px]"
-                        placeholder="Enter keywords, one per line or comma-separated"
-                      />
-                      <p className="text-xs text-slate-500 mt-2">
-                        <AlertCircle className="w-3 h-3 inline mr-1" />
-                        Articles matching these keywords will be highlighted in your feed (Coming soon)
-                      </p>
+                      <div className="bg-whatcyber-dark rounded-lg p-4 border border-whatcyber-light-gray">
+                        <p className="text-sm text-slate-400 mb-4">
+                          Track specific keywords across articles, vulnerabilities, and exploited threats.
+                        </p>
+                        <Button
+                          onClick={() => navigate('/watchlist')}
+                          className="bg-whatcyber-teal hover:bg-whatcyber-teal/90 text-whatcyber-dark"
+                        >
+                          Manage Watchlist
+                        </Button>
+                      </div>
                     </div>
 
                     <Separator className="bg-whatcyber-light-gray" />

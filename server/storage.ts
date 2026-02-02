@@ -1,4 +1,4 @@
-import { type Article, type InsertArticle, type Bookmark, type InsertBookmark, type RssSource, type InsertRssSource, type UserSourcePreference, type InsertUserSourcePreference, type UserPreferences, type InsertUserPreferences, type User, type KnownExploitedVulnerability, type InsertKnownExploitedVulnerability, type ThreatGroup } from "@shared/schema.js";
+import { type Article, type InsertArticle, type Bookmark, type InsertBookmark, type RssSource, type InsertRssSource, type UserSourcePreference, type InsertUserSourcePreference, type UserPreferences, type InsertUserPreferences, type User, type KnownExploitedVulnerability, type InsertKnownExploitedVulnerability, type ThreatGroup, type WatchlistItem, type InsertWatchlistItem } from "@shared/schema.js";
 import { randomUUID } from "crypto";
 
 // Define CVE types for in-memory storage
@@ -129,24 +129,87 @@ export interface IStorage {
     kevs: KnownExploitedVulnerability[];
     threat_actors: ThreatGroup[];
   }>;
+  // Watchlist
+  getWatchlistItems(userId: number): Promise<WatchlistItem[]>;
+  createWatchlistItem(insertWatchlistItem: InsertWatchlistItem): Promise<WatchlistItem>;
+  deleteWatchlistItem(id: string, userId: number): Promise<boolean>;
+  getArticlesByKeywords(keywords: string[], limit?: number): Promise<Article[]>;
+  getCVEsByKeywords(keywords: string[], limit?: number): Promise<CVE[]>;
+  getKEVsByKeywords(keywords: string[], limit?: number): Promise<KnownExploitedVulnerability[]>;
 }
 
 export class MemStorage implements IStorage {
+  private users: Map<number, User>;
   private articles: Map<string, Article>;
   private bookmarks: Map<string, Bookmark>;
   private rssSources: Map<string, RssSource>;
-  private cves: Map<string, CVE>;
   private userSourcePreferences: Map<string, UserSourcePreference>;
   private userPreferences: Map<number, UserPreferences>;
+  private cves: Map<string, CVE>;
+  private kevs: Map<string, KnownExploitedVulnerability>;
+  private watchlistItems: Map<string, WatchlistItem>;
+  currentId: number;
 
   constructor() {
+    this.users = new Map();
     this.articles = new Map();
     this.bookmarks = new Map();
     this.rssSources = new Map();
-    this.cves = new Map();
     this.userSourcePreferences = new Map();
     this.userPreferences = new Map();
+    this.cves = new Map();
+    this.kevs = new Map();
+    this.watchlistItems = new Map();
+    this.currentId = 1;
     this.initializeDefaultSources();
+  }
+
+  // Watchlist methods
+  async getWatchlistItems(userId: number): Promise<WatchlistItem[]> {
+    return Array.from(this.watchlistItems.values()).filter(item => item.userId === userId);
+  }
+
+  async createWatchlistItem(insertWatchlistItem: InsertWatchlistItem): Promise<WatchlistItem> {
+    const id = `watchlist-${this.currentId++}`; // Mock UUID
+    const newItem: WatchlistItem = { ...insertWatchlistItem, id, createdAt: new Date() };
+    this.watchlistItems.set(id, newItem);
+    return newItem;
+  }
+
+  async deleteWatchlistItem(id: string, userId: number): Promise<boolean> {
+    const item = this.watchlistItems.get(id);
+    if (!item || item.userId !== userId) return false;
+    this.watchlistItems.delete(id);
+    return true;
+  }
+
+  async getArticlesByKeywords(keywords: string[], limit = 50): Promise<Article[]> {
+    if (!keywords.length) return [];
+    const lowerKeywords = keywords.map(k => k.toLowerCase());
+    return Array.from(this.articles.values())
+      .filter(a => lowerKeywords.some(k => a.title.toLowerCase().includes(k) || (a.summary && a.summary.toLowerCase().includes(k))))
+      .slice(0, limit);
+  }
+
+  async getCVEsByKeywords(keywords: string[], limit = 50): Promise<CVE[]> {
+    if (!keywords.length) return [];
+    const lowerKeywords = keywords.map(k => k.toLowerCase());
+    return Array.from(this.cves.values())
+      .filter(c => lowerKeywords.some(k => c.id.toLowerCase().includes(k) || (c.description && c.description.toLowerCase().includes(k))))
+      .slice(0, limit);
+  }
+
+  async getKEVsByKeywords(keywords: string[], limit = 50): Promise<KnownExploitedVulnerability[]> {
+    if (!keywords.length) return [];
+    const lowerKeywords = keywords.map(k => k.toLowerCase());
+    return Array.from(this.kevs.values())
+      .filter(k => lowerKeywords.some(kw =>
+        k.cveID.toLowerCase().includes(kw) ||
+        k.product.toLowerCase().includes(kw) ||
+        k.vendorProject.toLowerCase().includes(kw) ||
+        k.vulnerabilityName.toLowerCase().includes(kw)
+      ))
+      .slice(0, limit);
   }
 
   private initializeDefaultSources() {

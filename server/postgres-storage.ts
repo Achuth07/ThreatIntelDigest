@@ -1,9 +1,9 @@
 import { and, desc, asc, ilike, inArray, eq, or, sql } from 'drizzle-orm';
 import { getDb } from './db.js';
-import { articles, bookmarks, rssSources, vulnerabilities, users, userSourcePreferences, userPreferences, knownExploitedVulnerabilities, cweCategories, malwareDailyStats, threatGroups } from '../shared/schema.js';
+import { articles, bookmarks, rssSources, vulnerabilities, users, userSourcePreferences, userPreferences, knownExploitedVulnerabilities, cweCategories, malwareDailyStats, threatGroups, watchlistItems } from '../shared/schema.js';
 import type { IStorage, CVE, InsertCVE } from './storage.js';
 import type { Article, InsertArticle, Bookmark, InsertBookmark, RssSource, InsertRssSource } from '../shared/schema.js';
-import type { User, InsertUser, UserSourcePreference, InsertUserSourcePreference, UserPreferences, InsertUserPreferences, KnownExploitedVulnerability, InsertKnownExploitedVulnerability, MalwareDailyStat, ThreatGroup } from '../shared/schema.js';
+import type { User, InsertUser, UserSourcePreference, InsertUserSourcePreference, UserPreferences, InsertUserPreferences, KnownExploitedVulnerability, InsertKnownExploitedVulnerability, MalwareDailyStat, ThreatGroup, WatchlistItem, InsertWatchlistItem } from '../shared/schema.js';
 
 export class PostgresStorage implements IStorage {
   private db = getDb();
@@ -803,6 +803,120 @@ export class PostgresStorage implements IStorage {
       throw error;
     }
   }
+
+  // Watchlist Implementation
+  async getWatchlistItems(userId: number): Promise<WatchlistItem[]> {
+    try {
+      return await this.db.select().from(watchlistItems).where(eq(watchlistItems.userId, userId)).orderBy(desc(watchlistItems.createdAt));
+    } catch (error) {
+      console.error('Error fetching watchlist items:', error);
+      return [];
+    }
+  }
+
+  async createWatchlistItem(insertWatchlistItem: InsertWatchlistItem): Promise<WatchlistItem> {
+    try {
+      const result = await this.db.insert(watchlistItems).values({
+        userId: insertWatchlistItem.userId,
+        keyword: insertWatchlistItem.keyword,
+      }).returning();
+      return result[0];
+    } catch (error) {
+      console.error('Error creating watchlist item:', error);
+      throw error;
+    }
+  }
+
+  async deleteWatchlistItem(id: string, userId: number): Promise<boolean> {
+    try {
+      const result = await this.db.delete(watchlistItems).where(and(eq(watchlistItems.id, id), eq(watchlistItems.userId, userId)));
+      return (result.rowCount || 0) > 0;
+    } catch (error) {
+      console.error('Error deleting watchlist item:', error);
+      return false;
+    }
+  }
+
+  async getArticlesByKeywords(keywords: string[], limit = 50): Promise<Article[]> {
+    if (!keywords.length) return [];
+    try {
+      // Use efficient ILIKE ANY for multiple keywords
+      const conditions = keywords.map(keyword => {
+        const term = `%${keyword}%`;
+        return or(ilike(articles.title, term), ilike(articles.summary, term));
+      });
+
+      return await this.db.select().from(articles)
+        .where(or(...conditions))
+        .orderBy(desc(articles.publishedAt))
+        .limit(limit);
+    } catch (error) {
+      console.error('Error fetching articles by keywords:', error);
+      return [];
+    }
+  }
+
+  async getCVEsByKeywords(keywords: string[], limit = 50): Promise<CVE[]> {
+    if (!keywords.length) return [];
+    try {
+      const conditions = keywords.map(keyword => {
+        const term = `%${keyword}%`;
+        return or(ilike(vulnerabilities.id, term), ilike(vulnerabilities.searchVector, term));
+      });
+
+      const results = await this.db.select().from(vulnerabilities)
+        .where(or(...conditions))
+        .orderBy(desc(vulnerabilities.publishedDate))
+        .limit(limit);
+
+      return results.map(result => ({
+        id: result.id,
+        description: (result as any).searchVector || "",
+        publishedDate: result.publishedDate,
+        lastModifiedDate: result.lastModifiedDate,
+        vulnStatus: result.vulnStatus,
+        cvssV3Score: result.cvssV3Score ? parseFloat(result.cvssV3Score as any) : null,
+        cvssV3Severity: result.cvssV3Severity,
+        cvssV2Score: result.cvssV2Score ? parseFloat(result.cvssV2Score as any) : null,
+        cvssV2Severity: result.cvssV2Severity,
+        cvssVector: result.cvssVector,
+        exploitabilityScore: result.exploitabilityScore ? parseFloat(result.exploitabilityScore as any) : null,
+        impactScore: result.impactScore ? parseFloat(result.impactScore as any) : null,
+        weaknesses: result.weaknesses || [],
+        affectedProducts: [],
+        references: [],
+        createdAt: result.createdAt || new Date()
+      }));
+    } catch (error) {
+      console.error('Error fetching CVEs by keywords:', error);
+      return [];
+    }
+  }
+
+  async getKEVsByKeywords(keywords: string[], limit = 50): Promise<KnownExploitedVulnerability[]> {
+    if (!keywords.length) return [];
+    try {
+      const conditions = keywords.map(keyword => {
+        const term = `%${keyword}%`;
+        return or(
+          ilike(knownExploitedVulnerabilities.cveID, term),
+          ilike(knownExploitedVulnerabilities.vendorProject, term),
+          ilike(knownExploitedVulnerabilities.product, term),
+          ilike(knownExploitedVulnerabilities.vulnerabilityName, term),
+          ilike(knownExploitedVulnerabilities.shortDescription, term)
+        );
+      });
+
+      return await this.db.select().from(knownExploitedVulnerabilities)
+        .where(or(...conditions))
+        .orderBy(desc(knownExploitedVulnerabilities.dateAdded))
+        .limit(limit);
+    } catch (error) {
+      console.error('Error fetching KEVs by keywords:', error);
+      return [];
+    }
+  }
+
   // CISA KEV
   async getKnownExploitedVulnerabilities(params?: { limit?: number; offset?: number; vendorProject?: string; knownRansomwareCampaignUse?: string; sort?: string }): Promise<(KnownExploitedVulnerability & { cvssV3Score: number | null, cvssV3Severity: string | null })[]> {
     console.log('getKnownExploitedVulnerabilities called with params:', params);
