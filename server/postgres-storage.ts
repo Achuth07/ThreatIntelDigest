@@ -840,10 +840,10 @@ export class PostgresStorage implements IStorage {
   async getArticlesByKeywords(keywords: string[], limit = 50): Promise<Article[]> {
     if (!keywords.length) return [];
     try {
-      // Use efficient ILIKE ANY for multiple keywords
+      // Use efficient FTS (Full Text Search) with websearch_to_tsquery for multiple keywords
+      // distinct on (articles.id) to avoid duplicates if multiple keywords match
       const conditions = keywords.map(keyword => {
-        const term = `%${keyword}%`;
-        return or(ilike(articles.title, term), ilike(articles.summary, term));
+        return sql`to_tsvector('english', ${articles.title} || ' ' || ${articles.summary}) @@ websearch_to_tsquery('english', ${keyword})`;
       });
 
       return await this.db.select().from(articles)
@@ -860,8 +860,8 @@ export class PostgresStorage implements IStorage {
     if (!keywords.length) return [];
     try {
       const conditions = keywords.map(keyword => {
-        const term = `%${keyword}%`;
-        return or(ilike(vulnerabilities.id, term), ilike(vulnerabilities.searchVector, term));
+        // Search ID and description (stored in searchVector since description col was dropped)
+        return sql`to_tsvector('english', ${vulnerabilities.id} || ' ' || COALESCE(${vulnerabilities.searchVector}, '')) @@ websearch_to_tsquery('english', ${keyword})`;
       });
 
       const results = await this.db.select().from(vulnerabilities)
@@ -897,14 +897,7 @@ export class PostgresStorage implements IStorage {
     if (!keywords.length) return [];
     try {
       const conditions = keywords.map(keyword => {
-        const term = `%${keyword}%`;
-        return or(
-          ilike(knownExploitedVulnerabilities.cveID, term),
-          ilike(knownExploitedVulnerabilities.vendorProject, term),
-          ilike(knownExploitedVulnerabilities.product, term),
-          ilike(knownExploitedVulnerabilities.vulnerabilityName, term),
-          ilike(knownExploitedVulnerabilities.shortDescription, term)
-        );
+        return sql`to_tsvector('english', ${knownExploitedVulnerabilities.vendorProject} || ' ' || ${knownExploitedVulnerabilities.product} || ' ' || ${knownExploitedVulnerabilities.vulnerabilityName} || ' ' || ${knownExploitedVulnerabilities.shortDescription}) @@ websearch_to_tsquery('english', ${keyword})`;
       });
 
       return await this.db.select().from(knownExploitedVulnerabilities)

@@ -21,11 +21,15 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { QueryBuilder } from "@/components/query-builder";
 import { Header } from '@/components/header';
 import { Sidebar } from '@/components/sidebar';
 import { SEO } from '@/components/seo';
 import type { Bookmark } from '@shared/schema';
 import { getAuthenticatedUser } from '@/lib/auth';
+
+import { ArticleViewer } from '@/components/article-viewer';
 
 interface WatchlistItem {
     id: string;
@@ -47,6 +51,8 @@ export default function WatchlistPage() {
 
     // Layout state
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [selectedArticleUrl, setSelectedArticleUrl] = useState<string | null>(null);
+    const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 
     // Sidebar dummy state (since this page focuses on watchlist, these are just for display/compatibility)
     const [selectedSource] = useState('all');
@@ -80,6 +86,7 @@ export default function WatchlistPage() {
             queryClient.invalidateQueries({ queryKey: ["/api/watchlist"] });
             queryClient.invalidateQueries({ queryKey: ["/api/watchlist/feed"] });
             setNewKeyword("");
+            setIsAddDialogOpen(false);
             toast({
                 title: "Keyword added",
                 description: "Your watchlist has been updated.",
@@ -109,8 +116,7 @@ export default function WatchlistPage() {
     });
 
     // Handlers
-    const handleAddKeyword = (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleAddKeyword = () => {
         if (!newKeyword.trim()) return;
         addMutation.mutate(newKeyword.trim());
     };
@@ -134,6 +140,14 @@ export default function WatchlistPage() {
 
     const handleSidebarToggle = () => setIsSidebarOpen(!isSidebarOpen);
     const handleSidebarClose = () => setIsSidebarOpen(false);
+
+    const handleReadHere = (articleUrl: string) => {
+        setSelectedArticleUrl(articleUrl);
+    };
+
+    const handleCloseArticleViewer = () => {
+        setSelectedArticleUrl(null);
+    };
 
     const seoProps = {
         title: "My Watchlist | WhatCyber",
@@ -200,20 +214,37 @@ export default function WatchlistPage() {
                                     <CardDescription>Manage your tracked terms</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-4">
-                                    <form onSubmit={handleAddKeyword} className="flex gap-2">
-                                        <Input
-                                            placeholder="Add keyword..."
-                                            value={newKeyword}
-                                            onChange={(e) => setNewKeyword(e.target.value)}
-                                            disabled={addMutation.isPending}
-                                            className="bg-slate-800 border-slate-700"
-                                        />
-                                        <Button type="submit" size="icon" disabled={addMutation.isPending || !newKeyword.trim()}>
-                                            {addMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                                        </Button>
-                                    </form>
+                                    <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button className="w-full bg-whatcyber-teal hover:bg-emerald-600 text-white">
+                                                <Plus className="h-4 w-4 mr-2" />
+                                                Create New Watchlist Item
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="bg-slate-900 border-slate-700 text-slate-100 sm:max-w-[425px]">
+                                            <DialogHeader>
+                                                <DialogTitle>Add Watchlist Item</DialogTitle>
+                                                <DialogDescription className="text-slate-400">
+                                                    Construct a query using AND, OR, and NOT logic.
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <div className="py-4">
+                                                <QueryBuilder onQueryChange={setNewKeyword} />
+                                            </div>
+                                            <DialogFooter>
+                                                <Button
+                                                    onClick={handleAddKeyword}
+                                                    disabled={addMutation.isPending || !newKeyword.trim()}
+                                                    className="w-full bg-whatcyber-teal hover:bg-emerald-600"
+                                                >
+                                                    {addMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                                                    Add to Watchlist
+                                                </Button>
+                                            </DialogFooter>
+                                        </DialogContent>
+                                    </Dialog>
 
-                                    <div className="space-y-2">
+                                    <div className="space-y-2 pt-2">
                                         {isLoadingItems ? (
                                             <div className="flex justify-center p-4">
                                                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -279,7 +310,7 @@ export default function WatchlistPage() {
                                                         ) : (
                                                             feed?.articles?.map((article) => (
                                                                 <div key={article.id} className="mb-4">
-                                                                    <ArticleCard article={article} />
+                                                                    <ArticleCard article={article} onReadHere={handleReadHere} />
                                                                 </div>
                                                             ))
                                                         )}
@@ -303,7 +334,11 @@ export default function WatchlistPage() {
                                                             <TableBody>
                                                                 {feed?.cves?.map((cve) => (
                                                                     <TableRow key={cve.id} className="border-slate-700 hover:bg-slate-800/50">
-                                                                        <TableCell className="font-medium text-slate-200">{cve.id}</TableCell>
+                                                                        <TableCell className="font-medium text-slate-200">
+                                                                            <Link href={`/vulnerabilities/${cve.id}`} className="text-whatcyber-teal hover:underline">
+                                                                                {cve.id}
+                                                                            </Link>
+                                                                        </TableCell>
                                                                         <TableCell>
                                                                             <Badge variant={
                                                                                 cve.cvssV3Severity === 'CRITICAL' ? 'destructive' :
@@ -338,7 +373,11 @@ export default function WatchlistPage() {
                                                             <TableBody>
                                                                 {feed?.kevs?.map((kev) => (
                                                                     <TableRow key={kev.cveID} className="border-slate-700 hover:bg-slate-800/50">
-                                                                        <TableCell className="font-medium text-slate-200">{kev.cveID}</TableCell>
+                                                                        <TableCell className="font-medium text-slate-200">
+                                                                            <Link href={`/exploited-vulnerabilities/${kev.cveID}`} className="text-whatcyber-teal hover:underline">
+                                                                                {kev.cveID}
+                                                                            </Link>
+                                                                        </TableCell>
                                                                         <TableCell className="text-slate-300">{kev.product}</TableCell>
                                                                         <TableCell className="text-slate-400">{kev.dateAdded ? formatDistanceToNow(new Date(kev.dateAdded), { addSuffix: true }) : 'N/A'}</TableCell>
                                                                     </TableRow>
@@ -356,6 +395,11 @@ export default function WatchlistPage() {
                     </div>
                 </main>
             </div>
+            {/* Article Viewer */}
+            <ArticleViewer
+                articleUrl={selectedArticleUrl}
+                onClose={handleCloseArticleViewer}
+            />
         </div>
     );
 }
