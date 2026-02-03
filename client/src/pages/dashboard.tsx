@@ -189,7 +189,7 @@ function MalwareWidget({ onArticleClick }: MalwareWidgetProps) {
 }
 
 export default function Dashboard() {
-    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [selectedArticleUrl, setSelectedArticleUrl] = useState<string | null>(null);
 
     const { data: topCwes, isLoading } = useQuery<TopCWE[]>({
@@ -197,28 +197,41 @@ export default function Dashboard() {
         refetchOnWindowFocus: false
     });
 
+
     return (
-        <div className="flex h-screen bg-whatcyber-darker text-slate-100 overflow-hidden">
-            <Sidebar
-                selectedSource="all"
-                onSourceSelect={() => { }}
-                timeFilter="all"
-                onTimeFilterChange={() => { }}
-                threatFilters={[]}
-                onThreatFilterChange={() => { }}
-                onClose={() => setSidebarOpen(false)}
+        <div className="min-h-screen bg-whatcyber-darker text-slate-100 flex flex-col">
+            <Header
+                onSearch={() => { }}
+                bookmarkCount={0}
+                onBookmarksClick={() => { }}
+                onSidebarToggle={() => setSidebarOpen(!sidebarOpen)}
+                isSidebarOpen={sidebarOpen}
             />
 
-            <div className="flex-1 flex flex-col overflow-hidden relative transition-all duration-300">
-                <Header
-                    onSearch={() => { }}
-                    bookmarkCount={0}
-                    onBookmarksClick={() => { }}
-                    onSidebarToggle={() => setSidebarOpen(!sidebarOpen)}
-                    isSidebarOpen={sidebarOpen}
-                />
+            <div className="flex flex-1 min-h-0 relative">
+                {/* Mobile Overlay */}
+                {sidebarOpen && (
+                    <div
+                        className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
+                        onClick={() => setSidebarOpen(false)}
+                    />
+                )}
 
-                <main className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-gray-800 hover:scrollbar-thumb-gray-700 bg-whatcyber-darker">
+                {/* Sidebar */}
+                <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+                    } fixed left-0 top-16 h-[calc(100vh-4rem)] z-30 lg:relative lg:translate-x-0 lg:z-10 lg:top-0 lg:h-full transition-transform duration-300 ease-in-out`}>
+                    <Sidebar
+                        selectedSource="all"
+                        onSourceSelect={() => { }}
+                        timeFilter="all"
+                        onTimeFilterChange={() => { }}
+                        threatFilters={[]}
+                        onThreatFilterChange={() => { }}
+                        onClose={() => setSidebarOpen(false)}
+                    />
+                </div>
+
+                <main className="flex-1 overflow-y-auto p-4 lg:p-6 scrollbar-thin scrollbar-thumb-gray-800 hover:scrollbar-thumb-gray-700 bg-whatcyber-darker">
                     <div className="max-w-7xl mx-auto space-y-8">
 
                         <div className="flex justify-between items-center">

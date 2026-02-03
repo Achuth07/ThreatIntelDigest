@@ -96,8 +96,8 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
   };
 
   return (
-    <Card className="glass-card border border-whatcyber-light-gray/20 hover:border-whatcyber-teal/30 transition-all duration-300 group overflow-hidden hover:shadow-lg hover:shadow-whatcyber-teal/5">
-      <div className="p-4 lg:p-6">
+    <Card className="glass-card border border-whatcyber-light-gray/20 hover:border-whatcyber-teal/30 transition-all duration-300 group hover:shadow-lg hover:shadow-whatcyber-teal/5">
+      <div className="p-4 lg:p-6 flex flex-col min-h-0">
         <div className="flex items-start justify-between mb-3 lg:mb-4">
           <div className="flex items-center space-x-2 lg:space-x-3 min-w-0 flex-1">
             <div className="flex-shrink-0">
@@ -171,19 +171,19 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
           {article.summary}
         </p>
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">
-          <div className="flex items-center space-x-3 lg:space-x-4">
-            <div className="flex items-center space-x-1 lg:space-x-2 text-xs lg:text-sm text-slate-400">
+        <div className="flex flex-wrap items-center justify-between gap-3 mt-auto pt-2">
+          <div className="flex items-center gap-3 min-w-0 max-w-full">
+            <div className="flex items-center gap-1.5 text-xs lg:text-sm text-slate-400 flex-shrink-0">
               <Eye className="w-3 lg:w-4 h-3 lg:h-4" />
               <span data-testid={`text-read-time-${article.id}`}>{article.readTime} min read</span>
             </div>
             {article.tags && article.tags.length > 0 && (
-              <div className="flex items-center space-x-1 overflow-x-auto">
+              <div className="flex items-center gap-1 overflow-x-auto min-w-0 no-scrollbar">
                 {article.tags.slice(0, 2).map((tag, index) => (
                   <Badge
                     key={index}
                     variant="secondary"
-                    className="text-xs bg-slate-700 text-slate-300 px-1.5 lg:px-2 py-0.5 lg:py-1 flex-shrink-0"
+                    className="text-xs bg-slate-700 text-slate-300 px-1.5 lg:px-2 py-0.5 flex-shrink-0"
                     data-testid={`badge-tag-${article.id}-${index}`}
                   >
                     {tag}
@@ -192,12 +192,12 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
               </div>
             )}
           </div>
-          <div className="flex items-center space-x-2 justify-end">
+          <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
             {onReadHere && (
               <Button
                 variant="outline"
                 size="sm"
-                className="text-whatcyber-teal border-whatcyber-teal hover:bg-whatcyber-teal hover:text-whatcyber-dark text-xs lg:text-sm font-medium px-2 lg:px-3 py-1 touch-manipulation"
+                className="text-whatcyber-teal border-whatcyber-teal hover:bg-whatcyber-teal hover:text-whatcyber-dark text-xs lg:text-sm font-medium px-2 lg:px-3 py-1 touch-manipulation h-8"
                 onClick={() => onReadHere(article.url)}
                 data-testid={`button-read-here-${article.id}`}
               >
@@ -209,7 +209,7 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
             <Button
               variant="link"
               size="sm"
-              className="text-slate-400 hover:text-slate-300 text-xs lg:text-sm font-medium p-0 touch-manipulation"
+              className="text-slate-400 hover:text-slate-300 text-xs lg:text-sm font-medium p-0 touch-manipulation h-8"
               onClick={() => window.open(article.url, '_blank', 'noopener,noreferrer')}
               data-testid={`button-read-article-${article.id}`}
             >

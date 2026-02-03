@@ -322,3 +322,39 @@ html {
 .animate-fade-in-up {
   animation: fadeInUp 0.3s ease-out forwards;
 }
+
+/* Safari-specific flexbox fixes */
+@supports (-webkit-touch-callout: none) {
+  /* Safari gap fallback using margins */
+  .flex.gap-3 > * + * {
+    margin-left: 0.75rem;
+  }
+  .flex-wrap.gap-3 > * {
+    margin-bottom: 0.75rem;
+  }
+  
+  /* Ensure flex children don't collapse */
+  .glass-card {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  /* Prevent flex item clipping */
+  .glass-card > div {
+    flex-shrink: 0;
+  }
+}
+
+/* Ensure article cards don't clip content */
+.glass-card {
+  overflow: visible;
+}
+
+/* Hide scrollbar but allow scrolling (for tags) */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
