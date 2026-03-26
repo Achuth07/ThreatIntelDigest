@@ -1,0 +1,38 @@
+name: Fetch RSS Feeds
+
+on:
+  schedule:
+    # Run every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  fetch_feeds:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Trigger Feed Fetch
+      env:
+        APP_URL: ${{ secrets.APP_URL }}
+        CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      run: |
+        # Use the deployed app URL to trigger feed fetching
+        URL="${APP_URL:-https://www.whatcyber.com}"
+        
+        echo "Triggering feed fetch at ${URL}/api/fetch-feeds..."
+        
+        HTTP_STATUS=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+          -X POST \
+          -H "Content-Type: application/json" \
+          -H "Authorization: Bearer ${CRON_SECRET}" \
+          "${URL}/api/fetch-feeds")
+        
+        echo "HTTP Status: ${HTTP_STATUS}"
+        cat /tmp/response.json
+        
+        if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 300 ]; then
+          echo "Feed fetch completed successfully"
+        else
+          echo "Feed fetch failed with status ${HTTP_STATUS}"
+          exit 1
+        fi

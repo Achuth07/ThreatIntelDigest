@@ -3,11 +3,17 @@ import { sql } from 'drizzle-orm';
 import { storage, initializeStorage } from '../server/storage.js';
 import { fetchCveFromR2 } from '../server/services/r2.js';
 
+// Module-level guard: only initialize storage once per warm function invocation
+let storageInitialized = false;
+
 // Consolidated API handler that handles all endpoints through action-based routing
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // IMPORTANT: Initialize storage to switch from MemStorage to PostgresStorage
-  // This is required for Vercel serverless functions
-  await initializeStorage();
+  // This is required for Vercel serverless functions, but only needs to run once per warm invocation
+  if (!storageInitialized) {
+    await initializeStorage();
+    storageInitialized = true;
+  }
 
   const { pathname } = new URL(req.url!, `https://${req.headers.host}`);
   const action = req.query.action as string || '';
@@ -74,6 +80,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (pathname.startsWith('/api/stats/top-cwes')) {
       try {
         const stats = await storage.getTop25CWEs();
+        res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
         return res.status(200).json(stats);
       } catch (error) {
         console.error("Error fetching Top 25 CWEs:", error);
@@ -84,6 +91,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (pathname.startsWith('/api/stats/industries')) {
       try {
         const stats = await storage.getIndustryStats();
+        res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
         return res.status(200).json(stats);
       } catch (error) {
         console.error("Error fetching industry stats:", error);
@@ -95,6 +103,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       try {
         const days = req.query.days ? parseInt(req.query.days as string) : 7;
         const stats = await storage.getTopMalware(days);
+        res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
         return res.status(200).json(stats);
       } catch (error) {
         console.error("Error fetching top malware:", error);
@@ -128,6 +137,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
         const str = await response.Body.transformToString();
         return res.send(str);
 
@@ -445,10 +455,12 @@ interface UserLoginRecord {
 }
 
 /**
- * Get database connection
- * @returns Database connection
+ * Get database connection (singleton - reused across warm invocations)
  */
+let cachedDb: any = null;
 async function getDb() {
+  if (cachedDb) return cachedDb;
+
   const connectionString = process.env.DATABASE_URL;
 
   if (!connectionString) {
@@ -460,7 +472,8 @@ async function getDb() {
   const { Pool } = await import('@neondatabase/serverless');
 
   const pool = new Pool({ connectionString });
-  return drizzle(pool);
+  cachedDb = drizzle(pool);
+  return cachedDb;
 }
 
 /**
@@ -812,9 +825,10 @@ async function handleEmailAuthEndpoints(req: VercelRequest, res: VercelResponse)
     });
   }
 
-  // Dynamically import dependencies
-  const { drizzle } = await import('drizzle-orm/neon-serverless');
-  const { Pool } = await import('@neondatabase/serverless');
+  // Use singleton DB connection instead of creating new pool per request
+  const db = await getDb();
+
+  // Import only email-auth-specific dependencies (these are only needed here)
   const { PostgresStorage } = await import('../server/postgres-storage.js');
   const {
     hashPassword,
@@ -829,9 +843,7 @@ async function handleEmailAuthEndpoints(req: VercelRequest, res: VercelResponse)
   const { users: usersTable } = await import('../shared/schema.js');
   const { eq } = await import('drizzle-orm');
 
-  // Create database connection and storage
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-  const db = drizzle(pool);
+  // Create storage instance
   const storage = new PostgresStorage();
 
   // Determine environment for URL construction
@@ -1404,13 +1416,8 @@ async function handleSourcesEndpoints(req: VercelRequest, res: VercelResponse, a
       }
     }
 
-    // Import modules dynamically to avoid module loading issues
-    const { drizzle } = await import('drizzle-orm/neon-serverless');
-    const { Pool } = await import('@neondatabase/serverless');
-    const { sql } = await import('drizzle-orm');
-
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    const db = drizzle(pool);
+    // Use singleton DB connection
+    const db = await getDb();
 
     if (req.method === 'GET') {
       console.log('Fetching RSS sources...');
@@ -1734,13 +1741,8 @@ async function handleArticlesEndpoints(req: VercelRequest, res: VercelResponse, 
       }
     }
 
-    // Import modules dynamically
-    const { drizzle } = await import('drizzle-orm/neon-serverless');
-    const { Pool } = await import('@neondatabase/serverless');
-    const { sql } = await import('drizzle-orm');
-
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    const db = drizzle(pool);
+    // Use singleton DB connection
+    const db = await getDb();
 
     if (req.method === 'GET') {
       console.log('Fetching articles...');
@@ -1930,6 +1932,7 @@ async function handleArticlesEndpoints(req: VercelRequest, res: VercelResponse, 
       }));
 
       console.log(`Successfully fetched ${articles.length} articles`);
+      res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
       res.json(articles);
 
     } else if (req.method === 'POST') {

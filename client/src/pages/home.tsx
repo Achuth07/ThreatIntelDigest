@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Header } from '@/components/header';
 import { Sidebar } from '@/components/sidebar';
 import { ArticleCard } from '@/components/article-card';
@@ -12,7 +12,6 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronDown, Clock } from 'lucide-react';
-import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { SEO } from '@/components/seo';
@@ -22,7 +21,6 @@ import { Helmet } from "react-helmet-async";
 
 export default function Home() {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [location] = useLocation();
 
   // State management
@@ -53,8 +51,7 @@ export default function Home() {
   // Fetch user sources
   const { data: fetchedSources = [] } = useQuery<RssSource[]>({
     queryKey: ['/api/sources'],
-    // Ensure cache is invalidated when sources change
-    staleTime: 0,
+    // Use default staleTime (5 min) — sources rarely change
     // Disable fetching for guest users to prevent loading all sources
     enabled: !user?.isGuest
   });
@@ -100,17 +97,15 @@ export default function Home() {
   const { data: bookmarks = [], refetch: refetchBookmarks, isLoading: bookmarksLoading, error: bookmarksError } = useQuery<Bookmark[]>({
     queryKey: ['/api/bookmarks'],
     enabled: !!user && !!user.token, // Only fetch bookmarks if user is authenticated and has a token
-    // Refetch on window focus for robustness
     refetchOnWindowFocus: true,
-    // Disable caching to ensure we always get fresh data
-    staleTime: 0,
+    staleTime: 1000 * 60 * 2, // 2 minutes — bookmarks change infrequently
   });
 
   // Fetch bookmarked articles when in bookmarks view
   const { data: bookmarkedArticles = [], isLoading: bookmarkedArticlesLoading } = useQuery<any[]>({
     queryKey: ['/api/bookmarks', { withArticles: true }],
     enabled: !!user && !!user.token && showBookmarks, // Only fetch when user is authenticated and viewing bookmarks
-    staleTime: 0,
+    staleTime: 1000 * 60 * 2, // 2 minutes
   });
   console.log('Home component - Bookmarks:', bookmarks, 'Loading:', bookmarksLoading, 'Error:', bookmarksError, 'User:', user);
 
@@ -122,26 +117,8 @@ export default function Home() {
     }
   }, [user, refetchBookmarks]);
 
-  // Auto-fetch feeds on component mount
-  const fetchFeedsMutation = useMutation({
-    mutationFn: () => apiRequest('POST', '/api/fetch-feeds'),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
-      // Also refetch bookmarks to ensure count is accurate after feed fetch
-      if (user) {
-        refetchBookmarks();
-      }
-    },
-    onError: (error) => {
-      console.error('Failed to fetch feeds:', error);
-      // Don't show error toast on initial load failure
-    },
-  });
-
-  // Auto-fetch feeds when component mounts
-  useEffect(() => {
-    fetchFeedsMutation.mutate();
-  }, []);
+  // Feed fetching is now handled by a scheduled GitHub Actions cron job
+  // (every 6 hours) instead of on every page load, to reduce Vercel CPU usage.
 
   // Refetch bookmarks when user changes or when showBookmarks changes
   useEffect(() => {
