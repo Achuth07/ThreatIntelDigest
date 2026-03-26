@@ -3790,8 +3790,8 @@ function extractTargetedIndustries(title: string, content: string): string[] {
 }
 
 async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse, action: string) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method not allowed' });
+  if (req.method !== 'POST' && req.method !== 'GET') {
+    return res.status(405).json({ message: 'Method not allowed. Use GET or POST.' });
   }
 
   try {
