@@ -36,6 +36,7 @@ import VulnerabilitiesPage from '@/pages/vulnerabilities';
 import Blog from "@/pages/blog";
 import BlogPost from "@/pages/blog-post";
 import WatchlistPage from "@/pages/watchlist";
+import { KofiBanner } from "@/components/kofi-banner";
 
 
 // Import context from separate file to prevent HMR issues
@@ -248,6 +249,7 @@ function App() {
               />
             )}
             <div className="flex flex-col min-h-screen">
+              <KofiBanner />
               <Router />
               <Footer />
             </div>

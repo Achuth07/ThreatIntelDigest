@@ -876,6 +876,22 @@ export function Sidebar({
               <BookOpen className="w-5 h-5 mr-3" />
               <span className="font-medium">Blog</span>
             </button>
+            
+            <div className="pt-2">
+              <a
+                href="https://ko-fi.com/whatcyber"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-center p-3 rounded-lg cursor-pointer transition-all bg-[#1e2327] hover:bg-[#252b30] border border-whatcyber-teal/30 hover:border-whatcyber-teal/80 group mt-2"
+              >
+                <img 
+                  src="https://storage.ko-fi.com/cdn/cup-border.png" 
+                  alt="Ko-fi" 
+                  className="w-5 h-5 mr-2 drop-shadow-sm group-hover:scale-110 transition-transform" 
+                />
+                <span className="font-semibold text-whatcyber-teal">Support WhatCyber</span>
+              </a>
+            </div>
           </div>
         </div>
 
