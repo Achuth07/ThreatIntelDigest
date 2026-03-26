@@ -7,6 +7,9 @@ import { useToast } from '@/hooks/use-toast';
 import { SEO } from '@/components/seo';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Link } from 'wouter';
+import { Sidebar } from '@/components/sidebar';
+import { Header } from '@/components/header';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -55,6 +58,8 @@ export function AdminDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [deleteUserId, setDeleteUserId] = useState<number | null>(null);
   const [resendingEmail, setResendingEmail] = useState<number | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [timeFilter, setTimeFilter] = useState("30");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -80,7 +85,7 @@ export function AdminDashboard() {
           'Authorization': `Bearer ${userData.token}`
         };
 
-        const userStatsResponse = await fetch('/api/user-management?stats=true', { headers });
+        const userStatsResponse = await fetch(`/api/user-management?stats=true&days=${timeFilter}`, { headers });
 
         if (userStatsResponse.ok) {
           const userStats = await userStatsResponse.json();
@@ -131,7 +136,7 @@ export function AdminDashboard() {
     };
 
     fetchAdminData();
-  }, []);
+  }, [timeFilter]);
 
   const handleResendVerification = async (userId: number, email: string) => {
     setResendingEmail(userId);
@@ -214,41 +219,99 @@ export function AdminDashboard() {
 
   if (error) {
     return (
-      <div className="p-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Admin Dashboard</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-red-500">Error: {error}</div>
-            <Button onClick={() => window.location.reload()} className="mt-4">
-              Retry
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-whatcyber-darker text-slate-100 flex flex-col">
+        <Header
+          onSearch={() => {}}
+          bookmarkCount={0}
+          onBookmarksClick={() => {}}
+          onSidebarToggle={() => setSidebarOpen(!sidebarOpen)}
+          isSidebarOpen={sidebarOpen}
+        />
+        <div className="flex flex-1 min-h-0 relative">
+          <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-whatcyber-darker">
+            <Card className="bg-slate-800 border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-slate-100">Admin Dashboard</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-red-500">Error: {error}</div>
+                <Button onClick={() => window.location.reload()} className="mt-4 bg-slate-700 text-white hover:bg-slate-600">
+                  Retry
+                </Button>
+              </CardContent>
+            </Card>
+          </main>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6">
+    <div className="min-h-screen bg-whatcyber-darker text-slate-100 flex flex-col">
       <SEO
         title="Admin Dashboard - WhatCyber ThreatFeed"
         description="Admin dashboard for managing users, statistics, and system metrics for WhatCyber ThreatFeed."
         keywords="admin, dashboard, cybersecurity, threat intelligence, CVE, vulnerabilities, user management"
       />
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Admin Dashboard</CardTitle>
-            <Link href="/threatfeed/">
-              <Button variant="outline" size="sm">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to ThreatFeed
-              </Button>
-            </Link>
-          </div>
-        </CardHeader>
+      
+      <Header
+        onSearch={() => {}}
+        bookmarkCount={0}
+        onBookmarksClick={() => {}}
+        onSidebarToggle={() => setSidebarOpen(!sidebarOpen)}
+        isSidebarOpen={sidebarOpen}
+      />
+
+      <div className="flex flex-1 min-h-0 relative">
+        {/* Mobile Overlay */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
+        {/* Sidebar */}
+        <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          } fixed left-0 top-16 h-[calc(100vh-4rem)] z-30 lg:relative lg:translate-x-0 lg:z-10 lg:top-0 lg:h-full transition-transform duration-300 ease-in-out`}>
+          <Sidebar
+            selectedSource="all"
+            onSourceSelect={() => {}}
+            timeFilter="all"
+            onTimeFilterChange={() => {}}
+            threatFilters={[]}
+            onThreatFilterChange={() => {}}
+            onClose={() => setSidebarOpen(false)}
+          />
+        </div>
+
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6 scrollbar-thin scrollbar-thumb-gray-800 hover:scrollbar-thumb-gray-700 bg-whatcyber-darker">
+          <div className="max-w-7xl mx-auto space-y-8">
+            <Card className="bg-slate-800 border-slate-700 backdrop-blur-sm shadow-xl">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-slate-100">Admin Dashboard</CardTitle>
+                  <div className="flex items-center gap-4">
+                    <Select value={timeFilter} onValueChange={setTimeFilter}>
+                      <SelectTrigger className="w-[140px] bg-slate-900 border-slate-700 text-slate-200">
+                        <SelectValue placeholder="Select range" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-800 border-slate-700 text-slate-200">
+                        <SelectItem value="7">Last 7 days</SelectItem>
+                        <SelectItem value="30">Last 30 days</SelectItem>
+                        <SelectItem value="90">Last 3 months</SelectItem>
+                        <SelectItem value="365">Last year</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Link href="/threatfeed/">
+                      <Button variant="outline" size="sm" className="bg-slate-900 border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-white">
+                        <ArrowLeft className="w-4 h-4 mr-2" />
+                        Back to ThreatFeed
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </CardHeader>
         <CardContent>
           {loading ? (
             <div className="flex justify-center items-center h-32">
@@ -548,6 +611,9 @@ export function AdminDashboard() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

@@ -2452,7 +2452,7 @@ function refreshToken(payload: any): string {
  * Get user statistics
  * @returns User statistics including total users, recent logins, etc.
  */
-async function getUserStatistics() {
+async function getUserStatistics(days: number = 30) {
   // Import modules dynamically
   const { drizzle } = await import('drizzle-orm/neon-serverless');
   const { Pool } = await import('@neondatabase/serverless');
@@ -2494,8 +2494,12 @@ async function getUserStatistics() {
       new Date(user.lastLoginAt) > oneWeekAgo
     ).length;
 
-    // Get ALL users (not just recent 10) with display names, role, topics, and emailWeeklyDigest
+    // Filter users signed up within the timeframe
+    const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    // Get filtered users with display names, role, topics, and emailWeeklyDigest
     const allUsersList = [...allUsers]
+      .filter(user => new Date(user.createdAt) >= cutoffDate)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .map(user => {
         const prefs = preferencesMap.get(user.id);
@@ -2515,11 +2519,10 @@ async function getUserStatistics() {
         };
       });
 
-    // Calculate signup trend data (last 30 days)
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    // Calculate signup trend data
     const signupTrend = [];
 
-    for (let i = 29; i >= 0; i--) {
+    for (let i = days - 1; i >= 0; i--) {
       const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
       const startOfDay = new Date(date.setHours(0, 0, 0, 0));
       const endOfDay = new Date(date.setHours(23, 59, 59, 999));
@@ -2641,8 +2644,9 @@ async function handleUserManagementEndpoints(req: VercelRequest, res: VercelResp
       const { stats } = req.query;
 
       if (stats === 'true') {
+        const days = req.query.days ? parseInt(req.query.days as string) : 30;
         // Get user statistics
-        const statsData = await getUserStatistics();
+        const statsData = await getUserStatistics(days);
         res.status(200).json({ ...statsData, token: newToken });
       } else {
         // Get all users
