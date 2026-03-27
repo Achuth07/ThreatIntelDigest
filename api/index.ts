@@ -2479,6 +2479,13 @@ async function getUserStatistics(days: number | 'all' = 30) {
   const db = drizzle(pool);
 
   try {
+    // Hotfix: Ensure login_count column exists to prevent schema crash in Serverless Functions
+    try {
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS login_count INTEGER DEFAULT 1`);
+    } catch (error) {
+      console.error('Migration error adding login_count column:', error);
+    }
+
     const allUsers = await db.select().from(users);
 
     // Fetch user preferences for display names and email preferences
