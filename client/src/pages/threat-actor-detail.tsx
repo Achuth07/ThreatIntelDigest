@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
-import { Loader2, AlertTriangle, ArrowLeft, Globe, Calendar, ExternalLink, Shield } from "lucide-react";
+import { Loader2, AlertTriangle, ArrowLeft, Activity, Calendar, ExternalLink, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -144,7 +144,6 @@ export default function ThreatActorDetailPage() {
                         onThreatFilterChange={() => { }}
                         onClose={handleSidebarClose}
                         onVulnerabilitiesClick={() => handleNavigation('/threatfeed')}
-                        onKevClick={() => handleNavigation('/threatfeed')}
                         onFollowSourcesClick={() => handleNavigation('/threatfeed')}
                         onBookmarksClick={() => handleNavigation('/threatfeed')}
                     />
@@ -166,18 +165,29 @@ export default function ThreatActorDetailPage() {
                             </Button>
 
                             <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                                <div>
-                                    <h1 className="text-4xl font-bold font-heading text-slate-100 mb-2">
-                                        {group.name}
-                                    </h1>
-                                    <div className="flex items-center gap-4 text-sm text-slate-400">
-                                        <span className="flex items-center gap-1 bg-slate-800 px-2 py-1 rounded text-slate-300 font-mono">
-                                            {group.stixId}
-                                        </span>
-                                        <span className="flex items-center gap-1">
-                                            <Calendar className="w-4 h-4" />
-                                            Updated {format(new Date(group.lastUpdated), "PPP")}
-                                        </span>
+                                <div className="flex items-start gap-4 sm:gap-6">
+                                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-slate-800 shrink-0 border border-slate-700 overflow-hidden flex items-center justify-center">
+                                        <img 
+                                            src={`https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(group.name)}`} 
+                                            alt={`${group.name} identicon`}
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </div>
+                                    <div>
+                                        <h1 className="text-3xl sm:text-4xl font-bold font-heading text-slate-100 mb-2">
+                                            {group.name}
+                                        </h1>
+                                        <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
+                                            {group.stixId && (
+                                                <span className="flex items-center gap-1 bg-slate-800 px-2 py-1 rounded text-slate-300 font-mono">
+                                                    {group.stixId}
+                                                </span>
+                                            )}
+                                            <span className="flex items-center gap-1">
+                                                <Calendar className="w-4 h-4" />
+                                                Updated {format(new Date(group.lastUpdated), "PPP")}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -201,7 +211,7 @@ export default function ThreatActorDetailPage() {
                                 {/* Activity Stream */}
                                 <section className="space-y-4">
                                     <h2 className="text-xl font-semibold text-slate-200 flex items-center gap-2">
-                                        <Globe className="w-5 h-5 text-blue-400" />
+                                        <Activity className="w-5 h-5 text-whatcyber-teal" />
                                         Live Activity Stream
                                     </h2>
                                     {group.recentArticles && group.recentArticles.length > 0 ? (

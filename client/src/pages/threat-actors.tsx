@@ -140,23 +140,27 @@ export default function ThreatActorsPage() {
                                     {data?.data?.map((group: any) => (
                                         <Card
                                             key={group.id}
-                                            className="bg-whatcyber-darker border-slate-700 hover:border-whatcyber-teal/50 transition-colors cursor-pointer group h-full"
+                                            className="bg-whatcyber-darker border-slate-700 hover:border-whatcyber-teal/50 hover:-translate-y-1 hover:shadow-lg hover:shadow-whatcyber-teal/10 transition-all duration-300 cursor-pointer group h-full"
                                             onClick={() => setLocation(`/threat-actors/${group.id}/`)}
                                         >
-                                            <CardHeader>
-                                                <CardTitle className="text-slate-100 group-hover:text-whatcyber-teal transition-colors flex justify-between items-start">
-                                                    <span>{group.name}</span>
-                                                    {group.stixId && (
-                                                        <span className="text-xs font-mono text-slate-500 bg-slate-900 px-2 py-1 rounded">
-                                                            {group.stixId}
-                                                        </span>
-                                                    )}
-                                                </CardTitle>
-                                                <CardDescription className="line-clamp-2 text-slate-400 text-xs">
-                                                    Last updated {formatDistanceToNow(new Date(group.lastUpdated), { addSuffix: true })}
-                                                </CardDescription>
+                                            <CardHeader className="flex flex-row items-center gap-4 space-y-0 pb-4">
+                                                <div className="w-12 h-12 rounded-md bg-slate-800 shrink-0 border border-slate-700 overflow-hidden flex items-center justify-center">
+                                                    <img 
+                                                        src={`https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(group.name)}`} 
+                                                        alt={`${group.name} identicon`}
+                                                        className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
+                                                    />
+                                                </div>
+                                                <div className="flex flex-col flex-1">
+                                                    <CardTitle className="text-slate-100 group-hover:text-whatcyber-teal transition-colors text-lg">
+                                                        {group.name}
+                                                    </CardTitle>
+                                                    <CardDescription className="text-slate-400 text-xs mt-1">
+                                                        Last updated {formatDistanceToNow(new Date(group.lastUpdated), { addSuffix: true })}
+                                                    </CardDescription>
+                                                </div>
                                             </CardHeader>
-                                            <CardContent className="space-y-4">
+                                            <CardContent>
                                                 {group.aliases && group.aliases.length > 0 && (
                                                     <div className="flex flex-wrap gap-2">
                                                         {group.aliases.slice(0, 3).map((alias: string, i: number) => (
@@ -170,11 +174,6 @@ export default function ThreatActorsPage() {
                                                             </span>
                                                         )}
                                                     </div>
-                                                )}
-                                                {group.description && (
-                                                    <p className="text-sm text-slate-400 line-clamp-3">
-                                                        {group.description}
-                                                    </p>
                                                 )}
                                             </CardContent>
                                         </Card>
