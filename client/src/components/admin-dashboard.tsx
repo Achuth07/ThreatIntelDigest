@@ -485,6 +485,8 @@ export function AdminDashboard() {
                         <SelectValue placeholder="Select range" />
                       </SelectTrigger>
                       <SelectContent className="bg-slate-800 border-slate-700 text-slate-200">
+                        <SelectItem value="1">Last 24 hours</SelectItem>
+                        <SelectItem value="3">Last 3 days</SelectItem>
                         <SelectItem value="7">Last 7 days</SelectItem>
                         <SelectItem value="30">Last 30 days</SelectItem>
                         <SelectItem value="90">Last 3 months</SelectItem>
