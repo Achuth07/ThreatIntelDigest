@@ -422,6 +422,7 @@ const users = pgTable('users', {
   role: text('role'),
   topics: jsonb('topics').$type<string[]>().default([]),
   hasOnboarded: pgBoolean('has_onboarded').default(false),
+  loginCount: integer('login_count').default(1),
 });
 
 // Define the user_preferences table schema directly
@@ -505,6 +506,13 @@ async function initializeUsersTable() {
       throw error;
     }
   }
+
+  // Ensure login_count column exists for older users
+  try {
+    await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS login_count INTEGER DEFAULT 1`);
+  } catch (error) {
+    console.error('Error adding login_count column:', error);
+  }
 }
 
 /**
@@ -524,9 +532,12 @@ async function getOrCreateUser(googleId: string, name: string, email: string, av
 
     if (existingUsers.length > 0) {
       const existingUser = existingUsers[0];
-      // Update last login time
+      // Update last login time and increment login count
       const updatedUsers = await db.update(users)
-        .set({ lastLoginAt: new Date() })
+        .set({ 
+          lastLoginAt: new Date(),
+          loginCount: sql`${users.loginCount} + 1`
+        })
         .where(eq(users.id, existingUser.id))
         .returning();
 
@@ -2452,12 +2463,12 @@ function refreshToken(payload: any): string {
  * Get user statistics
  * @returns User statistics including total users, recent logins, etc.
  */
-async function getUserStatistics(days: number = 30) {
+async function getUserStatistics(days: number | 'all' = 30) {
   // Import modules dynamically
   const { drizzle } = await import('drizzle-orm/neon-serverless');
   const { Pool } = await import('@neondatabase/serverless');
-  const { sql } = await import('drizzle-orm');
-  const { users, userPreferences } = await import('../shared/schema.js');
+  const { sql, eq } = await import('drizzle-orm');
+  const { users, userPreferences, userSourcePreferences } = await import('../shared/schema.js');
 
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
@@ -2494,12 +2505,15 @@ async function getUserStatistics(days: number = 30) {
       new Date(user.lastLoginAt) > oneWeekAgo
     ).length;
 
-    // Filter users signed up within the timeframe
-    const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    // Fetch active sources count per user
+    const activeSources = await db.select().from(userSourcePreferences).where(eq(userSourcePreferences.isActive, true));
+    const sourceCountMap = new Map<number, number>();
+    for (const source of activeSources) {
+      sourceCountMap.set(source.userId, (sourceCountMap.get(source.userId) || 0) + 1);
+    }
 
-    // Get filtered users with display names, role, topics, and emailWeeklyDigest
+    // Return all users, frontend will handle tab-specific filtering
     const allUsersList = [...allUsers]
-      .filter(user => new Date(user.createdAt) >= cutoffDate)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .map(user => {
         const prefs = preferencesMap.get(user.id);
@@ -2516,13 +2530,16 @@ async function getUserStatistics(days: number = 30) {
           role: user.role || null,
           topics: user.topics || [],
           emailWeeklyDigest: prefs?.emailWeeklyDigest || false,
+          loginCount: user.loginCount || 1,
+          sourceCount: sourceCountMap.get(user.id) || 0,
         };
       });
 
     // Calculate signup trend data
     const signupTrend = [];
+    const trendDays = days === 'all' ? 365 : days;
 
-    for (let i = days - 1; i >= 0; i--) {
+    for (let i = trendDays - 1; i >= 0; i--) {
       const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
       const startOfDay = new Date(date.setHours(0, 0, 0, 0));
       const endOfDay = new Date(date.setHours(23, 59, 59, 999));
@@ -2644,7 +2661,8 @@ async function handleUserManagementEndpoints(req: VercelRequest, res: VercelResp
       const { stats } = req.query;
 
       if (stats === 'true') {
-        const days = req.query.days ? parseInt(req.query.days as string) : 30;
+        const daysQuery = req.query.days as string;
+        const days = daysQuery === 'all' ? 'all' : (daysQuery ? parseInt(daysQuery) : 30);
         // Get user statistics
         const statsData = await getUserStatistics(days);
         res.status(200).json({ ...statsData, token: newToken });

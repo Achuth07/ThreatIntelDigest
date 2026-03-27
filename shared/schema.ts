@@ -105,6 +105,7 @@ export const users = pgTable('users', {
   role: text('role'),
   topics: jsonb('topics').$type<string[]>().default([]),
   hasOnboarded: pgBoolean('has_onboarded').default(false),
+  loginCount: integer('login_count').default(1),
 });
 
 export const userSourcePreferences = pgTable('user_source_preferences', {
