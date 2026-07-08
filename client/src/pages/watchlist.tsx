@@ -23,11 +23,9 @@ import {
 } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { QueryBuilder } from "@/components/query-builder";
-import { Header } from '@/components/header';
-import { Sidebar } from '@/components/sidebar';
+import { AppShell } from '@/components/layout/app-shell';
+import { DashboardSidebar } from '@/components/layout/sidebars/dashboard-sidebar';
 import { SEO } from '@/components/seo';
-import type { Bookmark } from '@shared/schema';
-import { getAuthenticatedUser } from '@/lib/auth';
 
 import { ArticleViewer } from '@/components/article-viewer';
 
@@ -47,19 +45,10 @@ export default function WatchlistPage() {
     const [newKeyword, setNewKeyword] = useState("");
     const { toast } = useToast();
     const queryClient = useQueryClient();
-    const [, setLocation] = useLocation();
 
     // Layout state
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [selectedArticleUrl, setSelectedArticleUrl] = useState<string | null>(null);
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-
-    // Sidebar dummy state (since this page focuses on watchlist, these are just for display/compatibility)
-    const [selectedSource] = useState('all');
-    const [timeFilter, setTimeFilter] = useState('all');
-    const [threatFilters, setThreatFilters] = useState(['CRITICAL', 'HIGH', 'MEDIUM']);
-
-    const user = getAuthenticatedUser();
 
     // Queries
     const { data: watchlistItems, isLoading: isLoadingItems } = useQuery<WatchlistItem[]>({
@@ -69,11 +58,6 @@ export default function WatchlistPage() {
     const { data: feed, isLoading: isLoadingFeed } = useQuery<WatchlistFeed>({
         queryKey: ["/api/watchlist/feed"],
         enabled: !!watchlistItems && watchlistItems.length > 0,
-    });
-
-    const { data: bookmarks = [] } = useQuery<Bookmark[]>({
-        queryKey: ['/api/bookmarks'],
-        enabled: !!user && !!user.token,
     });
 
     // Mutations
@@ -121,26 +105,6 @@ export default function WatchlistPage() {
         addMutation.mutate(newKeyword.trim());
     };
 
-    // Navigation Handlers (Redirect to Threat Feed)
-    const handleSourceSelect = (source: string) => {
-        setLocation(`/threatfeed?source=${source}`);
-    };
-
-    const handleBookmarksClick = () => {
-        setLocation('/threatfeed?view=bookmarks');
-    };
-
-    const handleVulnerabilitiesClick = () => {
-        setLocation('/threatfeed?view=cve');
-    };
-
-    const handleFollowSourcesClick = () => {
-        setLocation('/threatfeed?view=follow');
-    }
-
-    const handleSidebarToggle = () => setIsSidebarOpen(!isSidebarOpen);
-    const handleSidebarClose = () => setIsSidebarOpen(false);
-
     const handleReadHere = (articleUrl: string) => {
         setSelectedArticleUrl(articleUrl);
     };
@@ -156,45 +120,9 @@ export default function WatchlistPage() {
     };
 
     return (
-        <div className="min-h-screen bg-whatcyber-darker text-slate-100 flex flex-col">
+        <AppShell activeTab="dashboard" sidebar={<DashboardSidebar />}>
             <SEO {...seoProps} />
-            <Header
-                onSearch={(query) => setLocation(`/?search=${query}`)}
-                bookmarkCount={(bookmarks as Bookmark[]).length}
-                onBookmarksClick={handleBookmarksClick}
-                onSidebarToggle={handleSidebarToggle}
-                isSidebarOpen={isSidebarOpen}
-            />
-
-            <div className="flex flex-1 min-h-0 relative">
-                {/* Mobile Overlay */}
-                {isSidebarOpen && (
-                    <div
-                        className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
-                        onClick={handleSidebarClose}
-                    />
-                )}
-
-                {/* Sidebar */}
-                <div className={`${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-                    } fixed left-0 top-16 h-[calc(100vh-4rem)] z-30 lg:relative lg:translate-x-0 lg:z-10 lg:top-0 lg:h-full transition-transform duration-300 ease-in-out`}>
-                    <Sidebar
-                        selectedSource={selectedSource}
-                        onSourceSelect={handleSourceSelect}
-                        timeFilter={timeFilter}
-                        onTimeFilterChange={setTimeFilter}
-                        threatFilters={threatFilters}
-                        onThreatFilterChange={setThreatFilters}
-                        onClose={handleSidebarClose}
-                        onVulnerabilitiesClick={handleVulnerabilitiesClick}
-                        onFollowSourcesClick={handleFollowSourcesClick}
-                        onBookmarksClick={handleBookmarksClick}
-                    />
-                </div>
-
-                {/* Main Content */}
-                <main className="flex-1 overflow-y-auto bg-whatcyber-darker">
-                    <div className="max-w-6xl mx-auto p-4 lg:p-6 space-y-8">
+                    <div className="max-w-6xl mx-auto p-4 lg:p-8 space-y-8">
                         {/* Page Header */}
                         <div>
                             <h1 className="text-xl lg:text-2xl font-bold text-slate-100 mb-2 flex items-center gap-3">
@@ -393,13 +321,11 @@ export default function WatchlistPage() {
                             </Card>
                         </div>
                     </div>
-                </main>
-            </div>
             {/* Article Viewer */}
             <ArticleViewer
                 articleUrl={selectedArticleUrl}
                 onClose={handleCloseArticleViewer}
             />
-        </div>
+        </AppShell>
     );
 }
