@@ -142,7 +142,7 @@ export function TopNav({ activeTab, onSidebarToggle, isSidebarOpen }: TopNavProp
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-[1600px] items-center gap-2 px-4 sm:px-6">
+      <div className="flex h-16 items-center gap-2 px-4 sm:px-6">
         {/* Mobile menu */}
         <Button
           variant="ghost"

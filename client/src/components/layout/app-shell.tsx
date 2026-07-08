@@ -33,7 +33,7 @@ export function AppShell({ activeTab, sidebar, children }: AppShellProps) {
         isSidebarOpen={isSidebarOpen}
       />
 
-      <div className="mx-auto flex w-full max-w-[1600px] flex-1 min-h-0">
+      <div className="flex w-full flex-1 min-h-0">
         {/* Mobile overlay */}
         {isSidebarOpen && (
           <div
@@ -45,7 +45,7 @@ export function AppShell({ activeTab, sidebar, children }: AppShellProps) {
 
         {/* Mobile drawer */}
         <aside
-          className={`fixed inset-y-0 left-0 z-[120] w-[300px] max-w-[85vw] transform overflow-y-auto border-r border-border bg-sidebar transition-transform duration-300 ease-in-out lg:hidden ${
+          className={`fixed inset-y-0 left-0 z-[120] w-[300px] max-w-[85vw] transform overflow-y-auto no-scrollbar border-r border-border bg-sidebar transition-transform duration-300 ease-in-out lg:hidden ${
             isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
           aria-label="Sidebar"
@@ -70,7 +70,7 @@ export function AppShell({ activeTab, sidebar, children }: AppShellProps) {
 
         {/* Desktop sidebar */}
         <aside
-          className="sticky top-16 hidden h-[calc(100vh-4rem)] w-[280px] shrink-0 overflow-y-auto border-r border-border bg-sidebar lg:block"
+          className="sticky top-16 hidden h-[calc(100vh-4rem)] w-[280px] shrink-0 overflow-y-auto no-scrollbar border-r border-border bg-sidebar lg:block"
           aria-label="Sidebar"
         >
           {sidebarContent}
