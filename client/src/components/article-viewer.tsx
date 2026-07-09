@@ -183,7 +183,7 @@ export function ArticleViewer({ articleUrl, onClose }: ArticleViewerProps) {
               </header>
 
               <div
-                className="prose prose-invert prose-slate max-w-none prose-headings:text-slate-100 prose-p:text-slate-300 prose-a:text-cyber-cyan prose-a:no-underline hover:prose-a:underline prose-strong:text-slate-200 prose-em:text-slate-300 prose-blockquote:border-l-cyber-cyan prose-blockquote:text-slate-300 prose-code:text-cyber-cyan prose-code:bg-slate-800 prose-pre:bg-slate-800 prose-pre:border prose-pre:border-slate-700 prose-img:rounded-lg prose-img:w-full prose-img:h-auto"
+                className="prose max-w-none [--tw-prose-body:var(--foreground)] [--tw-prose-headings:var(--foreground)] [--tw-prose-lead:var(--muted-foreground)] [--tw-prose-links:var(--primary)] [--tw-prose-bold:var(--foreground)] [--tw-prose-counters:var(--muted-foreground)] [--tw-prose-bullets:var(--muted-foreground)] [--tw-prose-hr:var(--border)] [--tw-prose-quotes:var(--foreground)] [--tw-prose-quote-borders:var(--primary)] [--tw-prose-captions:var(--muted-foreground)] [--tw-prose-code:var(--primary)] [--tw-prose-pre-code:var(--foreground)] [--tw-prose-pre-bg:var(--muted)] [--tw-prose-th-borders:var(--border)] [--tw-prose-td-borders:var(--border)] prose-a:no-underline hover:prose-a:underline prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:border prose-pre:border-border prose-img:rounded-lg prose-img:w-full prose-img:h-auto"
                 dangerouslySetInnerHTML={{ __html: article.content }}
                 data-testid="article-content"
               />
