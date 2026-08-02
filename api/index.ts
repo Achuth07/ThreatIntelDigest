@@ -3911,12 +3911,15 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
           // Add timeout and handle SSL certificate issues by using fetch with custom options
           controller = new AbortController();
           timeoutId = setTimeout(() => controller?.abort(), 15000); // 15 second timeout
+          const userAgent = retryCount > 0 
+            ? 'ThreatIntelDigest/1.0 (RSS Reader)' 
+            : (process.env.RSS_USER_AGENT || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
           // Try to fetch
           response = await fetch(feedUrl, {
             signal: controller.signal,
             headers: {
-              'User-Agent': process.env.RSS_USER_AGENT || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'User-Agent': userAgent,
               'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
               'Accept-Language': 'en-US,en;q=0.9',
               'Accept-Encoding': 'gzip, deflate, br',
@@ -3937,8 +3940,16 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
             }
             // Handle 500 errors with retry
             else if (response.status >= 500 && retryCount < maxRetries) {
+              console.log(`Server error ${response.status} for ${source.name}, retrying...`);
               retryCount++;
               await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
+              continue;
+            }
+            // Handle 403 errors with retry
+            else if (response.status === 403 && retryCount < maxRetries) {
+              console.log(`Access denied (403) for ${source.name}, retrying with alternate User-Agent...`);
+              retryCount++;
+              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
               continue;
             }
             throw new Error(errorMessage);
