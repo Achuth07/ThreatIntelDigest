@@ -1,196 +1,125 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'wouter';
+import { useLocation, useSearch } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
-import { Header } from '@/components/header';
-import { Sidebar } from '@/components/sidebar';
+import { AppShell } from '@/components/layout/app-shell';
+import { FeedsSidebar, guestSources } from '@/components/layout/sidebars/feeds-sidebar';
 import { ArticleCard } from '@/components/article-card';
 import { ArticleViewer } from '@/components/article-viewer';
-import { CVEList } from '@/components/cve-list';
-
 import { FollowSourcesView } from '@/components/follow-sources-view';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronDown, Clock } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { SEO } from '@/components/seo';
 import type { Article, Bookmark, RssSource } from '@shared/schema';
-import { RSS_SOURCES } from '@/lib/rss-sources';
-import { Helmet } from "react-helmet-async";
+
+type FeedView = 'feed' | 'bookmarks' | 'follow';
+
+function viewFromParams(params: URLSearchParams): FeedView {
+  const view = params.get('view');
+  if (view === 'bookmarks') return 'bookmarks';
+  if (view === 'follow' || view === 'followSources') return 'follow';
+  return 'feed';
+}
 
 export default function Home() {
-  const { toast } = useToast();
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
+  const searchString = useSearch();
 
-  // State management
-  const urlParams = new URLSearchParams(window.location.search);
-  const initialSource = urlParams.get('source') || 'all';
-  const initialView = urlParams.get('view');
-
-  const initialSearch = urlParams.get('search') || '';
-  const [selectedSource, setSelectedSource] = useState(initialSource);
-  const [searchQuery, setSearchQuery] = useState(initialSearch);
+  const urlParams = new URLSearchParams(searchString || window.location.search);
+  const [selectedSource, setSelectedSource] = useState(urlParams.get('source') || 'all');
+  const [searchQuery, setSearchQuery] = useState(urlParams.get('search') || '');
   const [sortBy, setSortBy] = useState('newest');
   const [timeFilter, setTimeFilter] = useState('all');
   const [threatFilters, setThreatFilters] = useState(['CRITICAL', 'HIGH', 'MEDIUM']);
-
-  const [showBookmarks, setShowBookmarks] = useState(initialView === 'bookmarks');
-  const [showVulnerabilities, setShowVulnerabilities] = useState(initialView === 'cve' || initialView === 'cveList');
-  const [showFollowSources, setShowFollowSources] = useState(initialView === 'follow' || initialView === 'followSources');
+  const [view, setView] = useState<FeedView>(viewFromParams(urlParams));
   const [page, setPage] = useState(0);
   const [selectedArticleUrl, setSelectedArticleUrl] = useState<string | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const ARTICLES_PER_PAGE = 10;
 
-  // Get authenticated user
   const user = getAuthenticatedUser();
-  console.log('Home component - User:', user);
 
-  // Fetch user sources
-  // Fetch user sources
+  // The CVE list moved to its own tab; keep old links working.
+  useEffect(() => {
+    const params = new URLSearchParams(searchString || window.location.search);
+    const v = params.get('view');
+    if (v === 'cve' || v === 'cveList') {
+      setLocation('/vulnerabilities');
+    }
+  }, [location, searchString, setLocation]);
+
+  // Fetch user sources (Follow Sources view needs them)
   const { data: fetchedSources = [] } = useQuery<RssSource[]>({
     queryKey: ['/api/sources'],
-    // Use default staleTime (5 min) — sources rarely change
-    // Disable fetching for guest users to prevent loading all sources
-    enabled: !user?.isGuest
+    enabled: !user?.isGuest,
   });
+  const userSources: RssSource[] = user?.isGuest ? guestSources() : fetchedSources;
 
-  // Determine effective user sources (handle guest logic)
-  let userSources: RssSource[] = fetchedSources;
-
-  if (user?.isGuest) {
-    const defaultGuestSourceNames = [
-      "Microsoft Security Blog",
-      "Palo Alto Unit 42",
-      "CrowdStrike Blog",
-      "US-Cert (Alerts)",
-      "Bleeping Computer"
-    ];
-
-    userSources = RSS_SOURCES.filter(source =>
-      defaultGuestSourceNames.includes(source.name)
-    ).map((source, index) => ({
-      ...source,
-      id: `guest-source-${index}`,
-      isActive: true,
-      userId: 'guest',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      lastFetched: null
-    })) as unknown as RssSource[];
-  }
+  const showBookmarks = view === 'bookmarks';
 
   // Fetch articles
-  const { data: articles = [], isLoading: articlesLoading, refetch: refetchArticles } = useQuery<(Article & { isBookmarked?: boolean })[]>({
-    queryKey: ['/api/articles', {
-      source: selectedSource === 'all' ? undefined : selectedSource,
-      search: searchQuery,
-      sortBy,
-      limit: showBookmarks ? '1000' : ARTICLES_PER_PAGE, // Increase limit significantly when viewing bookmarks
-      offset: page * (showBookmarks ? 1000 : ARTICLES_PER_PAGE),
-      threatLevels: threatFilters.length === 3 ? undefined : threatFilters.join(','), // Only send if not all are selected
-    }],
+  const { data: articles = [], isLoading: articlesLoading } = useQuery<
+    (Article & { isBookmarked?: boolean })[]
+  >({
+    queryKey: [
+      '/api/articles',
+      {
+        source: selectedSource === 'all' ? undefined : selectedSource,
+        search: searchQuery,
+        sortBy,
+        limit: showBookmarks ? '1000' : ARTICLES_PER_PAGE,
+        offset: page * (showBookmarks ? 1000 : ARTICLES_PER_PAGE),
+        threatLevels: threatFilters.length === 3 ? undefined : threatFilters.join(','),
+      },
+    ],
   });
 
-  // Fetch bookmarks with automatic refetching
-  const { data: bookmarks = [], refetch: refetchBookmarks, isLoading: bookmarksLoading, error: bookmarksError } = useQuery<Bookmark[]>({
+  // Fetch bookmarks
+  const { data: bookmarks = [], refetch: refetchBookmarks } = useQuery<Bookmark[]>({
     queryKey: ['/api/bookmarks'],
-    enabled: !!user && !!user.token, // Only fetch bookmarks if user is authenticated and has a token
+    enabled: !!user && !!user.token,
     refetchOnWindowFocus: true,
-    staleTime: 1000 * 60 * 2, // 2 minutes — bookmarks change infrequently
+    staleTime: 1000 * 60 * 2,
   });
 
   // Fetch bookmarked articles when in bookmarks view
-  const { data: bookmarkedArticles = [], isLoading: bookmarkedArticlesLoading } = useQuery<any[]>({
+  const { data: bookmarkedArticles = [] } = useQuery<any[]>({
     queryKey: ['/api/bookmarks', { withArticles: true }],
-    enabled: !!user && !!user.token && showBookmarks, // Only fetch when user is authenticated and viewing bookmarks
-    staleTime: 1000 * 60 * 2, // 2 minutes
+    enabled: !!user && !!user.token && showBookmarks,
+    staleTime: 1000 * 60 * 2,
   });
-  console.log('Home component - Bookmarks:', bookmarks, 'Loading:', bookmarksLoading, 'Error:', bookmarksError, 'User:', user);
 
-  // Refetch bookmarks when user changes
   useEffect(() => {
-    if (user && user.token) {
-      console.log('User authenticated, refetching bookmarks');
+    if (user && user.token && showBookmarks) {
       refetchBookmarks();
     }
-  }, [user, refetchBookmarks]);
-
-  // Feed fetching is now handled by a scheduled GitHub Actions cron job
-  // (every 6 hours) instead of on every page load, to reduce Vercel CPU usage.
-
-  // Refetch bookmarks when user changes or when showBookmarks changes
-  useEffect(() => {
-    if (user && user.token) {
-      console.log('User or bookmarks view changed, refetching bookmarks');
-      refetchBookmarks();
-    }
-  }, [user, showBookmarks, refetchBookmarks]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showBookmarks]);
 
   // Sync state with URL parameters
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(searchString || window.location.search);
     const source = params.get('source');
-    const view = params.get('view');
+    const search = params.get('search');
 
+    setView(viewFromParams(params));
     if (source) {
       setSelectedSource(source);
-      setShowBookmarks(false);
-      setShowVulnerabilities(false);
-      setShowFollowSources(false);
-      setPage(0);
-    } else if (view) {
-      if (view === 'bookmarks') {
-        setShowBookmarks(true);
-        setShowVulnerabilities(false);
-        setShowFollowSources(false);
-      } else if (view === 'cve' || view === 'cveList') {
-        setShowVulnerabilities(true);
-        setShowBookmarks(false);
-        setShowFollowSources(false);
-      } else if (view === 'follow' || view === 'followSources') {
-        setShowFollowSources(true);
-        setShowBookmarks(false);
-        setShowVulnerabilities(false);
-      }
-      setPage(0);
-    } else if (params.get('search')) {
-      setSearchQuery(params.get('search') || '');
-      setShowBookmarks(false);
-      setShowVulnerabilities(false);
-      setShowFollowSources(false);
-      setPage(0);
-    } else {
-      // Default state if no params
+    } else if (!params.get('view') && !search) {
       setSelectedSource('all');
-      setShowBookmarks(false);
-      setShowVulnerabilities(false);
-      setShowFollowSources(false);
     }
-  }, [location, window.location.search]);
-
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    setPage(0); // Reset pagination when searching
-  };
+    if (search) {
+      setSearchQuery(search);
+    }
+    setPage(0);
+  }, [location, searchString]);
 
   const handleSourceSelect = (source: string) => {
-    // Exit bookmark page when selecting a source
-    if (showBookmarks) {
-      setShowBookmarks(false);
-    }
-    // Exit vulnerabilities page when selecting a source
-    if (showVulnerabilities) {
-      setShowVulnerabilities(false);
-    }
-
-    // Exit follow sources page when selecting a source
-    if (showFollowSources) {
-      setShowFollowSources(false);
-    }
+    setView('feed');
     setSelectedSource(source);
-    setPage(0); // Reset pagination when changing source
+    setSearchQuery('');
+    setPage(0);
   };
 
   const handleTimeFilterChange = (filter: string) => {
@@ -209,137 +138,38 @@ export default function Home() {
   };
 
   const handleNextPage = () => {
-    setPage(prev => prev + 1);
-    // Scroll to top of the list when changing pages
+    setPage((prev) => prev + 1);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handlePreviousPage = () => {
     if (page > 0) {
-      setPage(prev => prev - 1);
+      setPage((prev) => prev - 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
-  const handleBookmarksClick = () => {
-    if (!user) {
-      toast({
-        title: "Authentication Required",
-        description: "Please log in to view your bookmarks",
-        variant: "destructive",
-      });
-      return;
+  // Time filter applies client-side
+  const filteredArticles = articles.filter((article) => {
+    if (timeFilter === 'all') return true;
+    const now = new Date();
+    const articleDate = new Date(article.publishedAt);
+    const diffInDays = Math.floor((now.getTime() - articleDate.getTime()) / (1000 * 60 * 60 * 24));
+    switch (timeFilter) {
+      case 'today':
+        return diffInDays <= 0;
+      case 'week':
+        return diffInDays <= 7;
+      case 'month':
+        return diffInDays <= 30;
+      default:
+        return true;
     }
-    setShowBookmarks(!showBookmarks);
-    // Refetch bookmarks when toggling bookmarks view
-    refetchBookmarks();
-  };
-
-  const handleReadHere = (articleUrl: string) => {
-    setSelectedArticleUrl(articleUrl);
-  };
-
-  const handleCloseArticleViewer = () => {
-    setSelectedArticleUrl(null);
-  };
-
-  const handleSidebarToggle = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
-
-  const handleSidebarClose = () => {
-    setIsSidebarOpen(false);
-  };
-
-  const handleVulnerabilitiesClick = () => {
-
-    setShowVulnerabilities(true);
-    setShowBookmarks(false);
-    handleSidebarClose(); // Auto-close sidebar on mobile
-  };
-
-  const handleVulnerabilitiesClose = () => {
-    setShowVulnerabilities(false);
-  };
-
-
-
-  const handleFollowSourcesClick = () => {
-    setShowFollowSources(true);
-    handleSidebarClose(); // Auto-close sidebar on mobile
-  };
-
-  const handleFollowSourcesBack = () => {
-    setShowFollowSources(false);
-  };
-
-  const handleBookmarksSidebarClick = () => {
-    handleBookmarksClick();
-    handleSidebarClose(); // Auto-close sidebar on mobile
-  };
-
-  // Filter articles based on current filters
-  const filteredArticles = articles.filter(article => {
-    // Time filter
-    if (timeFilter !== 'all') {
-      const now = new Date();
-      const articleDate = new Date(article.publishedAt);
-      const diffInDays = Math.floor((now.getTime() - articleDate.getTime()) / (1000 * 60 * 60 * 24));
-
-      switch (timeFilter) {
-        case 'today':
-          if (diffInDays > 0) return false;
-          break;
-        case 'week':
-          if (diffInDays > 7) return false;
-          break;
-        case 'month':
-          if (diffInDays > 30) return false;
-          break;
-      }
-    }
-
-    // Threat level filter - now handled by API
-    // if (!threatFilters.includes(article.threatLevel)) {
-    //   return false;
-    // }
-
-    return true;
   });
 
-  // Show bookmarked articles if bookmarks view is active
-  // When showing bookmarks, we should display ALL bookmarked articles regardless of current filters
   const displayArticles = showBookmarks
-    ? (bookmarkedArticles as any[]).map(item => ({
-      ...item.article,
-      isBookmarked: true
-    }))
+    ? (bookmarkedArticles as any[]).map((item) => ({ ...item.article, isBookmarked: true }))
     : filteredArticles;
-
-  // Log a warning if we're in bookmarks view but not all bookmarks are displayed
-  if (showBookmarks) {
-    const bookmarkCount = (bookmarks as Bookmark[]).length;
-    const displayedBookmarkCount = displayArticles.length;
-    if (bookmarkCount !== displayedBookmarkCount) {
-      console.warn(`Bookmark count mismatch: ${bookmarkCount} bookmarks exist but only ${displayedBookmarkCount} are displayed`);
-    }
-  }
-
-  console.log('Display articles count:', displayArticles.length, 'Show bookmarks:', showBookmarks);
-  console.log('Bookmarks count:', (bookmarks as Bookmark[]).length);
-  console.log('Bookmarks:', bookmarks);
-  console.log('Articles:', articles.map(a => a.id));
-
-  // Log filtering details when in bookmarks view
-  if (showBookmarks) {
-    console.log('Filtering details:');
-    console.log('- Time filter:', timeFilter);
-    console.log('- Threat filters:', threatFilters);
-    console.log('- Selected source:', selectedSource);
-    console.log('- Total articles:', articles.length);
-    console.log('- Filtered articles:', filteredArticles.length);
-    console.log('- Bookmarked articles:', displayArticles.length);
-  }
 
   const lastUpdated = new Date().toLocaleTimeString('en-US', {
     hour: 'numeric',
@@ -348,220 +178,183 @@ export default function Home() {
   });
 
   const seoProps = {
-    title: "Live Cybersecurity News Feed | WhatCyber",
-    description: "Your live, aggregated feed of the latest cybersecurity news. Stay updated on vulnerabilities, threat intel, and breaking stories from around the web.",
-    keywords: "cybersecurity news, threat intelligence, vulnerability feed, security alerts, cyber threats, security updates"
+    title: 'Live Cybersecurity News Feed | WhatCyber',
+    description:
+      'Your live, aggregated feed of the latest cybersecurity news. Stay updated on vulnerabilities, threat intel, and breaking stories from around the web.',
+    keywords:
+      'cybersecurity news, threat intelligence, vulnerability feed, security alerts, cyber threats, security updates',
   };
 
   return (
-    <div className="min-h-screen bg-whatcyber-darker text-slate-100 flex flex-col">
-      <SEO
-        {...seoProps}
-      />
-      <Header
-        onSearch={handleSearch}
-        bookmarkCount={(bookmarks as Bookmark[]).length}
-        onBookmarksClick={handleBookmarksClick}
-        onSidebarToggle={handleSidebarToggle}
-        isSidebarOpen={isSidebarOpen}
-      />
+    <AppShell
+      activeTab="feeds"
+      sidebar={
+        <FeedsSidebar
+          selectedSource={selectedSource}
+          onSourceSelect={handleSourceSelect}
+          timeFilter={timeFilter}
+          onTimeFilterChange={handleTimeFilterChange}
+          threatFilters={threatFilters}
+          onThreatFilterChange={handleThreatFilterChange}
+          activeView={view}
+        />
+      }
+    >
+      <SEO {...seoProps} />
 
-      <div className="flex flex-1 min-h-0 relative">
-        {/* Mobile Overlay */}
-        {isSidebarOpen && (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
-            onClick={handleSidebarClose}
-          />
-        )}
-
-        {/* Sidebar */}
-        <div className={`${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          } fixed left-0 top-16 h-[calc(100vh-4rem)] z-30 lg:relative lg:translate-x-0 lg:z-10 lg:top-0 lg:h-full transition-transform duration-300 ease-in-out`}>
-          <Sidebar
-            selectedSource={selectedSource}
-            onSourceSelect={(source) => {
-              handleSourceSelect(source);
-              handleSidebarClose(); // Auto-close on mobile after selection
-            }}
-            timeFilter={timeFilter}
-            onTimeFilterChange={handleTimeFilterChange}
-            threatFilters={threatFilters}
-            onThreatFilterChange={handleThreatFilterChange}
-            onClose={handleSidebarClose}
-            onVulnerabilitiesClick={handleVulnerabilitiesClick}
-
-            onFollowSourcesClick={handleFollowSourcesClick}
-            onBookmarksClick={handleBookmarksSidebarClick} // Add this prop
-          />
-        </div>
-
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-whatcyber-darker">
-          {showVulnerabilities ? (
-            <CVEList onClose={handleVulnerabilitiesClose} />
-          ) : showFollowSources ? (
-            <FollowSourcesView
-              userSources={userSources}
-              onBack={handleFollowSourcesBack}
-            />
-          ) : (
-            <div className="max-w-4xl mx-auto p-4 lg:p-6">
-              {/* Content Header */}
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 space-y-4 lg:space-y-0">
-                <div>
-                  <h1 className="text-xl lg:text-2xl font-bold text-slate-100 mb-2" data-testid="text-page-title">
-                    {showBookmarks ? 'Bookmarked Articles' : 'Latest Threat Intelligence'}
-                  </h1>
-                  <p className="text-sm lg:text-base text-slate-400" data-testid="text-page-description">
-                    {showBookmarks
-                      ? user
-                        ? 'Your saved articles for later reading'
-                        : 'Please log in to view your bookmarks'
-                      : 'Stay updated with the latest cybersecurity threats and vulnerabilities'
-                    }
-                  </p>
-                </div>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
-                  <div className="flex items-center space-x-2 text-sm text-slate-400">
-                    <Clock className="w-4 h-4" />
-                    <span data-testid="text-last-updated">Last updated: {lastUpdated}</span>
-                  </div>
-                  {!showBookmarks && (
-                    <Select value={sortBy} onValueChange={handleSortChange}>
-                      <SelectTrigger className="bg-slate-700 border-slate-600 text-slate-100 w-full sm:w-auto" data-testid="select-sort">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="newest">Newest First</SelectItem>
-                        <SelectItem value="oldest">Oldest First</SelectItem>
-                        <SelectItem value="relevance">Most Relevant</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
+      {view === 'follow' ? (
+        <FollowSourcesView userSources={userSources} onBack={() => setLocation('/threatfeed')} />
+      ) : (
+        <div className="mx-auto max-w-4xl p-4 lg:p-8">
+          {/* Content Header */}
+          <div className="mb-6 flex flex-col justify-between space-y-4 lg:flex-row lg:items-center lg:space-y-0">
+            <div>
+              <h1
+                className="mb-1 font-display text-xl font-bold text-slate-100 lg:text-2xl"
+                data-testid="text-page-title"
+              >
+                {showBookmarks ? 'Bookmarked Articles' : 'Latest Threat Intelligence'}
+              </h1>
+              <p className="text-sm text-slate-400 lg:text-base" data-testid="text-page-description">
+                {showBookmarks
+                  ? user
+                    ? 'Your saved articles for later reading'
+                    : 'Please log in to view your bookmarks'
+                  : 'Stay updated with the latest cybersecurity threats and vulnerabilities'}
+              </p>
+            </div>
+            <div className="flex flex-col items-start space-y-2 sm:flex-row sm:items-center sm:space-x-4 sm:space-y-0">
+              <div className="flex items-center space-x-2 font-mono text-xs text-slate-400">
+                <Clock className="h-4 w-4" aria-hidden="true" />
+                <span data-testid="text-last-updated">Updated {lastUpdated}</span>
               </div>
+              {!showBookmarks && (
+                <Select value={sortBy} onValueChange={handleSortChange}>
+                  <SelectTrigger
+                    className="h-9 w-full bg-card sm:w-auto"
+                    data-testid="select-sort"
+                    aria-label="Sort articles"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest">Newest First</SelectItem>
+                    <SelectItem value="oldest">Oldest First</SelectItem>
+                    <SelectItem value="relevance">Most Relevant</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </div>
 
-              {/* Loading State */}
-              {articlesLoading && (
-                <div className="grid gap-6">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="bg-slate-800 rounded-xl border border-slate-700 p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center space-x-3">
-                          <Skeleton className="w-6 h-6 rounded-sm" />
-                          <Skeleton className="w-24 h-4" />
-                          <Skeleton className="w-16 h-6 rounded-full" />
-                        </div>
-                        <Skeleton className="w-20 h-4" />
-                      </div>
-                      <Skeleton className="w-full h-6 mb-3" />
-                      <Skeleton className="w-full h-4 mb-2" />
-                      <Skeleton className="w-3/4 h-4 mb-4" />
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <Skeleton className="w-20 h-4" />
-                          <div className="flex space-x-1">
-                            <Skeleton className="w-16 h-6 rounded-full" />
-                            <Skeleton className="w-20 h-6 rounded-full" />
-                          </div>
-                        </div>
-                        <Skeleton className="w-24 h-4" />
+          {/* Loading State */}
+          {articlesLoading && (
+            <div className="grid gap-5">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="rounded-xl border border-border bg-card p-6">
+                  <div className="mb-4 flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <Skeleton className="h-6 w-6 rounded-sm" />
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-6 w-16 rounded-full" />
+                    </div>
+                    <Skeleton className="h-4 w-20" />
+                  </div>
+                  <Skeleton className="mb-3 h-6 w-full" />
+                  <Skeleton className="mb-2 h-4 w-full" />
+                  <Skeleton className="mb-4 h-4 w-3/4" />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <Skeleton className="h-4 w-20" />
+                      <div className="flex space-x-1">
+                        <Skeleton className="h-6 w-16 rounded-full" />
+                        <Skeleton className="h-6 w-20 rounded-full" />
                       </div>
                     </div>
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Articles */}
+          {!articlesLoading && (
+            <>
+              {showBookmarks && !user ? (
+                <div className="py-12 text-center">
+                  <div className="mb-2 text-lg text-slate-400" data-testid="text-no-articles">
+                    Please log in to view your bookmarks
+                  </div>
+                  <p className="text-sm text-slate-500" data-testid="text-no-articles-description">
+                    Your bookmarked articles will appear here once you log in
+                  </p>
+                </div>
+              ) : displayArticles.length === 0 ? (
+                <div className="py-12 text-center">
+                  <div className="mb-2 text-lg text-slate-400" data-testid="text-no-articles">
+                    {showBookmarks
+                      ? 'No bookmarked articles yet'
+                      : searchQuery
+                        ? 'No articles found matching your search'
+                        : 'No articles available'}
+                  </div>
+                  <p className="text-sm text-slate-500" data-testid="text-no-articles-description">
+                    {showBookmarks
+                      ? 'Bookmark articles to read them later'
+                      : searchQuery
+                        ? 'Try adjusting your search terms or filters'
+                        : 'Articles will appear here once feeds are loaded. Try adjusting your Time range filter.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-5">
+                  {displayArticles.map((article, index) => (
+                    <ArticleCard
+                      key={article.id}
+                      article={{
+                        ...article,
+                        isBookmarked: showBookmarks
+                          ? true
+                          : bookmarks.some((bookmark) => bookmark.articleId === article.id),
+                      }}
+                      isFeatured={index === 0 && !showBookmarks && !searchQuery}
+                      onReadHere={setSelectedArticleUrl}
+                    />
                   ))}
                 </div>
               )}
 
-              {/* Articles Grid */}
-              {!articlesLoading && (
-                <>
-                  {showBookmarks && !user ? (
-                    <div className="text-center py-12">
-                      <div className="text-slate-400 text-lg mb-2" data-testid="text-no-articles">
-                        Please log in to view your bookmarks
-                      </div>
-                      <p className="text-slate-500 text-sm" data-testid="text-no-articles-description">
-                        Your bookmarked articles will appear here once you log in
-                      </p>
-                    </div>
-                  ) : displayArticles.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className="text-slate-400 text-lg mb-2" data-testid="text-no-articles">
-                        {showBookmarks
-                          ? "No bookmarked articles yet"
-                          : searchQuery
-                            ? "No articles found matching your search"
-                            : "No articles available"
-                        }
-                      </div>
-                      <p className="text-slate-500 text-sm" data-testid="text-no-articles-description">
-                        {showBookmarks
-                          ? "Bookmark articles to read them later"
-                          : searchQuery
-                            ? "Try adjusting your search terms or filters"
-                            : "Articles will appear here once feeds are loaded. Try adjusting your Time range filter."
-                        }
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="grid gap-6">
-                      {displayArticles.map((article, index) => (
-                        <ArticleCard
-                          key={article.id}
-                          article={{
-                            ...article,
-                            isBookmarked: showBookmarks ? true : bookmarks.some(bookmark => bookmark.articleId === article.id)
-                          }}
-                          isFeatured={index === 0 && !showBookmarks && !searchQuery}
-                          onReadHere={handleReadHere}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Pagination Controls */}
-                  {!showBookmarks && (
-                    <div className="flex justify-center items-center mt-8 space-x-4">
-                      <Button
-                        variant="outline"
-                        onClick={handlePreviousPage}
-                        disabled={page === 0}
-                        className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-100 border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                        data-testid="button-previous-page"
-                      >
-                        <ChevronDown className="w-4 h-4 mr-2 rotate-90" />
-                        Previous
-                      </Button>
-
-                      <span className="text-slate-400 font-medium">
-                        Page {page + 1}
-                      </span>
-
-                      <Button
-                        variant="outline"
-                        onClick={handleNextPage}
-                        disabled={displayArticles.length < ARTICLES_PER_PAGE}
-                        className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-100 border-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                        data-testid="button-next-page"
-                      >
-                        Next
-                        <ChevronDown className="w-4 h-4 ml-2 -rotate-90" />
-                      </Button>
-                    </div>
-                  )}
-                </>
+              {/* Pagination */}
+              {!showBookmarks && displayArticles.length > 0 && (
+                <div className="mt-8 flex items-center justify-center space-x-4">
+                  <Button
+                    variant="outline"
+                    onClick={handlePreviousPage}
+                    disabled={page === 0}
+                    data-testid="button-previous-page"
+                  >
+                    <ChevronDown className="mr-2 h-4 w-4 rotate-90" />
+                    Previous
+                  </Button>
+                  <span className="font-mono text-sm text-slate-400">Page {page + 1}</span>
+                  <Button
+                    variant="outline"
+                    onClick={handleNextPage}
+                    disabled={displayArticles.length < ARTICLES_PER_PAGE}
+                    data-testid="button-next-page"
+                  >
+                    Next
+                    <ChevronDown className="ml-2 h-4 w-4 -rotate-90" />
+                  </Button>
+                </div>
               )}
-            </div>
+            </>
           )}
-        </main>
-      </div>
+        </div>
+      )}
 
-      {/* Article Viewer */}
-      <ArticleViewer
-        articleUrl={selectedArticleUrl}
-        onClose={handleCloseArticleViewer}
-      />
-    </div>
+      <ArticleViewer articleUrl={selectedArticleUrl} onClose={() => setSelectedArticleUrl(null)} />
+    </AppShell>
   );
 }

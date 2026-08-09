@@ -74,12 +74,12 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
   const getThreatLevelColor = (level: string) => {
     switch (level.toUpperCase()) {
       case 'CRITICAL':
-        return 'text-red-400 bg-red-500/20';
+        return 'text-red-700 bg-red-100 dark:text-red-400 dark:bg-red-500/20';
       case 'HIGH':
-        return 'text-yellow-400 bg-yellow-500/20';
+        return 'text-amber-700 bg-amber-100 dark:text-yellow-400 dark:bg-yellow-500/20';
       case 'MEDIUM':
       default:
-        return 'text-blue-400 bg-blue-500/20';
+        return 'text-sky-700 bg-sky-100 dark:text-blue-400 dark:bg-blue-500/20';
     }
   };
 
@@ -126,7 +126,7 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
           </div>
           <div className="flex items-center space-x-1 lg:space-x-2 flex-shrink-0 ml-2">
             <span
-              className="text-xs lg:text-sm text-slate-400 hidden sm:block"
+              className="text-xs font-mono text-slate-400 hidden sm:block"
               data-testid={`text-publish-time-${article.id}`}
             >
               {formatTimeAgo(article.publishedAt)}

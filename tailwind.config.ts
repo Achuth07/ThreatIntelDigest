@@ -63,6 +63,7 @@ export default {
         },
         // Custom WhatCyber theme colors - matching main site
         "whatcyber-teal": "var(--whatcyber-teal)",
+        "whatcyber-teal-bright": "var(--whatcyber-teal-bright)",
         "whatcyber-dark": "var(--whatcyber-dark)",
         "whatcyber-darker": "var(--whatcyber-darker)",
         "whatcyber-gray": "var(--whatcyber-gray)",
@@ -70,16 +71,27 @@ export default {
         "cyber-blue": "var(--cyber-blue)",
         "cyber-cyan": "var(--cyber-cyan)",
         "dark-slate": "var(--dark-slate)",
-        "slate-800": "hsl(185 15% 15%)",
-        "slate-700": "hsl(185 10% 25%)",
-        "slate-600": "hsl(185 8% 35%)",
-        "slate-300": "hsl(185 5% 65%)",
-        "slate-100": "hsl(185 5% 98%)",
+        // Legacy tone scale: slate-* utilities resolve per theme so
+        // dark-mode-era components adapt to light mode automatically.
+        slate: {
+          "50": "var(--tone-100)",
+          "100": "var(--tone-100)",
+          "200": "var(--tone-200)",
+          "300": "var(--tone-300)",
+          "400": "var(--tone-400)",
+          "500": "var(--tone-500)",
+          "600": "var(--tone-600)",
+          "700": "var(--tone-700)",
+          "800": "var(--tone-800)",
+          "900": "var(--tone-900)",
+          "950": "var(--tone-900)",
+        },
       },
       fontFamily: {
         sans: ["var(--font-sans)"],
         serif: ["var(--font-serif)"],
         mono: ["var(--font-mono)"],
+        display: ["var(--font-display)"],
         inter: ["Inter", "sans-serif"],
       },
       keyframes: {

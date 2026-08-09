@@ -49,7 +49,7 @@ export function KofiBanner() {
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <p className="text-sm leading-6 text-slate-200">
-          <strong className="font-semibold text-white flex items-center gap-2">
+          <strong className="font-semibold text-slate-100 flex items-center gap-2">
             <Heart className="h-4 w-4 text-whatcyber-teal" fill="currentColor" />
             Support WhatCyber
           </strong>
@@ -69,7 +69,7 @@ export function KofiBanner() {
         <button
           type="button"
           onClick={handleDismiss}
-          className="-m-3 p-3 focus-visible:outline-offset-[-4px] text-slate-400 hover:text-white transition-colors"
+          className="-m-3 p-3 focus-visible:outline-offset-[-4px] text-slate-400 hover:text-slate-100 transition-colors"
         >
           <span className="sr-only">Dismiss</span>
           <X className="h-5 w-5" aria-hidden="true" />

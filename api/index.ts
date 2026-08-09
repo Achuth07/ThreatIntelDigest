@@ -4240,35 +4240,102 @@ async function handleFetchArticleEndpoints(req: VercelRequest, res: VercelRespon
     }
 
     // Fetch the article HTML with more realistic browser headers
-    const response = await axios.get(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Accept-Encoding': 'gzip, deflate',
-        'Connection': 'keep-alive',
-        'Upgrade-Insecure-Requests': '1',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Sec-Fetch-User': '?1',
-        'Cache-Control': 'max-age=0',
-        'Referer': 'https://www.google.com/',
-      },
-      timeout: 15000, // 15 second timeout
-      maxRedirects: 5,
-      // Add response type to handle different content encodings
-      responseType: 'text',
-      decompress: true,
-    });
+    const { default: zlib } = await import('zlib');
+    let response;
+    try {
+      response = await axios.get(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Cache-Control': 'max-age=0',
+          'Referer': 'https://www.google.com/',
+        },
+        timeout: 15000,
+        maxRedirects: 5,
+        responseType: 'arraybuffer',
+        decompress: false, // We will manually decompress to avoid all quirks
+        validateStatus: (status) => status < 400 || status === 403 // Allow 403 to be caught manually instead of throwing if we want, or just let it throw
+      });
+    } catch (error: any) {
+      if (error.response?.status === 403) {
+        console.log(`Access denied (403) fetching ${url}, retrying with bot User-Agent...`);
+        response = await axios.get(url, {
+          headers: {
+            'User-Agent': 'ThreatIntelDigest/1.0 (Article Extractor)'
+          },
+          timeout: 15000,
+          maxRedirects: 5,
+          responseType: 'arraybuffer',
+          decompress: false
+        });
+      } else {
+        throw error;
+      }
+    }
+    
+    if (response.status === 403) {
+       // In case validateStatus let it through, we should trigger the retry logic
+       console.log(`Access denied (403) fetching ${url}, retrying with bot User-Agent...`);
+       response = await axios.get(url, {
+         headers: {
+           'User-Agent': 'ThreatIntelDigest/1.0 (Article Extractor)'
+         },
+         timeout: 15000,
+         maxRedirects: 5,
+         responseType: 'arraybuffer',
+         decompress: false
+       });
+    }
 
     if (!response.data) {
       return res.status(404).json({ message: 'No content found at the provided URL' });
     }
 
+    // Manually decompress the arraybuffer if needed
+    let htmlText = '';
+    try {
+      let buffer = Buffer.from(response.data);
+      const encoding = (response.headers['content-encoding'] || '').toLowerCase();
+      
+      if (encoding.includes('br')) {
+        buffer = zlib.brotliDecompressSync(buffer);
+      } else if (encoding.includes('gzip')) {
+        buffer = zlib.gunzipSync(buffer);
+      } else if (encoding.includes('deflate')) {
+        buffer = zlib.inflateSync(buffer);
+      }
+      
+      htmlText = buffer.toString('utf8');
+    } catch (decompressionError) {
+      console.error('Failed to decompress article response:', decompressionError);
+      // Fallback: try parsing as string directly
+      htmlText = Buffer.from(response.data).toString('utf8');
+    }
+
     // Parse HTML with JSDOM
-    const dom = new JSDOM(response.data, {
+    const dom = new JSDOM(htmlText, {
       url: url,
+    });
+
+    // Clean up known cookie banners and modals before parsing
+    const elementsToRemove = [
+      '#cookie-law-info-bar',
+      '#cookie-law-info-again',
+      '#cliSettingsPopup',
+      '.cookie-banner',
+      '.cli-modal',
+      '.cc-window',
+      '#cookie-notice'
+    ];
+    elementsToRemove.forEach(selector => {
+      dom.window.document.querySelectorAll(selector).forEach(el => el.remove());
     });
 
     // Use Readability to extract the main content
