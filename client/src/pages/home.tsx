@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation } from 'wouter';
+import { useLocation, useSearch } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { AppShell } from '@/components/layout/app-shell';
 import { FeedsSidebar, guestSources } from '@/components/layout/sidebars/feeds-sidebar';
@@ -25,8 +25,9 @@ function viewFromParams(params: URLSearchParams): FeedView {
 
 export default function Home() {
   const [location, setLocation] = useLocation();
+  const searchString = useSearch();
 
-  const urlParams = new URLSearchParams(window.location.search);
+  const urlParams = new URLSearchParams(searchString || window.location.search);
   const [selectedSource, setSelectedSource] = useState(urlParams.get('source') || 'all');
   const [searchQuery, setSearchQuery] = useState(urlParams.get('search') || '');
   const [sortBy, setSortBy] = useState('newest');
@@ -41,12 +42,12 @@ export default function Home() {
 
   // The CVE list moved to its own tab; keep old links working.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(searchString || window.location.search);
     const v = params.get('view');
     if (v === 'cve' || v === 'cveList') {
       setLocation('/vulnerabilities');
     }
-  }, [location, setLocation]);
+  }, [location, searchString, setLocation]);
 
   // Fetch user sources (Follow Sources view needs them)
   const { data: fetchedSources = [] } = useQuery<RssSource[]>({
@@ -98,7 +99,7 @@ export default function Home() {
 
   // Sync state with URL parameters
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(searchString || window.location.search);
     const source = params.get('source');
     const search = params.get('search');
 
@@ -112,7 +113,7 @@ export default function Home() {
       setSearchQuery(search);
     }
     setPage(0);
-  }, [location]);
+  }, [location, searchString]);
 
   const handleSourceSelect = (source: string) => {
     setView('feed');

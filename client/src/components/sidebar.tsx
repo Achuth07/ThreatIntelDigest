@@ -522,20 +522,6 @@ export function Sidebar({
           </div>
         </div>
 
-        {/* My Watchlist */}
-        <div className="mb-6">
-          <Link href="/watchlist">
-            <div className={`w-full flex items-center p-2 rounded-lg cursor-pointer transition-colors group ${location === '/watchlist'
-              ? 'bg-whatcyber-teal/20'
-              : 'hover:bg-slate-700'
-              }`}>
-              <h3 className={`text-lg font-semibold flex items-center ${location === '/watchlist' ? 'text-whatcyber-teal' : 'text-slate-100'}`}>
-                <Telescope className={`w-5 h-5 mr-2 transition-colors ${location === '/watchlist' ? 'text-whatcyber-teal' : 'text-whatcyber-teal'}`} />
-                My Watchlist
-              </h3>
-            </div>
-          </Link>
-        </div>
 
         {/* Filter Options - Moved to top */}
         <div className="mb-6">

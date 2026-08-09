@@ -181,7 +181,6 @@ export function FeedsSidebar({
   return (
     <>
       <SidebarSection label="Browse" icon={Telescope}>
-        <SidebarItem icon={Telescope} label="My Watchlist" href="/watchlist" testId="button-watchlist" />
         <SidebarItem
           icon={Plus}
           label="Follow Sources"
