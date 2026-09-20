@@ -18,40 +18,48 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    const apiToken = process.env.VITE_THREATFEED_COUNTER || process.env.COUNTERAPI_TOKEN;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    };
+    if (apiToken) {
+      headers['Authorization'] = `Bearer ${apiToken}`;
+    }
+
     if (req.method === 'POST') {
-      // Increment visitor count using CounterAPI v1 (no authentication needed)
-      // Added trailing slash to avoid 301 redirect that causes CORS issues
-      const counterUrl = `https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed/up/`;
+      const counterUrl = `https://api.counterapi.dev/v2/threatfeed/visitorstothreatfeed/up`;
       
       const response = await fetch(counterUrl, {
-        method: 'GET'  // CounterAPI v1 uses GET for incrementing
+        method: 'GET',
+        headers
       });
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`CounterAPI v1 increment failed: ${response.status} ${response.statusText}`, errorText);
-        throw new Error(`CounterAPI v1 increment failed: ${response.status} ${response.statusText} - ${errorText}`);
+        console.error(`CounterAPI v2 increment failed: ${response.status} ${response.statusText}`, errorText);
+        throw new Error(`CounterAPI v2 increment failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
       
       const data = await response.json();
-      res.status(200).json(data);
+      const count = data.data?.up_count ?? data.up_count ?? data.count ?? 0;
+      res.status(200).json({ ...data, count });
     } else if (req.method === 'GET') {
-      // Get visitor count using CounterAPI v1 (no authentication needed)
-      // Added trailing slash to avoid 301 redirect that causes CORS issues
-      const counterUrl = `https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed/`;
+      const counterUrl = `https://api.counterapi.dev/v2/threatfeed/visitorstothreatfeed`;
       
       const response = await fetch(counterUrl, {
-        method: 'GET'
+        method: 'GET',
+        headers
       });
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`CounterAPI v1 fetch failed: ${response.status} ${response.statusText}`, errorText);
-        throw new Error(`CounterAPI v1 fetch failed: ${response.status} ${response.statusText} - ${errorText}`);
+        console.error(`CounterAPI v2 fetch failed: ${response.status} ${response.statusText}`, errorText);
+        throw new Error(`CounterAPI v2 fetch failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
       
       const data = await response.json();
-      res.status(200).json(data);
+      const count = data.data?.up_count ?? data.up_count ?? data.count ?? 0;
+      res.status(200).json({ ...data, count });
     } else {
       res.status(405).json({ error: 'Method not allowed' });
     }

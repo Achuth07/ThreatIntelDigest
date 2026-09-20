@@ -409,7 +409,7 @@ This project integrates with CounterAPI to track visitor statistics. The visitor
 
 ### Setting up CounterAPI
 
-1. **Create a CounterAPI account** at [https://counterapi.com](https://counterapi.com)
+1. **Create a CounterAPI account** at [https://counterapi.dev](https://counterapi.dev)
 2. **Create a workspace** called `threatfeed`
 3. **Create a counter** with these details:
    - Name: `visitors`

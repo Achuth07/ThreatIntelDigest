@@ -271,14 +271,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/counter", async (req, res) => {
     console.log('GET /api/counter called');
     try {
-      // Proxy request to CounterAPI
-      const counterResponse = await fetch('https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed');
+      const apiToken = process.env.VITE_THREATFEED_COUNTER || process.env.COUNTERAPI_TOKEN;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (apiToken) {
+        headers['Authorization'] = `Bearer ${apiToken}`;
+      }
+
+      const counterResponse = await fetch('https://api.counterapi.dev/v2/threatfeed/visitorstothreatfeed', {
+        method: 'GET',
+        headers
+      });
 
       if (counterResponse.ok) {
         const data = await counterResponse.json();
-        res.json(data);
+        const count = data.data?.up_count ?? data.up_count ?? data.count ?? 0;
+        res.json({ ...data, count });
       } else {
-        // If CounterAPI returns an error, try to get error details
         const errorText = await counterResponse.text();
         res.status(counterResponse.status).json({
           error: `CounterAPI error: ${counterResponse.status}`,
@@ -297,41 +305,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/counter/increment", async (req, res) => {
     console.log('POST /api/counter/increment called');
     try {
-      // Try different approaches to increment the counter
-      // Approach 1: POST to the counter endpoint with up action
-      const counterResponse = await fetch('https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed/up', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      const apiToken = process.env.VITE_THREATFEED_COUNTER || process.env.COUNTERAPI_TOKEN;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (apiToken) {
+        headers['Authorization'] = `Bearer ${apiToken}`;
+      }
+
+      // CounterAPI v2 uses GET for /up endpoint
+      const counterResponse = await fetch('https://api.counterapi.dev/v2/threatfeed/visitorstothreatfeed/up', {
+        method: 'GET',
+        headers
       });
 
       if (counterResponse.ok) {
         const data = await counterResponse.json();
-        res.json(data);
+        const count = data.data?.up_count ?? data.up_count ?? data.count ?? 0;
+        res.json({ ...data, count });
       } else {
-        // If that fails, try a different approach
         const errorText = await counterResponse.text();
-        console.log('First approach failed:', errorText);
-
-        // Approach 2: GET request to the up endpoint
-        const counterResponse2 = await fetch('https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed/up', {
-          method: 'GET',
+        res.status(counterResponse.status).json({
+          error: `CounterAPI error: ${counterResponse.status}`,
+          details: errorText
         });
-
-        if (counterResponse2.ok) {
-          const data = await counterResponse2.json();
-          res.json(data);
-        } else {
-          const errorText2 = await counterResponse2.text();
-          console.log('Second approach failed:', errorText2);
-
-          // If both approaches fail, return error
-          res.status(counterResponse.status).json({
-            error: `CounterAPI error: ${counterResponse.status}`,
-            details: errorText
-          });
-        }
       }
     } catch (error) {
       console.error('CounterAPI proxy increment error:', error);
@@ -342,96 +337,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/visitor-count/increment', async (req, res) => {
+  const handleVisitorCountIncrement = async (req: any, res: any) => {
     try {
-      console.log('POST /api/visitor-count/increment - Starting request');
+      console.log(`${req.method} ${req.path} - Starting increment request`);
 
-      // Use CounterAPI v2 with token if available
-      const apiToken = process.env.VITE_THREATFEED_COUNTER;
-
+      const apiToken = process.env.VITE_THREATFEED_COUNTER || process.env.COUNTERAPI_TOKEN;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (apiToken) {
-        // Use CounterAPI v2 with authentication
-        const counterUrl = `https://api.counterapi.dev/v2/threatfeed/visitorstothreatfeed/up`;
-
-        const response = await fetch(counterUrl, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${apiToken}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error(`CounterAPI v2 failed: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        console.log('POST /api/visitor-count/increment - Success', data);
-        res.json(data);
-      } else {
-        // Fallback to CounterAPI v1
-        const counterUrl = `https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed/up/`;
-
-        const response = await fetch(counterUrl, {
-          method: 'GET'
-        });
-
-        if (!response.ok) {
-          throw new Error(`CounterAPI v1 failed: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        console.log('POST /api/visitor-count/increment - Success', data);
-        res.json(data);
+        headers['Authorization'] = `Bearer ${apiToken}`;
       }
+
+      // CounterAPI v2 uses GET method for incrementing via /up
+      const counterUrl = `https://api.counterapi.dev/v2/threatfeed/visitorstothreatfeed/up`;
+
+      const response = await fetch(counterUrl, {
+        method: 'GET',
+        headers
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`CounterAPI v2 failed: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      const count = data.data?.up_count ?? data.up_count ?? data.count ?? 0;
+      console.log(`${req.method} ${req.path} - Success`, data);
+      res.json({ ...data, count });
     } catch (error) {
-      console.error('POST /api/visitor-count/increment - Error:', error);
+      console.error(`Visitor count increment error:`, error);
       res.status(500).json({ error: 'Failed to increment visitor count' });
     }
-  });
+  };
+
+  app.post('/api/visitor-count/increment', handleVisitorCountIncrement);
+  app.post('/api/visitor-count', handleVisitorCountIncrement);
 
   app.get('/api/visitor-count', async (req, res) => {
     try {
       console.log('GET /api/visitor-count - Starting request');
 
-      // Use CounterAPI v2 with token if available
-      const apiToken = process.env.VITE_THREATFEED_COUNTER;
-
+      const apiToken = process.env.VITE_THREATFEED_COUNTER || process.env.COUNTERAPI_TOKEN;
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       if (apiToken) {
-        // Use CounterAPI v2 with authentication
-        const counterUrl = `https://api.counterapi.dev/v2/threatfeed/visitorstothreatfeed`;
-
-        const response = await fetch(counterUrl, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${apiToken}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error(`CounterAPI v2 failed: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        console.log('GET /api/visitor-count - Success', data);
-        res.json(data);
-      } else {
-        // Fallback to CounterAPI v1
-        const counterUrl = `https://api.counterapi.dev/v1/threatfeed/visitorstothreatfeed/`;
-
-        const response = await fetch(counterUrl, {
-          method: 'GET'
-        });
-
-        if (!response.ok) {
-          throw new Error(`CounterAPI v1 failed: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        console.log('GET /api/visitor-count - Success', data);
-        res.json(data);
+        headers['Authorization'] = `Bearer ${apiToken}`;
       }
+
+      const counterUrl = `https://api.counterapi.dev/v2/threatfeed/visitorstothreatfeed`;
+
+      const response = await fetch(counterUrl, {
+        method: 'GET',
+        headers
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`CounterAPI v2 failed: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      const count = data.data?.up_count ?? data.up_count ?? data.count ?? 0;
+      console.log('GET /api/visitor-count - Success', data);
+      res.json({ ...data, count });
     } catch (error) {
       console.error('GET /api/visitor-count - Error:', error);
       res.status(500).json({ error: 'Failed to fetch visitor count' });
