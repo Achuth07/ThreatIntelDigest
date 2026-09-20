@@ -17,8 +17,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { getAuthenticatedUser } from '@/lib/auth';
 import { apiRequest } from '@/lib/queryClient';
-import { Header } from '@/components/header';
-import { Sidebar } from '@/components/sidebar';
+import { AppShell } from '@/components/layout/app-shell';
+import { DashboardSidebar } from '@/components/layout/sidebars/dashboard-sidebar';
 import { SEO } from '@/components/seo';
 
 interface UserSettings {
@@ -271,53 +271,18 @@ export default function Settings() {
   }
 
   return (
-    <div className="min-h-screen bg-whatcyber-darker text-slate-100 flex flex-col">
+    <AppShell activeTab="dashboard" sidebar={<DashboardSidebar />}>
       <SEO
         title="Settings - WhatCyber ThreatFeed"
         description="Manage your WhatCyber ThreatFeed account settings, preferences, and integrations."
         keywords="settings, cybersecurity, threat intelligence, preferences"
       />
-      <Header
-        onSearch={() => { }}
-        bookmarkCount={0}
-        onBookmarksClick={() => navigate('/threatfeed?view=bookmarks')}
-        onSidebarToggle={handleSidebarToggle}
-        isSidebarOpen={isSidebarOpen}
-      />
 
-      <div className="flex flex-1 min-h-0 relative">
-        {/* Mobile Overlay */}
-        {isSidebarOpen && (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
-            onClick={handleSidebarClose}
-          />
-        )}
-
-        {/* Sidebar */}
-        <div className={`${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          } fixed left-0 top-16 h-[calc(100vh-4rem)] z-30 lg:relative lg:translate-x-0 lg:z-10 lg:top-0 lg:h-full transition-transform duration-300 ease-in-out`}>
-          <Sidebar
-            selectedSource="all"
-            onSourceSelect={handleSourceSelect}
-            timeFilter="all"
-            onTimeFilterChange={() => { }}
-            threatFilters={['CRITICAL', 'HIGH', 'MEDIUM']}
-            onThreatFilterChange={() => { }}
-            onClose={handleSidebarClose}
-            onVulnerabilitiesClick={() => navigate('/threatfeed?view=cve')}
-            onFollowSourcesClick={() => navigate('/threatfeed?view=follow')}
-            onBookmarksClick={() => navigate('/threatfeed?view=bookmarks')}
-          />
+      <div className="mx-auto max-w-5xl p-4 lg:p-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-slate-100 mb-2">Settings</h1>
+          <p className="text-slate-400">Manage your account settings and preferences.</p>
         </div>
-
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-whatcyber-darker p-4 lg:p-8">
-          <div className="max-w-5xl mx-auto">
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-slate-100 mb-2">Settings</h1>
-              <p className="text-slate-400">Manage your account settings and preferences.</p>
-            </div>
 
             <Tabs defaultValue="profile" className="space-y-6">
               <TabsList className="bg-whatcyber-gray border border-whatcyber-light-gray w-full justify-start overflow-x-auto h-auto p-1">
@@ -788,8 +753,6 @@ export default function Settings() {
               </Button>
             </div>
           </div>
-        </main>
-      </div>
-    </div>
+    </AppShell>
   );
 }

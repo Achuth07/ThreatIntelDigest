@@ -2,8 +2,8 @@
 import { useState, useEffect } from 'react';
 import { client } from '@/lib/sanity';
 import { BlogCard, BlogPost } from '@/components/blog-card';
-import { Header } from '@/components/header';
-import { Sidebar } from '@/components/sidebar';
+import { AppShell } from '@/components/layout/app-shell';
+import { DashboardSidebar } from '@/components/layout/sidebars/dashboard-sidebar';
 import { SEO } from '@/components/seo';
 import { ChevronRight } from 'lucide-react';
 import { Link } from 'wouter';

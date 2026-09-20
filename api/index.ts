@@ -3835,21 +3835,26 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
     const Parser = (await import('rss-parser')).default;
 
     const parser = new Parser();
-
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
     const db = drizzle(pool);
 
     // Clean up old articles (older than 30 days)
     console.log('Cleaning up old articles...');
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    try {
+      await db.execute(sql`
+        DELETE FROM articles 
+        WHERE published_at < NOW() - INTERVAL '30 days'
+      `);
+      console.log('Cleaned up old articles');
+    } catch (cleanupErr) {
+      console.warn('Old articles cleanup warning:', cleanupErr);
+    }
 
-    const cleanupResult = await db.execute(sql`
-      DELETE FROM articles 
-      WHERE published_at < ${thirtyDaysAgo}
-    `);
-
-    console.log(`Cleaned up ${cleanupResult.rowCount || 0} old articles`);
+    // Pre-fetch all existing article URLs to avoid O(N) database queries during feed iteration
+    console.log('Pre-loading existing article URLs...');
+    const existingUrlsResult = await db.execute(sql`SELECT url FROM articles`);
+    const existingUrls = new Set<string>(existingUrlsResult.rows.map((r: any) => r.url));
+    console.log(`Loaded ${existingUrls.size} existing article URLs into cache`);
 
     // Get active RSS sources
     console.log('Fetching active RSS sources...');
@@ -3857,22 +3862,17 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
       SELECT id, name, url, icon, color, is_active 
       FROM rss_sources 
       WHERE is_active = true
-      `);
+    `);
 
-    const activeSources = sourcesResult.rows;
+    const activeSources = sourcesResult.rows.filter((s: any) => !s.disabled);
     console.log(`Found ${activeSources.length} active RSS sources`);
 
     let totalFetched = 0;
-    let feedResults: any[] = [];
+    const feedResults: any[] = [];
+    const CONCURRENCY = 10;
 
-    for (const source of activeSources) {
-      // Skip disabled sources
-      if (source.disabled) {
-        console.log(`Skipping disabled source: ${source.name} `);
-        continue;
-      }
-
-      let sourceResult: any = {
+    async function fetchSourceFeed(source: any) {
+      const sourceResult: any = {
         name: source.name,
         url: source.url,
         itemsFound: 0,
@@ -3880,192 +3880,99 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
         errors: [] as string[]
       };
 
-      // Retry mechanism for failed feeds
-      let retryCount = 0;
-      const maxRetries = 2;
-      let success = false;
-
-      while (retryCount <= maxRetries && !success) {
-        let timeoutId: NodeJS.Timeout | undefined;
-        let controller: AbortController | undefined;
-        let fetchErrorHandled = false;
-        let response: Response | undefined;
-        let feedUrl: string | undefined;
-
-        try {
-          // Resolve relative URLs to absolute URLs
-          feedUrl = source.url as string;
-          if (feedUrl.startsWith('/')) {
-            const protocol = req.headers['x-forwarded-proto'] || 'http';
-            const host = req.headers.host;
-            if (host) {
-              feedUrl = `${protocol}://${host}${feedUrl}`;
-              console.log(`Resolved relative URL ${source.url} to ${feedUrl} (Protocol: ${protocol}, Host: ${host})`);
-            } else {
-              console.warn(`Could not resolve relative URL ${source.url}: Host header missing. Headers:`, req.headers);
-            }
-          }
-
-          console.log(`Fetching feed from ${source.name} (${feedUrl})${retryCount > 0 ? ` (retry ${retryCount})` : ''}...`);
-
-          // Add timeout and handle SSL certificate issues by using fetch with custom options
-          controller = new AbortController();
-          timeoutId = setTimeout(() => controller?.abort(), 15000); // 15 second timeout
-
-          // Try to fetch
-          response = await fetch(feedUrl, {
-            signal: controller.signal,
-            headers: {
-              'User-Agent': process.env.RSS_USER_AGENT || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-              'Accept-Language': 'en-US,en;q=0.9',
-              'Accept-Encoding': 'gzip, deflate, br',
-              'Cache-Control': 'no-cache',
-              'Pragma': 'no-cache'
-            }
-          });
-          if (timeoutId) clearTimeout(timeoutId);
-
-          // At this point, response should be defined
-          if (response && !response.ok) {
-            const errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-            console.error(`HTTP error for ${source.name}:`, errorMessage);
-            // Handle 404 errors specifically
-            if (response.status === 404) {
-              sourceResult.errors.push(`Feed URL not found (404): The feed URL may be invalid or the source may have moved`);
-              break;
-            }
-            // Handle 500 errors with retry
-            else if (response.status >= 500 && retryCount < maxRetries) {
-              retryCount++;
-              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
-              continue;
-            }
-            throw new Error(errorMessage);
-          }
-
-          if (!response) {
-            throw new Error('Response is undefined');
-          }
-
-          let xmlText = await response.text();
-
-          // Sanitize XML text to handle common parsing issues
-          // Handle unescaped ampersands
-          xmlText = xmlText.replace(/&(?![a-zA-Z0-9#]{1,10};)/g, '&amp;');
-
-          // Remove any null bytes that might cause issues
-          xmlText = xmlText.replace(/\0/g, '');
-
-          const feed = await parser.parseString(xmlText);
-          console.log(`Feed parsed successfully. Found ${feed.items.length} items`);
-
-          sourceResult.itemsFound = feed.items.length;
-
-          let processedCount = 0;
-          for (const item of feed.items.slice(0, 10)) { // Limit to 10 latest items per source
-            if (!item.title || !item.link) {
-              console.log('Skipping item: missing title or link');
-              continue;
-            }
-
-            // Check if article already exists
-            const existingResult = await db.execute(sql`
-              SELECT id FROM articles WHERE url = ${item.link}
-            `);
-
-            if (existingResult.rows.length === 0) {
-              const threatLevel = determineThreatLevel(item.title || "", item.contentSnippet || "");
-              const tags = extractTags(item.title || "", item.contentSnippet || "");
-              const targetedIndustries = extractTargetedIndustries(item.title || "", item.contentSnippet || "");
-              const readTime = estimateReadTime(item.contentSnippet || item.content || "");
-              const summary = (item.contentSnippet || item.content?.substring(0, 300) || "") + ((item.content && item.content.length > 300) ? "..." : "");
-
-              // Handle published date - use current time if parsing fails
-              let publishedAt: Date;
-              try {
-                publishedAt = item.pubDate ? new Date(item.pubDate) : new Date();
-                // Validate the date
-                if (isNaN(publishedAt.getTime())) {
-                  publishedAt = new Date();
-                }
-              } catch {
-                publishedAt = new Date();
-              }
-
-              try {
-                console.log(`Inserting article: ${item.title}`);
-                console.log(`Industries:`, targetedIndustries);
-                console.log(`Published At:`, publishedAt);
-
-                // Temporarily skip tags field to get basic insertion working
-                await db.execute(sql`
-                  INSERT INTO articles (title, summary, url, source, threat_level, read_time, published_at, targeted_industries)
-                  VALUES (${item.title}, ${summary}, ${item.link}, ${source.name}, ${threatLevel}, ${readTime}, ${publishedAt}, ${JSON.stringify(targetedIndustries)})
-                `);
-
-                totalFetched++;
-                processedCount++;
-                sourceResult.itemsProcessed++;
-                console.log(`Saved article: ${item.title}`);
-              } catch (insertError) {
-                console.error(`Failed to insert article "${item.title}":`, insertError);
-                sourceResult.errors.push(`Insert failed: ${insertError instanceof Error ? insertError.message : 'Unknown error'}`);
-              }
-            } else {
-              console.log(`Article already exists: ${item.title}`);
-            }
-          }
-
-          // Update last fetched timestamp for the source
-          await db.execute(sql`
-            UPDATE rss_sources 
-            SET last_fetched = NOW() 
-            WHERE id = ${source.id}
-          `);
-
-          console.log(`Processed ${processedCount} new articles from ${source.name}`);
-          success = true; // Mark as successful
-
-        } catch (feedError) {
-          if (timeoutId) clearTimeout(timeoutId);
-          console.error(`Error fetching feed for ${source.name}:`, feedError);
-          console.error('Feed URL:', source.url);
-          console.error('Error details:', feedError instanceof Error ? feedError.message : feedError);
-
-          // Handle specific XML parsing errors
-          if (feedError instanceof Error) {
-            if (feedError.message.includes('Invalid character in entity name')) {
-              sourceResult.errors.push(`XML parsing error: Invalid character in feed. This is often caused by unescaped ampersands (&) in the XML. Error at column: ${feedError.message.match(/Column: (\d+)/)?.[1] || 'unknown'}`);
-            } else if (feedError.message.includes('Attribute without value')) {
-              sourceResult.errors.push(`XML parsing error: Attribute without value. This feed contains malformed XML attributes. Error at line: ${feedError.message.match(/Line: (\d+)/)?.[1] || 'unknown'}, column: ${feedError.message.match(/Column: (\d+)/)?.[1] || 'unknown'}`);
-            } else if (feedError.message.includes('No whitespace between attributes')) {
-              sourceResult.errors.push(`XML parsing error: No whitespace between attributes. This feed contains malformed XML. Error at line: ${feedError.message.match(/Line: (\d+)/)?.[1] || 'unknown'}, column: ${feedError.message.match(/Column: (\d+)/)?.[1] || 'unknown'}`);
-            } else if (feedError.message.includes('Invalid attribute name')) {
-              sourceResult.errors.push(`XML parsing error: Invalid attribute name. This feed contains malformed XML. Error at line: ${feedError.message.match(/Line: (\d+)/)?.[1] || 'unknown'}, column: ${feedError.message.match(/Column: (\d+)/)?.[1] || 'unknown'}`);
-            } else if (feedError.message.includes('Feed not recognized as RSS')) {
-              sourceResult.errors.push(`RSS format error: Feed not recognized as RSS 1 or 2. The URL may not point to a valid RSS feed.`);
-            } else {
-              sourceResult.errors.push(feedError.message);
-            }
-          } else {
-            sourceResult.errors.push('Unknown error');
-          }
-
-          // Retry on certain errors
-          if (retryCount < maxRetries && feedError instanceof Error &&
-            (feedError.message.includes('timeout') || feedError.message.includes('network') || feedError.message.includes('500'))) {
-            retryCount++;
-            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
-            continue;
-          } else {
-            // Don't retry, break out of retry loop
-            break;
-          }
+      let feedUrl = source.url as string;
+      if (feedUrl.startsWith('/')) {
+        const protocol = req.headers['x-forwarded-proto'] || 'http';
+        const host = req.headers.host;
+        if (host) {
+          feedUrl = `${protocol}://${host}${feedUrl}`;
         }
       }
 
+      let timeoutId: NodeJS.Timeout | undefined;
+      let controller: AbortController | undefined;
+
+      try {
+        controller = new AbortController();
+        timeoutId = setTimeout(() => controller?.abort(), 8000); // 8-second timeout per feed
+
+        const response = await fetch(feedUrl, {
+          signal: controller.signal,
+          headers: {
+            'User-Agent': process.env.RSS_USER_AGENT || 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
+        if (timeoutId) clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          sourceResult.errors.push(`HTTP ${response.status}: ${response.statusText}`);
+          feedResults.push(sourceResult);
+          return;
+        }
+
+        let xmlText = await response.text();
+        xmlText = xmlText.replace(/&(?![a-zA-Z0-9#]{1,10};)/g, '&amp;').replace(/\0/g, '');
+
+        const feed = await parser.parseString(xmlText);
+        sourceResult.itemsFound = feed.items.length;
+
+        let processedCount = 0;
+        for (const item of feed.items.slice(0, 10)) {
+          if (!item.title || !item.link) continue;
+
+          if (!existingUrls.has(item.link)) {
+            existingUrls.add(item.link);
+
+            const threatLevel = determineThreatLevel(item.title || "", item.contentSnippet || "");
+            const targetedIndustries = extractTargetedIndustries(item.title || "", item.contentSnippet || "");
+            const readTime = estimateReadTime(item.contentSnippet || item.content || "");
+            const summary = (item.contentSnippet || item.content?.substring(0, 300) || "") + ((item.content && item.content.length > 300) ? "..." : "");
+
+            let publishedAt: Date;
+            try {
+              publishedAt = item.pubDate ? new Date(item.pubDate) : new Date();
+              if (isNaN(publishedAt.getTime())) publishedAt = new Date();
+            } catch {
+              publishedAt = new Date();
+            }
+
+            try {
+              await db.execute(sql`
+                INSERT INTO articles (title, summary, url, source, threat_level, read_time, published_at, targeted_industries)
+                VALUES (${item.title}, ${summary}, ${item.link}, ${source.name}, ${threatLevel}, ${readTime}, ${publishedAt}, ${JSON.stringify(targetedIndustries)})
+              `);
+              totalFetched++;
+              processedCount++;
+              sourceResult.itemsProcessed++;
+            } catch (insertError: any) {
+              sourceResult.errors.push(`Insert failed: ${insertError?.message || 'Unknown error'}`);
+            }
+          }
+        }
+
+        // Update last_fetched timestamp
+        await db.execute(sql`
+          UPDATE rss_sources 
+          SET last_fetched = NOW() 
+          WHERE id = ${source.id}
+        `);
+
+      } catch (feedError: any) {
+        if (timeoutId) clearTimeout(timeoutId);
+        sourceResult.errors.push(feedError?.message || 'Unknown fetch error');
+      }
+
       feedResults.push(sourceResult);
+    }
+
+    // Process sources in parallel batches
+    for (let i = 0; i < activeSources.length; i += CONCURRENCY) {
+      const batch = activeSources.slice(i, i + CONCURRENCY);
+      await Promise.allSettled(batch.map((s: any) => fetchSourceFeed(s)));
     }
 
     console.log(`Feed fetch complete. Fetched ${totalFetched} new articles.`);

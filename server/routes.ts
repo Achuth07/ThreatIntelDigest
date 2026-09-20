@@ -256,7 +256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Fetch feeds API
-  app.post('/api/fetch-feeds', async (req, res) => {
+  app.post(['/api/fetch-feeds', '/api/fetch-feeds/'], async (req, res) => {
     const { mockReq, mockRes } = createMockHandlers(req, res, '/api/fetch-feeds');
     await consolidatedApiHandler(mockReq as any, mockRes as any);
   });
