@@ -53,7 +53,6 @@ export default function Settings() {
   const [displayNameError, setDisplayNameError] = useState('');
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Available IOC types to hide
   const iocTypes = ['MD5', 'SHA1', 'SHA256', 'SHA512', 'IPv4', 'IPv6', 'Domain', 'URL', 'Email'];
@@ -253,19 +252,6 @@ export default function Settings() {
     }));
   };
 
-  const handleSidebarToggle = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
-
-  const handleSidebarClose = () => {
-    setIsSidebarOpen(false);
-  };
-
-  const handleSourceSelect = (source: string) => {
-    navigate(`/threatfeed?source=${source}`);
-    handleSidebarClose();
-  };
-
   if (!user) {
     return null;
   }
@@ -284,475 +270,475 @@ export default function Settings() {
           <p className="text-slate-400">Manage your account settings and preferences.</p>
         </div>
 
-            <Tabs defaultValue="profile" className="space-y-6">
-              <TabsList className="bg-whatcyber-gray border border-whatcyber-light-gray w-full justify-start overflow-x-auto h-auto p-1">
-                {['Profile', 'Password', 'Notifications', 'Application Preferences', 'API & Integrations', 'Subscription & Billing'].map((tab) => (
-                  <TabsTrigger
-                    key={tab}
-                    value={tab.toLowerCase().replace(' & ', '-').replace(/ /g, '-')}
-                    className="data-[state=active]:bg-whatcyber-dark data-[state=active]:text-white text-slate-400 hover:text-slate-200 whitespace-nowrap"
-                  >
-                    {tab}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+        <Tabs defaultValue="profile" className="space-y-6">
+          <TabsList className="bg-slate-900 border border-slate-800 w-full justify-start overflow-x-auto h-auto p-1 text-slate-400">
+            {['Profile', 'Password', 'Notifications', 'Application Preferences', 'API & Integrations', 'Subscription & Billing'].map((tab) => (
+              <TabsTrigger
+                key={tab}
+                value={tab.toLowerCase().replace(' & ', '-').replace(/ /g, '-')}
+                className="data-[state=active]:bg-slate-800 data-[state=active]:text-cyan-400 text-slate-400 hover:text-slate-200 whitespace-nowrap"
+              >
+                {tab}
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
-              {/* Profile Tab */}
-              <TabsContent value="profile" className="space-y-6">
-                <Card className="bg-whatcyber-gray border-whatcyber-light-gray">
-                  <CardHeader>
-                    <div className="flex items-center space-x-2">
-                      <User className="w-5 h-5 text-whatcyber-teal" />
-                      <CardTitle className="text-slate-100">Profile Details</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center space-x-4">
-                      {user.avatar && (
-                        <img
-                          src={user.avatar}
-                          alt={user.name}
-                          className="w-16 h-16 rounded-full border-2 border-whatcyber-light-gray"
+          {/* Profile Tab */}
+          <TabsContent value="profile" className="space-y-6">
+            <Card className="bg-slate-900/60 border-slate-800">
+              <CardHeader>
+                <div className="flex items-center space-x-2">
+                  <User className="w-5 h-5 text-cyan-400" />
+                  <CardTitle className="text-slate-100">Profile Details</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center space-x-4">
+                  {user.avatar && (
+                    <img
+                      src={user.avatar}
+                      alt={user.name}
+                      className="w-16 h-16 rounded-full border-2 border-slate-800"
+                    />
+                  )}
+                  <div className="flex-1 space-y-4">
+                    <div>
+                      <Label htmlFor="name" className="text-slate-300">Display Name</Label>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <Input
+                          id="name"
+                          value={settings.displayName || ''}
+                          onChange={(e) => handleDisplayNameChange(e.target.value)}
+                          className="bg-slate-950 border-slate-800 text-slate-100 focus:border-cyan-500/50"
+                          disabled={!isEditingDisplayName}
                         />
+                        {!isEditingDisplayName ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIsEditingDisplayName(true)}
+                            className="border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800"
+                          >
+                            Edit
+                          </Button>
+                        ) : (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleSaveDisplayName}
+                              disabled={isSaving || !!displayNameError}
+                              className="border-green-600 text-green-500 hover:bg-green-600 hover:text-white"
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleCancelDisplayName}
+                              disabled={isSaving}
+                              className="border-red-600 text-red-500 hover:bg-red-600 hover:text-white"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                      {displayNameError && (
+                        <p className="text-xs text-red-400 mt-1">{displayNameError}</p>
                       )}
-                      <div className="flex-1 space-y-4">
-                        <div>
-                          <Label htmlFor="name" className="text-slate-300">Display Name</Label>
-                          <div className="flex items-center space-x-2 mt-1">
-                            <Input
-                              id="name"
-                              value={settings.displayName || ''}
-                              onChange={(e) => handleDisplayNameChange(e.target.value)}
-                              className="bg-whatcyber-dark border-whatcyber-light-gray text-slate-100"
-                              disabled={!isEditingDisplayName}
-                            />
-                            {!isEditingDisplayName ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setIsEditingDisplayName(true)}
-                                className="border-whatcyber-light-gray text-slate-300 hover:bg-whatcyber-dark"
-                              >
-                                Edit
-                              </Button>
-                            ) : (
-                              <>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={handleSaveDisplayName}
-                                  disabled={isSaving || !!displayNameError}
-                                  className="border-green-600 text-green-500 hover:bg-green-600 hover:text-white"
-                                >
-                                  <Check className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={handleCancelDisplayName}
-                                  disabled={isSaving}
-                                  className="border-red-600 text-red-500 hover:bg-red-600 hover:text-white"
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                          {displayNameError && (
-                            <p className="text-xs text-red-400 mt-1">{displayNameError}</p>
-                          )}
-                          <p className="text-xs text-slate-500 mt-1">
-                            Click Edit to change your display name (letters, numbers, and spaces only, max 50 characters)
-                          </p>
-                        </div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Click Edit to change your display name (letters, numbers, and spaces only, max 50 characters)
+                      </p>
+                    </div>
 
-                        <div>
-                          <Label className="text-slate-300">Full Name</Label>
-                          <div className="flex items-center space-x-2 mt-1">
-                            <Input
-                              value={user.name}
-                              disabled
-                              className="bg-whatcyber-dark/50 border-whatcyber-light-gray text-slate-400 cursor-not-allowed"
-                            />
-                          </div>
-                          <p className="text-xs text-slate-500 mt-1">From your Google account (cannot be changed)</p>
-                        </div>
+                    <div>
+                      <Label className="text-slate-300">Full Name</Label>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <Input
+                          value={user.name}
+                          disabled
+                          className="bg-slate-950/50 border-slate-800 text-slate-400 cursor-not-allowed"
+                        />
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">From your Google account (cannot be changed)</p>
+                    </div>
 
-                        <div>
-                          <Label className="text-slate-300">Email</Label>
-                          <Input
-                            value={user.email}
-                            disabled
-                            className="bg-whatcyber-dark/50 border-whatcyber-light-gray text-slate-400 mt-1"
-                          />
-                        </div>
+                    <div>
+                      <Label className="text-slate-300">Email</Label>
+                      <Input
+                        value={user.email}
+                        disabled
+                        className="bg-slate-950/50 border-slate-800 text-slate-400 mt-1 cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Password Tab */}
+          <TabsContent value="password" className="space-y-6">
+            <Card className="bg-slate-900/60 border-slate-800">
+              <CardHeader>
+                <div className="flex items-center space-x-2">
+                  <Key className="w-5 h-5 text-cyan-400" />
+                  <CardTitle className="text-slate-100">Password & Security</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div>
+                  <h4 className="text-sm font-medium text-slate-300 mb-3">Change Password</h4>
+                  <Button
+                    variant="outline"
+                    className="border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10"
+                    onClick={() => navigate('/set-password/')}
+                  >
+                    <Key className="w-4 h-4 mr-2" />
+                    Set/Change Password
+                  </Button>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-slate-300 mb-3">Active Sessions</h4>
+                  <div className="bg-slate-950 rounded-lg p-4 border border-slate-800 flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <Monitor className="w-5 h-5 text-cyan-400" />
+                      <div>
+                        <p className="text-sm font-medium text-slate-300">Current Session</p>
+                        <p className="text-xs text-slate-500">
+                          {navigator.userAgent.includes('Chrome') ? 'Chrome' : 'Browser'} on macOS
+                        </p>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+                      onClick={handleSignOutEverywhere}
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Sign Out Everywhere
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-              {/* Password Tab */}
-              <TabsContent value="password" className="space-y-6">
-                <Card className="bg-whatcyber-gray border-whatcyber-light-gray">
-                  <CardHeader>
-                    <div className="flex items-center space-x-2">
-                      <Key className="w-5 h-5 text-whatcyber-teal" />
-                      <CardTitle className="text-slate-100">Password & Security</CardTitle>
+          {/* Notifications Tab */}
+          <TabsContent value="notifications" className="space-y-6">
+            <Card className="bg-slate-900/60 border-slate-800">
+              <CardHeader>
+                <div className="flex items-center space-x-2">
+                  <Bell className="w-5 h-5 text-cyan-400" />
+                  <CardTitle className="text-slate-100">Notifications</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-slate-300">Weekly Digest</Label>
+                    <p className="text-xs text-slate-500">Receive a weekly summary of top threats</p>
+                  </div>
+                  <Switch
+                    checked={settings.emailWeeklyDigest}
+                    onCheckedChange={(checked) => setSettings({ ...settings, emailWeeklyDigest: checked })}
+                  />
+                </div>
+                <Separator className="bg-slate-800" />
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-slate-300">Watchlist Alerts</Label>
+                    <p className="text-xs text-slate-500">Email immediately when high-priority keywords are found</p>
+                  </div>
+                  <Switch
+                    checked={settings.emailWatchlistAlerts}
+                    onCheckedChange={(checked) => setSettings({ ...settings, emailWatchlistAlerts: checked })}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Application Preferences Tab */}
+          <TabsContent value="application-preferences" className="space-y-6">
+            <Card className="bg-slate-900/60 border-slate-800">
+              <CardHeader>
+                <div className="flex items-center space-x-2">
+                  <SettingsIcon className="w-5 h-5 text-cyan-400" />
+                  <CardTitle className="text-slate-100">Application Preferences</CardTitle>
+                </div>
+                <CardDescription className="text-slate-400">
+                  Customize your threat intelligence experience
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Manage Feeds */}
+                <div>
+                  <h4 className="text-sm font-medium text-slate-300 mb-2">Manage Feeds</h4>
+                  <Button
+                    variant="outline"
+                    className="border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800"
+                    onClick={() => navigate('/threatfeed?view=follow')}
+                  >
+                    Go to Feed Management
+                    <ChevronRight className="w-4 h-4 ml-2" />
+                  </Button>
+                  <p className="text-xs text-slate-500 mt-2">
+                    Add, remove, and categorize your RSS feeds from the main page
+                  </p>
+                </div>
+
+                <Separator className="bg-slate-800" />
+
+                {/* My Watchlist */}
+                <div>
+                  <h4 className="text-sm font-medium text-slate-300 mb-2">My Watchlist</h4>
+                  <div className="bg-slate-950 rounded-lg p-4 border border-slate-800">
+                    <p className="text-sm text-slate-400 mb-4">
+                      Track specific keywords across articles, vulnerabilities, and exploited threats.
+                    </p>
+                    <Button
+                      onClick={() => navigate('/watchlist')}
+                      className="bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-semibold"
+                    >
+                      Manage Watchlist
+                    </Button>
+                  </div>
+                </div>
+
+                <Separator className="bg-slate-800" />
+
+                {/* IOC Preferences */}
+                <div>
+                  <h4 className="text-sm font-medium text-slate-300 mb-3">IOC Preferences</h4>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="text-slate-300">Auto-run Extraction</Label>
+                        <p className="text-xs text-slate-500">
+                          Automatically extract IOCs on article load
+                        </p>
+                      </div>
+                      <Switch
+                        checked={settings.autoExtractIOCs}
+                        onCheckedChange={(checked) => setSettings({ ...settings, autoExtractIOCs: checked })}
+                      />
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div>
-                      <h4 className="text-sm font-medium text-slate-300 mb-3">Change Password</h4>
-                      <Button
-                        variant="outline"
-                        className="border-whatcyber-teal text-whatcyber-teal hover:bg-whatcyber-teal/10"
-                        onClick={() => navigate('/set-password/')}
-                      >
-                        <Key className="w-4 h-4 mr-2" />
-                        Set/Change Password
-                      </Button>
+
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="text-slate-300">Auto-enrich IOCs</Label>
+                        <p className="text-xs text-slate-500">
+                          Automatically fetch reputation from VirusTotal, AbuseIPDB, etc.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={settings.autoEnrichIOCs}
+                        onCheckedChange={(checked) => setSettings({ ...settings, autoEnrichIOCs: checked })}
+                      />
                     </div>
+
                     <div>
-                      <h4 className="text-sm font-medium text-slate-300 mb-3">Active Sessions</h4>
-                      <div className="bg-whatcyber-dark rounded-lg p-4 border border-whatcyber-light-gray flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <Monitor className="w-5 h-5 text-whatcyber-teal" />
-                          <div>
-                            <p className="text-sm font-medium text-slate-300">Current Session</p>
-                            <p className="text-xs text-slate-500">
-                              {navigator.userAgent.includes('Chrome') ? 'Chrome' : 'Browser'} on macOS
-                            </p>
+                      <Label className="text-slate-300 mb-2 block">Hidden IOC Types</Label>
+                      <p className="text-xs text-slate-500 mb-3">
+                        Select IOC types you don't want to see
+                      </p>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {iocTypes.map((iocType) => (
+                          <div key={iocType} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={iocType}
+                              checked={settings.hiddenIOCTypes?.includes(iocType)}
+                              onCheckedChange={() => handleIOCTypeToggle(iocType)}
+                            />
+                            <label
+                              htmlFor={iocType}
+                              className="text-sm text-slate-300 cursor-pointer"
+                            >
+                              {iocType}
+                            </label>
                           </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-3">
+                    <AlertCircle className="w-3 h-3 inline mr-1" />
+                    IOC extraction feature coming in a future update
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* API & Integrations Tab */}
+          <TabsContent value="api-integrations" className="space-y-6">
+            <Card className="bg-slate-900/60 border-slate-800">
+              <CardHeader>
+                <div className="flex items-center space-x-2">
+                  <Key className="w-5 h-5 text-cyan-400" />
+                  <CardTitle className="text-slate-100">API & Integrations</CardTitle>
+                </div>
+                <CardDescription className="text-slate-400">
+                  Connect external services and manage API access
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* My API Key */}
+                <div>
+                  <h4 className="text-sm font-medium text-slate-300 mb-3">My API Key</h4>
+                  {apiKey ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <div className="flex-1 relative">
+                          <Input
+                            value={apiKeyVisible ? apiKey : '•'.repeat(apiKey.length)}
+                            readOnly
+                            className="bg-slate-950 border-slate-800 text-slate-100 pr-10 font-mono text-sm"
+                          />
+                          <button
+                            onClick={() => setApiKeyVisible(!apiKeyVisible)}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300"
+                          >
+                            {apiKeyVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
                         </div>
                         <Button
                           variant="outline"
                           size="sm"
-                          className="border-red-500/50 text-red-400 hover:bg-red-500/10"
-                          onClick={handleSignOutEverywhere}
+                          className="border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800"
+                          onClick={() => {
+                            navigator.clipboard.writeText(apiKey);
+                            toast({ title: "Copied!", description: "API key copied to clipboard" });
+                          }}
                         >
-                          <LogOut className="w-4 h-4 mr-2" />
-                          Sign Out Everywhere
+                          Copy
                         </Button>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* Notifications Tab */}
-              <TabsContent value="notifications" className="space-y-6">
-                <Card className="bg-whatcyber-gray border-whatcyber-light-gray">
-                  <CardHeader>
-                    <div className="flex items-center space-x-2">
-                      <Bell className="w-5 h-5 text-whatcyber-teal" />
-                      <CardTitle className="text-slate-100">Notifications</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label className="text-slate-300">Weekly Digest</Label>
-                        <p className="text-xs text-slate-500">Receive a weekly summary of top threats</p>
-                      </div>
-                      <Switch
-                        checked={settings.emailWeeklyDigest}
-                        onCheckedChange={(checked) => setSettings({ ...settings, emailWeeklyDigest: checked })}
-                      />
-                    </div>
-                    <Separator className="bg-whatcyber-light-gray" />
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label className="text-slate-300">Watchlist Alerts</Label>
-                        <p className="text-xs text-slate-500">Email immediately when high-priority keywords are found</p>
-                      </div>
-                      <Switch
-                        checked={settings.emailWatchlistAlerts}
-                        onCheckedChange={(checked) => setSettings({ ...settings, emailWatchlistAlerts: checked })}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* Application Preferences Tab */}
-              <TabsContent value="application-preferences" className="space-y-6">
-                <Card className="bg-whatcyber-gray border-whatcyber-light-gray">
-                  <CardHeader>
-                    <div className="flex items-center space-x-2">
-                      <SettingsIcon className="w-5 h-5 text-whatcyber-teal" />
-                      <CardTitle className="text-slate-100">Application Preferences</CardTitle>
-                    </div>
-                    <CardDescription className="text-slate-400">
-                      Customize your threat intelligence experience
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {/* Manage Feeds */}
-                    <div>
-                      <h4 className="text-sm font-medium text-slate-300 mb-2">Manage Feeds</h4>
                       <Button
                         variant="outline"
-                        className="border-whatcyber-light-gray text-slate-300 hover:bg-whatcyber-dark"
-                        onClick={() => navigate('/threatfeed?view=follow')}
+                        size="sm"
+                        className="border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                        onClick={handleRevokeApiKey}
                       >
-                        Go to Feed Management
-                        <ChevronRight className="w-4 h-4 ml-2" />
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Revoke API Key
                       </Button>
-                      <p className="text-xs text-slate-500 mt-2">
-                        Add, remove, and categorize your RSS feeds from the main page
-                      </p>
                     </div>
-
-                    <Separator className="bg-whatcyber-light-gray" />
-
-                    {/* My Watchlist */}
+                  ) : (
                     <div>
-                      <h4 className="text-sm font-medium text-slate-300 mb-2">My Watchlist</h4>
-                      <div className="bg-whatcyber-dark rounded-lg p-4 border border-whatcyber-light-gray">
-                        <p className="text-sm text-slate-400 mb-4">
-                          Track specific keywords across articles, vulnerabilities, and exploited threats.
-                        </p>
-                        <Button
-                          onClick={() => navigate('/watchlist')}
-                          className="bg-whatcyber-teal hover:bg-whatcyber-teal/90 text-whatcyber-dark"
-                        >
-                          Manage Watchlist
-                        </Button>
-                      </div>
+                      <Button
+                        variant="outline"
+                        className="border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10"
+                        onClick={handleGenerateApiKey}
+                      >
+                        <Key className="w-4 h-4 mr-2" />
+                        Generate API Key
+                      </Button>
                     </div>
+                  )}
+                  <p className="text-xs text-slate-500 mt-2">
+                    Use this key to access your curated feed via our API
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    <AlertCircle className="w-3 h-3 inline mr-1" />
+                    API endpoints coming in a future update
+                  </p>
+                </div>
 
-                    <Separator className="bg-whatcyber-light-gray" />
+                <Separator className="bg-slate-800" />
 
-                    {/* IOC Preferences */}
-                    <div>
-                      <h4 className="text-sm font-medium text-slate-300 mb-3">IOC Preferences</h4>
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <div className="space-y-0.5">
-                            <Label className="text-slate-300">Auto-run Extraction</Label>
-                            <p className="text-xs text-slate-500">
-                              Automatically extract IOCs on article load
-                            </p>
-                          </div>
-                          <Switch
-                            checked={settings.autoExtractIOCs}
-                            onCheckedChange={(checked) => setSettings({ ...settings, autoExtractIOCs: checked })}
-                          />
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <div className="space-y-0.5">
-                            <Label className="text-slate-300">Auto-enrich IOCs</Label>
-                            <p className="text-xs text-slate-500">
-                              Automatically fetch reputation from VirusTotal, AbuseIPDB, etc.
-                            </p>
-                          </div>
-                          <Switch
-                            checked={settings.autoEnrichIOCs}
-                            onCheckedChange={(checked) => setSettings({ ...settings, autoEnrichIOCs: checked })}
-                          />
-                        </div>
-
-                        <div>
-                          <Label className="text-slate-300 mb-2 block">Hidden IOC Types</Label>
-                          <p className="text-xs text-slate-500 mb-3">
-                            Select IOC types you don't want to see
-                          </p>
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                            {iocTypes.map((iocType) => (
-                              <div key={iocType} className="flex items-center space-x-2">
-                                <Checkbox
-                                  id={iocType}
-                                  checked={settings.hiddenIOCTypes?.includes(iocType)}
-                                  onCheckedChange={() => handleIOCTypeToggle(iocType)}
-                                />
-                                <label
-                                  htmlFor={iocType}
-                                  className="text-sm text-slate-300 cursor-pointer"
-                                >
-                                  {iocType}
-                                </label>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-xs text-slate-500 mt-3">
-                        <AlertCircle className="w-3 h-3 inline mr-1" />
-                        IOC extraction feature coming in a future update
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* API & Integrations Tab */}
-              <TabsContent value="api-integrations" className="space-y-6">
-                <Card className="bg-whatcyber-gray border-whatcyber-light-gray">
-                  <CardHeader>
-                    <div className="flex items-center space-x-2">
-                      <Key className="w-5 h-5 text-whatcyber-teal" />
-                      <CardTitle className="text-slate-100">API & Integrations</CardTitle>
-                    </div>
-                    <CardDescription className="text-slate-400">
-                      Connect external services and manage API access
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {/* My API Key */}
-                    <div>
-                      <h4 className="text-sm font-medium text-slate-300 mb-3">My API Key</h4>
-                      {apiKey ? (
-                        <div className="space-y-3">
-                          <div className="flex items-center space-x-2">
-                            <div className="flex-1 relative">
-                              <Input
-                                value={apiKeyVisible ? apiKey : '•'.repeat(apiKey.length)}
-                                readOnly
-                                className="bg-whatcyber-dark border-whatcyber-light-gray text-slate-100 pr-10 font-mono text-sm"
-                              />
-                              <button
-                                onClick={() => setApiKeyVisible(!apiKeyVisible)}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300"
-                              >
-                                {apiKeyVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                              </button>
-                            </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="border-whatcyber-light-gray text-slate-300 hover:bg-whatcyber-dark"
-                              onClick={() => {
-                                navigator.clipboard.writeText(apiKey);
-                                toast({ title: "Copied!", description: "API key copied to clipboard" });
-                              }}
-                            >
-                              Copy
-                            </Button>
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                            onClick={handleRevokeApiKey}
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Revoke API Key
-                          </Button>
-                        </div>
-                      ) : (
-                        <div>
-                          <Button
-                            variant="outline"
-                            className="border-whatcyber-teal/50 text-whatcyber-teal hover:bg-whatcyber-teal/10"
-                            onClick={handleGenerateApiKey}
-                          >
-                            <Key className="w-4 h-4 mr-2" />
-                            Generate API Key
-                          </Button>
-                        </div>
-                      )}
-                      <p className="text-xs text-slate-500 mt-2">
-                        Use this key to access your curated feed via our API
-                      </p>
-                      <p className="text-xs text-slate-500 mt-1">
-                        <AlertCircle className="w-3 h-3 inline mr-1" />
-                        API endpoints coming in a future update
-                      </p>
-                    </div>
-
-                    <Separator className="bg-whatcyber-light-gray" />
-
-                    {/* Integration Settings */}
-                    <div>
-                      <h4 className="text-sm font-medium text-slate-300 mb-2">Integration Settings</h4>
-                      <div className="bg-whatcyber-dark rounded-lg p-4 border border-whatcyber-light-gray border-dashed">
-                        <p className="text-sm text-slate-400 text-center">
-                          Third-party integrations (VirusTotal, Shodan, etc.) coming soon
-                        </p>
-                      </div>
-                      <p className="text-xs text-slate-500 mt-2">
-                        You'll be able to enter your own API keys for enrichment services
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* Subscription & Billing Tab */}
-              <TabsContent value="subscription-billing" className="space-y-6">
-                <Card className="bg-whatcyber-gray border-whatcyber-light-gray">
-                  <CardHeader>
-                    <div className="flex items-center space-x-2">
-                      <CreditCard className="w-5 h-5 text-whatcyber-teal" />
-                      <CardTitle className="text-slate-100">Subscription & Billing</CardTitle>
-                    </div>
-                    <CardDescription className="text-slate-400">
-                      Manage your subscription and billing information
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="bg-gradient-to-br from-whatcyber-teal/10 to-whatcyber-teal/5 rounded-lg p-6 border border-whatcyber-teal/30">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h4 className="text-lg font-semibold text-slate-100 mb-2">Current Plan: Free</h4>
-                          <ul className="space-y-2 text-sm text-slate-300">
-                            <li className="flex items-center">
-                              <span className="w-1.5 h-1.5 bg-whatcyber-teal rounded-full mr-2"></span>
-                              Unlimited RSS Feeds
-                            </li>
-                            <li className="flex items-center">
-                              <span className="w-1.5 h-1.5 bg-whatcyber-teal rounded-full mr-2"></span>
-                              Full CVE Database Access
-                            </li>
-                            <li className="flex items-center">
-                              <span className="w-1.5 h-1.5 bg-whatcyber-teal rounded-full mr-2"></span>
-                              Unlimited Bookmarks
-                            </li>
-                            <li className="flex items-center">
-                              <span className="w-1.5 h-1.5 bg-whatcyber-teal rounded-full mr-2"></span>
-                              Basic Support
-                            </li>
-                          </ul>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-2xl font-bold text-whatcyber-teal">$0</p>
-                          <p className="text-xs text-slate-400">forever</p>
-                        </div>
-                      </div>
-                    </div>
-                    <p className="text-xs text-slate-500 mt-3">
-                      <AlertCircle className="w-3 h-3 inline mr-1" />
-                      Pro plan with advanced features coming soon
+                {/* Integration Settings */}
+                <div>
+                  <h4 className="text-sm font-medium text-slate-300 mb-2">Integration Settings</h4>
+                  <div className="bg-slate-950 rounded-lg p-4 border border-slate-800 border-dashed">
+                    <p className="text-sm text-slate-400 text-center">
+                      Third-party integrations (VirusTotal, Shodan, etc.) coming soon
                     </p>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-2">
+                    You'll be able to enter your own API keys for enrichment services
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-            </Tabs>
+          {/* Subscription & Billing Tab */}
+          <TabsContent value="subscription-billing" className="space-y-6">
+            <Card className="bg-slate-900/60 border-slate-800">
+              <CardHeader>
+                <div className="flex items-center space-x-2">
+                  <CreditCard className="w-5 h-5 text-cyan-400" />
+                  <CardTitle className="text-slate-100">Subscription & Billing</CardTitle>
+                </div>
+                <CardDescription className="text-slate-400">
+                  Manage your subscription and billing information
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-gradient-to-br from-cyan-500/10 to-cyan-500/5 rounded-lg p-6 border border-cyan-500/30">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h4 className="text-lg font-semibold text-slate-100 mb-2">Current Plan: Free</h4>
+                      <ul className="space-y-2 text-sm text-slate-300">
+                        <li className="flex items-center">
+                          <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full mr-2"></span>
+                          Unlimited RSS Feeds
+                        </li>
+                        <li className="flex items-center">
+                          <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full mr-2"></span>
+                          Full CVE Database Access
+                        </li>
+                        <li className="flex items-center">
+                          <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full mr-2"></span>
+                          Unlimited Bookmarks
+                        </li>
+                        <li className="flex items-center">
+                          <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full mr-2"></span>
+                          Basic Support
+                        </li>
+                      </ul>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-cyan-400">$0</p>
+                      <p className="text-xs text-slate-400">forever</p>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500 mt-3">
+                  <AlertCircle className="w-3 h-3 inline mr-1" />
+                  Pro plan with advanced features coming soon
+                </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-            {/* Global Save Button */}
-            <div className="mt-8 flex justify-end space-x-3">
-              <Button
-                className="bg-whatcyber-teal hover:bg-whatcyber-teal/90 text-whatcyber-dark font-semibold"
-                onClick={handleSaveSettings}
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Preferences
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
+        </Tabs>
+
+        {/* Global Save Button */}
+        <div className="mt-8 flex justify-end space-x-3">
+          <Button
+            className="bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-semibold"
+            onClick={handleSaveSettings}
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <>
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Save Preferences
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
     </AppShell>
   );
 }
