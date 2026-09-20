@@ -3888,6 +3888,8 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
           feedUrl = `${protocol}://${host}${feedUrl}`;
         }
       }
+        }
+      }
 
       let timeoutId: NodeJS.Timeout | undefined;
       let controller: AbortController | undefined;
