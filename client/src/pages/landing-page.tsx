@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { motion } from 'framer-motion';
 import { Shield, Menu, X, Database, Eye, Settings, Zap, Target, Github, Linkedin, Mail, Globe, Heart, Twitter, ChevronDownIcon, HelpCircle, Plus, Minus, FileText, ShieldAlert, Users, Activity } from 'lucide-react';
 import * as THREE from 'three';
@@ -229,6 +229,7 @@ const CyberSphere = () => {
 
 // Header Component
 const Header = () => {
+  const [, setLocation] = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -247,10 +248,10 @@ const Header = () => {
 
     if (user && user.token) {
       // User is logged in, redirect to threat feed
-      window.location.href = '/threatfeed';
+      setLocation('/threatfeed');
     } else {
       // User is not logged in, redirect to login page
-      window.location.href = '/login';
+      setLocation('/login');
     }
   };
 
@@ -286,7 +287,7 @@ const Header = () => {
     }
     // If we're on another page, navigate to homepage
     else {
-      window.location.href = '/';
+      setLocation('/');
     }
   };
 
@@ -466,6 +467,7 @@ const Header = () => {
 
 // HeroSection Component
 const HeroSection = () => {
+  const [, setLocation] = useLocation();
   const [currentText, setCurrentText] = useState(0);
   const [scrollY, setScrollY] = useState(0);
 
@@ -500,10 +502,10 @@ const HeroSection = () => {
 
     if (user && user.token) {
       // User is logged in, redirect to threat feed
-      window.location.href = '/threatfeed';
+      setLocation('/threatfeed');
     } else {
       // User is not logged in, redirect to login page
-      window.location.href = '/login';
+      setLocation('/login');
     }
   };
 
