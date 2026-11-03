@@ -17,9 +17,11 @@ function getR2() {
         // We might still return a client to avoid crashing, but it won't work
     }
 
+    const endpoint = process.env.R2_ENDPOINT_URL || (process.env.R2_ACCOUNT_ID ? `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com` : undefined);
+
     r2Client = new S3Client({
         region: 'auto',
-        endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+        endpoint,
         credentials: {
             accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
             secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',

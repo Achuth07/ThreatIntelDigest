@@ -39,6 +39,7 @@ async function main() {
     // NVD max range is 120 days actually.
     const chunkSize = 30;
     let currentStart = new Date(startDate);
+    let chunkErrors = 0;
 
     while (currentStart < endDate) {
         let currentEnd = new Date(currentStart);
@@ -50,12 +51,18 @@ async function main() {
         try {
             await fetchAndStoreNvdCves(currentStart, currentEnd);
         } catch (error) {
+            chunkErrors++;
             console.error(`Error processing chunk ${currentStart.toISOString()} - ${currentEnd.toISOString()}:`, error);
         }
 
         currentStart = new Date(currentEnd);
         // Small buffer between chunks
         await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+
+    if (chunkErrors > 0) {
+        console.error(`Backfill finished with ${chunkErrors} failed chunk(s).`);
+        process.exit(1);
     }
 
     console.log('Backfill complete.');

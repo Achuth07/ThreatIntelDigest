@@ -255,8 +255,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
               // Upsert
               await db.execute(sql`
-                  INSERT INTO vulnerabilities (id, description, published_date, last_modified_date, vuln_status, cvss_v3_score, cvss_v3_severity)
-                  VALUES (${cveId}, ${description}, ${vuln.published}, ${vuln.lastModified}, ${vuln.vulnStatus}, ${cvssV3Score ? String(cvssV3Score) : null}, ${cvssV3Severity})
+                  INSERT INTO vulnerabilities (id, published_date, last_modified_date, vuln_status, cvss_v3_score, cvss_v3_severity)
+                  VALUES (${cveId}, ${vuln.published}, ${vuln.lastModified}, ${vuln.vulnStatus}, ${cvssV3Score ? String(cvssV3Score) : null}, ${cvssV3Severity})
                   ON CONFLICT (id) DO UPDATE SET
                     cvss_v3_score = EXCLUDED.cvss_v3_score,
                     cvss_v3_severity = EXCLUDED.cvss_v3_severity

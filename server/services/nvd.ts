@@ -166,7 +166,7 @@ export async function fetchAndStoreNvdCves(startDate: Date, endDate: Date, start
                     // Perform R2 Upload
                     await uploadCveToR2(cveId, fullData);
 
-                    valuesChunks.push(sql`(${cveId}, ${description}, ${cve.published}, ${cve.lastModified}, ${cve.vulnStatus}, ${cvssV3Score !== null ? String(cvssV3Score) : null}, ${cvssV3Severity}, ${cvssV2Score !== null ? String(cvssV2Score) : null}, ${cvssV2Severity}, ${weaknessesLiteral}::text[], ${JSON.stringify(references)}::jsonb, ${JSON.stringify(vendorsArray)}::jsonb, ${cvssVector}, ${exploitabilityScore !== null ? String(exploitabilityScore) : null}, ${impactScore !== null ? String(impactScore) : null}, ${JSON.stringify(affectedProducts)}::jsonb, ${true}, ${searchVector})`);
+                    valuesChunks.push(sql`(${cveId}, ${cve.published}, ${cve.lastModified}, ${cve.vulnStatus}, ${cvssV3Score !== null ? String(cvssV3Score) : null}, ${cvssV3Severity}, ${cvssV2Score !== null ? String(cvssV2Score) : null}, ${cvssV2Severity}, ${weaknessesLiteral}::text[], ${JSON.stringify(vendorsArray)}::jsonb, ${cvssVector}, ${exploitabilityScore !== null ? String(exploitabilityScore) : null}, ${impactScore !== null ? String(impactScore) : null}, ${true}, ${searchVector})`);
                     processedCount++;
 
                 } catch (err) {
@@ -181,15 +181,14 @@ export async function fetchAndStoreNvdCves(startDate: Date, endDate: Date, start
 
                 await db.execute(sql`
                   INSERT INTO vulnerabilities (
-                    id, description, published_date, last_modified_date, vuln_status,
+                    id, published_date, last_modified_date, vuln_status,
                     cvss_v3_score, cvss_v3_severity, cvss_v2_score, cvss_v2_severity,
-                    weaknesses, reference_urls, vendors,
-                    cvss_vector, exploitability_score, impact_score, affected_products,
+                    weaknesses, vendors,
+                    cvss_vector, exploitability_score, impact_score,
                     has_r2_backing, search_vector
                   )
                   VALUES ${finalValues}
                   ON CONFLICT (id) DO UPDATE SET
-                    description = EXCLUDED.description,
                     published_date = EXCLUDED.published_date,
                     last_modified_date = EXCLUDED.last_modified_date,
                     vuln_status = EXCLUDED.vuln_status,
@@ -198,12 +197,10 @@ export async function fetchAndStoreNvdCves(startDate: Date, endDate: Date, start
                     cvss_v2_score = EXCLUDED.cvss_v2_score,
                     cvss_v2_severity = EXCLUDED.cvss_v2_severity,
                     weaknesses = EXCLUDED.weaknesses,
-                    reference_urls = EXCLUDED.reference_urls,
                     vendors = EXCLUDED.vendors,
                     cvss_vector = EXCLUDED.cvss_vector,
                     exploitability_score = EXCLUDED.exploitability_score,
                     impact_score = EXCLUDED.impact_score,
-                    affected_products = EXCLUDED.affected_products,
                     has_r2_backing = EXCLUDED.has_r2_backing,
                     search_vector = EXCLUDED.search_vector
                 `);

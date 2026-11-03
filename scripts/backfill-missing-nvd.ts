@@ -101,13 +101,13 @@ async function backfill() {
                 // Insert
                 await db.execute(sql`
             INSERT INTO ${vulnerabilities} (
-                id, description, published_date, last_modified_date, vuln_status, 
+                id, published_date, last_modified_date, vuln_status, 
                 cvss_v3_score, cvss_v3_severity, cvss_v2_score, cvss_v2_severity,
-                weaknesses, reference_urls, created_at
+                weaknesses, created_at
             ) VALUES (
-                ${cveId}, ${description}, ${new Date(vuln.published)}, ${new Date(vuln.lastModified)}, ${vuln.vulnStatus},
+                ${cveId}, ${new Date(vuln.published)}, ${new Date(vuln.lastModified)}, ${vuln.vulnStatus},
                 ${cvssV3Score ? String(cvssV3Score) : null}, ${cvssV3Severity}, ${cvssV2Score ? String(cvssV2Score) : null}, ${cvssV2Severity},
-                ${weaknessesArray}::text[], ${JSON.stringify(references)}::jsonb, NOW()
+                ${weaknessesArray}::text[], NOW()
             )
             ON CONFLICT (id) DO NOTHING
         `);
