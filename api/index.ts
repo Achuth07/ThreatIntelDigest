@@ -3560,15 +3560,22 @@ async function handleVulnerabilityDetailEndpoint(req: VercelRequest, res: Vercel
         const r2Data = await fetchCveFromR2(cveId);
 
         if (r2Data) {
-          vulnerability = r2Data;
+          vulnerability = {
+            ...r2Data,
+            cvssVector: r2Data.cvssVector || r2Data.cvss_vector || row.cvss_vector || null,
+            cvssV3Score: r2Data.cvssV3Score ?? (row.cvss_v3_score ? parseFloat(row.cvss_v3_score) : null),
+            cvssV3Severity: r2Data.cvssV3Severity || row.cvss_v3_severity || null,
+            cvssV2Score: r2Data.cvssV2Score ?? (row.cvss_v2_score ? parseFloat(row.cvss_v2_score) : null),
+            cvssV2Severity: r2Data.cvssV2Severity || row.cvss_v2_severity || null,
+            exploitabilityScore: r2Data.exploitabilityScore ?? (row.exploitability_score ? parseFloat(row.exploitability_score) : null),
+            impactScore: r2Data.impactScore ?? (row.impact_score ? parseFloat(row.impact_score) : null),
+          };
         } else {
           // Fallback if R2 fetch fails but DB says it should be there (consistency issue?)
           console.error(`R2 backing claimed but fetch failed for ${cveId}`);
-          // We could try to return DB data if we haven't dropped columns yet
-          // For now, construct from DB columns as best effort
           vulnerability = {
             id: row.id,
-            description: row.description,
+            description: row.description || '',
             publishedDate: row.published_date,
             lastModifiedDate: row.last_modified_date,
             vulnStatus: row.vuln_status,
@@ -3589,7 +3596,7 @@ async function handleVulnerabilityDetailEndpoint(req: VercelRequest, res: Vercel
         // Legacy: Fetch from DB columns
         vulnerability = {
           id: row.id,
-          description: row.description,
+          description: row.description || '',
           publishedDate: row.published_date,
           lastModifiedDate: row.last_modified_date,
           vulnStatus: row.vuln_status,
@@ -3605,6 +3612,128 @@ async function handleVulnerabilityDetailEndpoint(req: VercelRequest, res: Vercel
           exploitabilityScore: row.exploitability_score ? parseFloat(row.exploitability_score) : null,
           impactScore: row.impact_score ? parseFloat(row.impact_score) : null,
         };
+      }
+    }
+
+    // If vulnerability record is missing or lacks CVSS data, attempt on-demand fetch from NVD API
+    if (!vulnerability || !vulnerability.cvssVector || !vulnerability.cvssV3Score) {
+      try {
+        console.log(`[API] Checking NVD for missing CVSS data on ${cveId}...`);
+        const nvdHeaders: Record<string, string> = {
+          'User-Agent': 'ThreatIntelDigest/1.0',
+          'Accept': 'application/json'
+        };
+        if (process.env.NVD_API_KEY) {
+          nvdHeaders['apiKey'] = process.env.NVD_API_KEY;
+        }
+        const nvdResp = await fetch(`https://services.nvd.nist.gov/rest/json/cves/2.0?cveId=${cveId}`, {
+          headers: nvdHeaders,
+          signal: AbortSignal.timeout(6000)
+        });
+        if (nvdResp.ok) {
+          const nvdJson = await nvdResp.json();
+          const vulnItem = nvdJson.vulnerabilities?.[0]?.cve;
+          if (vulnItem) {
+            const metrics = vulnItem.metrics;
+            let cvssV3Score = null;
+            let cvssV3Severity = null;
+            let cvssVector = null;
+            let exploitabilityScore = null;
+            let impactScore = null;
+
+            if (metrics?.cvssMetricV31?.[0]) {
+              const m = metrics.cvssMetricV31[0];
+              cvssV3Score = m.cvssData?.baseScore;
+              cvssV3Severity = m.cvssData?.baseSeverity;
+              cvssVector = m.cvssData?.vectorString;
+              exploitabilityScore = m.exploitabilityScore;
+              impactScore = m.impactScore;
+            } else if (metrics?.cvssMetricV30?.[0]) {
+              const m = metrics.cvssMetricV30[0];
+              cvssV3Score = m.cvssData?.baseScore;
+              cvssV3Severity = m.cvssData?.baseSeverity;
+              cvssVector = m.cvssData?.vectorString;
+              exploitabilityScore = m.exploitabilityScore;
+              impactScore = m.impactScore;
+            }
+
+            let cvssV2Score = null;
+            let cvssV2Severity = null;
+            if (metrics?.cvssMetricV2?.[0]) {
+              cvssV2Score = metrics.cvssMetricV2[0].cvssData?.baseScore;
+              cvssV2Severity = metrics.cvssMetricV2[0].baseSeverity;
+              if (!cvssVector) {
+                cvssVector = metrics.cvssMetricV2[0].cvssData?.vectorString;
+              }
+            }
+
+            const weaknesses = vulnItem.weaknesses?.map((w: any) =>
+              w.description?.find((d: any) => d.lang === 'en')?.value
+            ).filter(Boolean) || [];
+
+            const references = vulnItem.references?.map((r: any) => ({
+              url: r.url,
+              source: r.source || 'Unknown'
+            })) || [];
+
+            const nvdDescription = vulnItem.descriptions?.find((d: any) => d.lang === 'en')?.value || '';
+
+            vulnerability = {
+              id: cveId,
+              description: nvdDescription || vulnerability?.description || '',
+              publishedDate: vulnItem.published,
+              lastModifiedDate: vulnItem.lastModified,
+              vulnStatus: vulnItem.vulnStatus || 'Analyzed',
+              cvssV3Score: cvssV3Score !== null ? Number(cvssV3Score) : (vulnerability?.cvssV3Score ?? null),
+              cvssV3Severity: cvssV3Severity || vulnerability?.cvssV3Severity || null,
+              cvssV2Score: cvssV2Score !== null ? Number(cvssV2Score) : (vulnerability?.cvssV2Score ?? null),
+              cvssV2Severity: cvssV2Severity || vulnerability?.cvssV2Severity || null,
+              cvssVector: cvssVector || vulnerability?.cvssVector || null,
+              exploitabilityScore: exploitabilityScore !== null ? Number(exploitabilityScore) : (vulnerability?.exploitabilityScore ?? null),
+              impactScore: impactScore !== null ? Number(impactScore) : (vulnerability?.impactScore ?? null),
+              weaknesses: weaknesses.length > 0 ? weaknesses : (vulnerability?.weaknesses || []),
+              vendors: vulnerability?.vendors || [],
+              affectedProducts: vulnerability?.affectedProducts || [],
+              references: references.length > 0 ? references : (vulnerability?.references || [])
+            };
+
+            // Asynchronously cache into DB
+            try {
+              const weaknessesLiteral = '{' + (vulnerability.weaknesses.map((w: string) => `"${w.replace(/"/g, '\\"')}"`).join(',')) + '}';
+              await db.execute(sql`
+                INSERT INTO vulnerabilities (
+                  id, published_date, last_modified_date, vuln_status,
+                  cvss_v3_score, cvss_v3_severity, cvss_v2_score, cvss_v2_severity,
+                  weaknesses, vendors, cvss_vector, exploitability_score, impact_score,
+                  has_r2_backing, search_vector
+                ) VALUES (
+                  ${cveId}, ${vulnItem.published}, ${vulnItem.lastModified}, ${vulnItem.vulnStatus || 'Analyzed'},
+                  ${cvssV3Score ? String(cvssV3Score) : null}, ${cvssV3Severity},
+                  ${cvssV2Score ? String(cvssV2Score) : null}, ${cvssV2Severity},
+                  ${weaknessesLiteral}::text[],
+                  ${JSON.stringify(vulnerability.vendors)}::jsonb,
+                  ${cvssVector},
+                  ${exploitabilityScore ? String(exploitabilityScore) : null},
+                  ${impactScore ? String(impactScore) : null},
+                  false,
+                  ${cveId}
+                )
+                ON CONFLICT (id) DO UPDATE SET
+                  cvss_v3_score = COALESCE(EXCLUDED.cvss_v3_score, vulnerabilities.cvss_v3_score),
+                  cvss_v3_severity = COALESCE(EXCLUDED.cvss_v3_severity, vulnerabilities.cvss_v3_severity),
+                  cvss_v2_score = COALESCE(EXCLUDED.cvss_v2_score, vulnerabilities.cvss_v2_score),
+                  cvss_v2_severity = COALESCE(EXCLUDED.cvss_v2_severity, vulnerabilities.cvss_v2_severity),
+                  cvss_vector = COALESCE(EXCLUDED.cvss_vector, vulnerabilities.cvss_vector),
+                  exploitability_score = COALESCE(EXCLUDED.exploitability_score, vulnerabilities.exploitability_score),
+                  impact_score = COALESCE(EXCLUDED.impact_score, vulnerabilities.impact_score)
+              `);
+            } catch (cacheErr) {
+              console.warn(`[API] Failed to cache live NVD for ${cveId}:`, cacheErr);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn(`[API] Failed to fetch live NVD fallback for ${cveId}:`, err);
       }
     }
 
