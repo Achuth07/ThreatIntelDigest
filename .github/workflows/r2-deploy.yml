@@ -17,14 +17,13 @@ jobs:
     steps:
       # 1. Check out the code from the repository
       - name: Checkout Source Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # 2. Prepare the Python Runtime
-      # Reference: 
-      - name: Set up Python 3.9
-        uses: actions/setup-python@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.11'
           cache: 'pip' # Enable caching to speed up subsequent runs
 
       # 3. Install the Boto3 Library
