@@ -33,7 +33,23 @@
     },
     {
       "source": "/sitemap.xml",
-      "destination": "/sitemap.xml"
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/sitemap-core.xml",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/sitemap-blog.xml",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/sitemap-kev.xml",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/sitemap-actors.xml",
+      "destination": "/api/index.ts"
     },
     {
       "source": "/robots.txt",

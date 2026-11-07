@@ -30,7 +30,6 @@ export default function PrivacyPolicy() {
         description={metaDescription}
         keywords={metaKeywords}
         image={ogImage}
-        url="https://whatcyber.com/privacy/"
       />
       <div className="min-h-screen bg-whatcyber-darker">
         <motion.header

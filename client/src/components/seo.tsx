@@ -1,9 +1,32 @@
 import { Helmet } from 'react-helmet-async';
+import { useLocation, useSearch } from 'wouter';
+
+const SITE_URL = 'https://www.whatcyber.com';
+
+/**
+ * Builds the self-referencing canonical URL for a path on the www host.
+ *
+ * - No query string, except `?page=N` (N > 1) so paginated hubs are not collapsed into page 1.
+ * - No trailing slash, except the root and /threatfeed/, which vercel.json
+ *   permanently redirects to its trailing-slash form. (A single site-wide
+ *   trailing-slash rule is tracked in WHA-10.)
+ */
+export function canonicalFor(pathname: string, search = ''): string {
+  const path = pathname.split(/[?#]/)[0] || '/';
+  if (path === '/') return `${SITE_URL}/`;
+
+  const trimmed = path.replace(/\/+$/, '');
+  if (trimmed === '/threatfeed') return `${SITE_URL}/threatfeed/`;
+
+  const page = parseInt(new URLSearchParams(search).get('page') ?? '', 10);
+  return `${SITE_URL}${trimmed}${page > 1 ? `?page=${page}` : ''}`;
+}
 
 interface SEOProps {
   title?: string;
   description?: string;
   image?: string;
+  /** Override only when the canonical differs from the current path (e.g. a duplicate route). */
   url?: string;
   type?: string;
   keywords?: string;
@@ -12,15 +35,16 @@ interface SEOProps {
 
 export const SEO: React.FC<SEOProps> = ({
   title = 'WhatCyber - ThreatFeed',
-  description = 'Advanced cybersecurity solutions powered by AI. Protecting your digital assets with next-generation threat intelligence and automated defense systems.',
-  image = 'https://www.whatcyber.com/og-image.jpg',
+  description = 'Free threat intelligence dashboard: track CISA Known Exploited Vulnerabilities, CVEs, threat actor profiles and cybersecurity news in one place.',
+  image = `${SITE_URL}/og-image.jpg`,
   url,
   type = 'website',
   keywords,
   structuredData
 }) => {
-  // For threatfeed routes, use the correct canonical URL structure
-  const canonicalUrl = url || `https://www.whatcyber.com/threatfeed/`;
+  const [location] = useLocation();
+  const search = useSearch();
+  const canonicalUrl = url || canonicalFor(location, search);
 
   return (
     <Helmet>

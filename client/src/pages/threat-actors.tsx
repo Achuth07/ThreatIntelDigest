@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Search, Loader2, Users, AlertTriangle } from "lucide-react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
+import { usePageParam } from "@/hooks/use-page-param";
 import { formatDistanceToNow } from "date-fns";
 import { AppShell } from "@/components/layout/app-shell";
 import { ActorsSidebar } from "@/components/layout/sidebars/actors-sidebar";
@@ -13,7 +14,7 @@ import { SEO } from "@/components/seo";
 export default function ThreatActorsPage() {
     const [, setLocation] = useLocation();
     const [search, setSearch] = useState("");
-    const [page, setPage] = useState(1);
+    const { page, setPage, hrefFor } = usePageParam();
 
     const { data, isLoading, isError } = useQuery({
         queryKey: ["/api/threat-groups", page, search],
@@ -76,7 +77,7 @@ export default function ThreatActorsPage() {
                                 <Card
                                     key={group.id}
                                     className="bg-card border-border hover:border-whatcyber-teal/50 hover:-translate-y-1 hover:shadow-lg hover:shadow-whatcyber-teal/10 transition-all duration-300 cursor-pointer group h-full"
-                                    onClick={() => setLocation(`/threat-actors/${group.id}/`)}
+                                    onClick={() => setLocation(`/threat-actors/${group.id}`)}
                                 >
                                     <CardHeader className="flex flex-row items-center gap-4 space-y-0 pb-4">
                                         <div className="w-12 h-12 rounded-md bg-secondary shrink-0 border border-border overflow-hidden flex items-center justify-center">
@@ -88,7 +89,12 @@ export default function ThreatActorsPage() {
                                         </div>
                                         <div className="flex flex-col flex-1">
                                             <CardTitle className="text-slate-100 group-hover:text-whatcyber-teal transition-colors text-lg">
-                                                {group.name}
+                                                <Link
+                                                    href={`/threat-actors/${group.id}`}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    {group.name}
+                                                </Link>
                                             </CardTitle>
                                             <CardDescription className="text-slate-400 text-xs mt-1 font-mono">
                                                 Updated {formatDistanceToNow(new Date(group.lastUpdated), { addSuffix: true })}
@@ -124,25 +130,27 @@ export default function ThreatActorsPage() {
                         {/* Pagination */}
                         {data?.pagination && (
                             <div className="flex justify-between items-center mt-6">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                                    disabled={page === 1}
-                                >
-                                    Previous
-                                </Button>
+                                {page > 1 ? (
+                                    <Button asChild variant="outline" size="sm">
+                                        <Link href={hrefFor(page - 1)} rel="prev">Previous</Link>
+                                    </Button>
+                                ) : (
+                                    <Button variant="outline" size="sm" disabled>
+                                        Previous
+                                    </Button>
+                                )}
                                 <span className="text-slate-400 text-sm font-mono">
                                     Page {page} of {data.pagination.totalPages}
                                 </span>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setPage(p => p + 1)}
-                                    disabled={page >= data.pagination.totalPages}
-                                >
-                                    Next
-                                </Button>
+                                {page < data.pagination.totalPages ? (
+                                    <Button asChild variant="outline" size="sm">
+                                        <Link href={hrefFor(page + 1)} rel="next">Next</Link>
+                                    </Button>
+                                ) : (
+                                    <Button variant="outline" size="sm" disabled>
+                                        Next
+                                    </Button>
+                                )}
                             </div>
                         )}
                     </>

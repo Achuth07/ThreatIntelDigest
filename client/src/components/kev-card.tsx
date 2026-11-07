@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Shield, AlertTriangle, Calendar, ExternalLink, Newspaper, Activity } from 'lucide-react';
 import { format } from 'date-fns';
+import { Link } from 'wouter';
 import { KnownExploitedVulnerability } from '@shared/schema';
 
 interface KEVCardProps {
@@ -35,7 +36,12 @@ export function KEVCard({ kev, onRelatedNewsClick }: KEVCardProps) {
                 <div className="flex justify-between items-start">
                     <div className="space-y-1">
                         <CardTitle className="text-xl text-slate-100 font-mono tracking-tight hover:underline decoration-whatcyber-teal/50 underline-offset-4 cursor-pointer">
-                            {kev.cveID}
+                            <Link
+                                href={`/exploited-vulnerabilities/${kev.cveID}`}
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                {kev.cveID}
+                            </Link>
                         </CardTitle>
                         <CardDescription className="text-slate-400 font-medium line-clamp-1">
                             {kev.vendorProject} - {kev.product}

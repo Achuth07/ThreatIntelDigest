@@ -1,63 +1,19 @@
-
 import { Router } from "express";
-import { createClient } from "@sanity/client";
+import { getDb } from "../db";
+import { renderSitemap } from "../services/sitemap";
 
+// Dev / non-Vercel server. Production serves the same XML from api/index.ts.
 const router = Router();
 
-const client = createClient({
-    projectId: "0odjb7zx",
-    dataset: "production",
-    useCdn: true, // Use CDN for sitemap as it doesn't need to be instant
-    apiVersion: "2024-01-01",
-});
-
-router.get("/sitemap.xml", async (_req, res) => {
+router.get(/^\/sitemap(?:-([a-z]+))?\.xml$/, async (req, res) => {
     try {
-        const query = `*[_type == "post"] { "slug": slug.current, publishedAt, _updatedAt }`;
-        const posts = await client.fetch(query);
-
-        const baseUrl = "https://www.whatcyber.com";
-
-        // Static pages
-        const staticPages = [
-            "",
-            "/threatfeed",
-            "/about",
-            "/contact",
-            "/privacy",
-            "/terms",
-            "/blog"
-        ];
-
-        let sitemap = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-        sitemap += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
-
-        // Add static pages
-        staticPages.forEach((page) => {
-            sitemap += `  <url>\n`;
-            sitemap += `    <loc>${baseUrl}${page}</loc>\n`;
-            sitemap += `    <changefreq>daily</changefreq>\n`;
-            sitemap += `    <priority>0.8</priority>\n`;
-            sitemap += `  </url>\n`;
-        });
-
-        // Add blog posts
-        posts.forEach((post: any) => {
-            if (post.slug) {
-                const lastMod = post._updatedAt || post.publishedAt || new Date().toISOString();
-                sitemap += `  <url>\n`;
-                sitemap += `    <loc>${baseUrl}/blog/${post.slug}</loc>\n`;
-                sitemap += `    <lastmod>${lastMod}</lastmod>\n`;
-                sitemap += `    <changefreq>weekly</changefreq>\n`;
-                sitemap += `    <priority>0.9</priority>\n`;
-                sitemap += `  </url>\n`;
-            }
-        });
-
-        sitemap += `</urlset>`;
-
-        res.header("Content-Type", "application/xml");
-        res.send(sitemap);
+        const xml = await renderSitemap(req.params[0], getDb);
+        if (xml === null) {
+            return res.status(404).send("Not found");
+        }
+        res.header("Content-Type", "application/xml; charset=utf-8");
+        res.header("Cache-Control", "public, s-maxage=3600, stale-while-revalidate=86400");
+        res.send(xml);
     } catch (error) {
         console.error("Error generating sitemap:", error);
         res.status(500).send("Error generating sitemap");

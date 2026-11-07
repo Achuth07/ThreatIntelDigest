@@ -1,16 +1,33 @@
-import { useEffect, useState } from 'react';
+import { Link } from 'wouter';
 
+// Site-wide footer. Plain links to every public hub so crawlers can reach them from any page.
+const FOOTER_LINKS = [
+  { href: '/threatfeed/', label: 'Security News Feed' },
+  { href: '/vulnerabilities', label: 'Latest CVEs' },
+  { href: '/exploited-vulnerabilities', label: 'CISA KEV Catalog' },
+  { href: '/threat-actors', label: 'Threat Actors' },
+  { href: '/blog', label: 'Blog' },
+  { href: '/sources', label: 'Sources' },
+  { href: '/about', label: 'About' },
+  { href: '/contact', label: 'Contact' },
+  { href: '/privacy', label: 'Privacy' },
+  { href: '/terms', label: 'Terms' },
+];
 
 export function Footer() {
   return (
-    <footer className="py-6 md:px-8 md:py-0 border-t">
-      <div className="container flex flex-col items-center justify-between gap-4 md:h-16 md:flex-row">
-        <div className="flex flex-col items-center gap-4 px-8 md:flex-row md:gap-2 md:px-0">
-          <p className="text-center text-sm leading-loose text-muted-foreground md:text-left">
-            © 2025 WhatCyber.com. All rights reserved.
-          </p>
-
-        </div>
+    <footer className="py-6 border-t">
+      <div className="container flex flex-col items-center gap-4">
+        <nav aria-label="Footer" className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+          {FOOTER_LINKS.map((link) => (
+            <Link key={link.href} href={link.href} className="hover:text-foreground hover:underline">
+              {link.label}
+            </Link>
+          ))}
+        </nav>
+        <p className="text-center text-sm leading-loose text-muted-foreground">
+          © {new Date().getFullYear()} WhatCyber.com. All rights reserved.
+        </p>
       </div>
     </footer>
   );

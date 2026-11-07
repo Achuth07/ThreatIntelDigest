@@ -30,7 +30,6 @@ export default function TermsOfService() {
         description={metaDescription}
         keywords={metaKeywords}
         image={ogImage}
-        url="https://whatcyber.com/terms/"
       />
       <div className="min-h-screen bg-whatcyber-darker">
         <motion.header

@@ -82,7 +82,6 @@ export default function Contact() {
         description={metaDescription}
         keywords={metaKeywords}
         image={ogImage}
-        url="https://whatcyber.com/contact/"
       />
       <div className="min-h-screen relative overflow-hidden"
         style={{

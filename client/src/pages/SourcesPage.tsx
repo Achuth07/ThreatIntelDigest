@@ -117,20 +117,20 @@ export default function SourcesPage() {
         
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://whatcyber.com/sources" />
+        <meta property="og:url" content="https://www.whatcyber.com/sources" />
         <meta property="og:title" content="Our Cybersecurity Sources | WhatCyber" />
         <meta property="og:description" content="Explore the 25+ trusted cybersecurity sources that feed into WhatCyber's threat intelligence aggregator." />
-        <meta property="og:image" content="https://whatcyber.com/og-image-sources.png" />
+        <meta property="og:image" content="https://www.whatcyber.com/og-image-sources.png" />
         
         {/* Twitter */}
         <meta property="twitter:card" content="summary_large_image" />
-        <meta property="twitter:url" content="https://whatcyber.com/sources" />
+        <meta property="twitter:url" content="https://www.whatcyber.com/sources" />
         <meta property="twitter:title" content="Our Cybersecurity Sources | WhatCyber" />
         <meta property="twitter:description" content="Explore the 25+ trusted cybersecurity sources that feed into WhatCyber's threat intelligence aggregator." />
-        <meta property="twitter:image" content="https://whatcyber.com/og-image-sources.png" />
+        <meta property="twitter:image" content="https://www.whatcyber.com/og-image-sources.png" />
         
         {/* Canonical URL */}
-        <link rel="canonical" href="https://whatcyber.com/sources" />
+        <link rel="canonical" href="https://www.whatcyber.com/sources" />
       </Helmet>
       
       <div className="min-h-screen relative overflow-hidden"

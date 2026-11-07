@@ -743,21 +743,27 @@ const FeaturesSection = () => {
       description: "Advanced sorting and filtering capabilities for CVEs. Quickly identify critical vulnerabilities affecting your infrastructure using our comprehensive dashboard.",
       video: "/latest-cves-demo.mp4",
       webm: "/latest-cves-demo.webm",
-      align: "right"
+      align: "right",
+      href: "/vulnerabilities",
+      cta: "Browse the latest CVEs"
     },
     {
       title: "Exploited Vulnerabilities",
       description: "Stay updated with CISA's Known Exploited Vulnerabilities (KEV) catalog and related news. Prioritize patching based on real-world exploitation data.",
       video: "/exploited-vulnerabilities-demo.mp4",
       webm: "/exploited-vulnerabilities-demo.webm",
-      align: "left"
+      align: "left",
+      href: "/exploited-vulnerabilities",
+      cta: "Open the CISA KEV catalog"
     },
     {
       title: "Threat Actor Directory",
       description: "Comprehensive profiles of threat groups driven by MITRE ATT&CK data. Monitor live activity streams and related news for specific threat actors.",
       video: "/threat-actors-demo.mp4",
       webm: "/threat-actors-demo.webm",
-      align: "right"
+      align: "right",
+      href: "/threat-actors",
+      cta: "Explore threat actor profiles"
     }
   ];
 
@@ -819,9 +825,15 @@ const FeaturesSection = () => {
                 <h3 className="text-3xl sm:text-4xl font-bold text-white mb-6 tracking-tight">
                   {feature.title}
                 </h3>
-                <p className="text-lg text-[#aaa] leading-relaxed mb-8">
+                <p className="text-lg text-[#aaa] leading-relaxed mb-4">
                   {feature.description}
                 </p>
+                <Link
+                  href={feature.href}
+                  className="inline-block mb-8 text-[#00d4ff] hover:underline underline-offset-4"
+                >
+                  {feature.cta} &rarr;
+                </Link>
 
                 {/* Visual decorative line */}
                 <div className={`h-1 w-24 bg-gradient-to-r from-[#00d4ff] to-[#00ff88] rounded-full mx-auto lg:mx-0`} />
@@ -1203,12 +1215,22 @@ const FooterSection = () => {
 
           {/* Quick Links */}
           <motion.div
-            className="grid grid-cols-2 gap-8"
+            className="grid grid-cols-2 sm:grid-cols-3 gap-8"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
             viewport={{ once: true }}
           >
+            <div>
+              <h3 className="text-white font-semibold mb-4">Platform</h3>
+              <ul className="space-y-2 text-[#888]">
+                <li><Link href="/threatfeed/" className="hover:text-[#00d4ff] transition-colors">Security News Feed</Link></li>
+                <li><Link href="/vulnerabilities" className="hover:text-[#00d4ff] transition-colors">Latest CVEs</Link></li>
+                <li><Link href="/exploited-vulnerabilities" className="hover:text-[#00d4ff] transition-colors">CISA KEV Catalog</Link></li>
+                <li><Link href="/threat-actors" className="hover:text-[#00d4ff] transition-colors">Threat Actors</Link></li>
+              </ul>
+            </div>
+
             <div>
               <h3 className="text-white font-semibold mb-4">Company</h3>
               <ul className="space-y-2 text-[#888]">

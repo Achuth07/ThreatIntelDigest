@@ -29,7 +29,7 @@ export default function AboutPage() {
 
   const metaDescription = "Learn about WhatCyber's mission to make cybersecurity accessible and effective for everyone. Discover our story, values, and team behind the cybersecurity news aggregator platform.";
   const metaKeywords = "cybersecurity, about us, company story, cybersecurity team, threat intelligence platform, security mission";
-  const ogImage = "https://whatcyber.com/og-image-about.png";
+  const ogImage = "https://www.whatcyber.com/og-image-about.png";
 
   return (
     <>
@@ -41,20 +41,20 @@ export default function AboutPage() {
         
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://whatcyber.com/about" />
+        <meta property="og:url" content="https://www.whatcyber.com/about" />
         <meta property="og:title" content="About WhatCyber - Our Mission & Team | Cybersecurity News Aggregator" />
         <meta property="og:description" content={metaDescription} />
         <meta property="og:image" content={ogImage} />
         
         {/* Twitter */}
         <meta property="twitter:card" content="summary_large_image" />
-        <meta property="twitter:url" content="https://whatcyber.com/about" />
+        <meta property="twitter:url" content="https://www.whatcyber.com/about" />
         <meta property="twitter:title" content="About WhatCyber - Our Mission & Team | Cybersecurity News Aggregator" />
         <meta property="twitter:description" content={metaDescription} />
         <meta property="twitter:image" content={ogImage} />
         
         {/* Canonical URL */}
-        <link rel="canonical" href="https://whatcyber.com/about" />
+        <link rel="canonical" href="https://www.whatcyber.com/about" />
       </Helmet>
       <div className="min-h-screen relative overflow-hidden"
         style={{
