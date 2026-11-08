@@ -53,7 +53,7 @@ export default function Home() {
   // Fetch user sources (Follow Sources view needs them)
   const { data: fetchedSources = [] } = useQuery<RssSource[]>({
     queryKey: ['/api/sources'],
-    enabled: !user?.isGuest,
+    enabled: !!user && !user.isGuest,
   });
   const userSources: RssSource[] = user?.isGuest ? guestSources() : fetchedSources;
 

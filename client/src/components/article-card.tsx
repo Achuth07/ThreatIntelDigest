@@ -10,6 +10,7 @@ import { getAuthenticatedUser } from '@/lib/auth';
 import { getFaviconUrl } from '@/lib/favicon-utils';
 import type { ArticleWithSource } from '@shared/schema';
 import { ShareButton } from '@/components/share-button';
+import { useLoginPopup } from '@/contexts/login-popup-context';
 
 interface ArticleCardProps {
   article: ArticleWithSource;
@@ -20,6 +21,7 @@ interface ArticleCardProps {
 export function ArticleCard({ article, isFeatured = false, onReadHere }: ArticleCardProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { showLoginPopup } = useLoginPopup();
   const [isBookmarked, setIsBookmarked] = useState(article.isBookmarked || false);
 
   // Update local state when article prop changes
@@ -141,7 +143,14 @@ export function ArticleCard({ article, isFeatured = false, onReadHere }: Article
               size="sm"
               className={`p-1.5 lg:p-1 transition-colors touch-manipulation ${isBookmarked ? 'text-whatcyber-teal' : 'text-slate-400 hover:text-whatcyber-teal'
                 }`}
-              onClick={() => bookmarkMutation.mutate()}
+              onClick={() => {
+                // Anonymous visitors can read the feed; saving needs an account.
+                if (!getAuthenticatedUser()) {
+                  showLoginPopup();
+                  return;
+                }
+                bookmarkMutation.mutate();
+              }}
               disabled={bookmarkMutation.isPending}
               data-testid={`button-bookmark-${article.id}`}
               title={isBookmarked ? "Remove bookmark" : "Bookmark article"}

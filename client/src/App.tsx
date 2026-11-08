@@ -168,9 +168,9 @@ function App() {
   }, []);
 
   useEffect(() => {
-    // Only show login popup on threatfeed routes
-    const shouldShowLoginPopup = location.startsWith('/threatfeed') ||
-      location.startsWith('/set-password') ||
+    // The login popup covers account pages only. Public pages such as /threatfeed stay readable
+    // without signing in; sign-in is requested when a visitor saves or follows something.
+    const shouldShowLoginPopup = location.startsWith('/set-password') ||
       location.startsWith('/settings') ||
       location.startsWith('/admin');
 
@@ -196,7 +196,7 @@ function App() {
       // Cleanup interval
       return () => clearInterval(interval);
     } else {
-      // For non-threatfeed routes, don't show login popup and mark user as checked
+      // Public routes: no login popup, mark user as checked
       setShowLoginPopup(false);
       setUserChecked(true);
 
