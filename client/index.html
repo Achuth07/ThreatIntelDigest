@@ -8,9 +8,14 @@
     <meta name="author" content="WhatCyber">
     <meta name="robots" content="index, follow">
     
-    <!-- Open Graph / Facebook -->
+    <!-- Open Graph / Facebook.
+         These static tags are what link-preview crawlers (LinkedIn, X, Slack) see, because they do
+         not run JavaScript, and this one file is served for every page. So they must be generic:
+         no og:url or twitter:url here. A fixed URL would make every shared page claim /threatfeed
+         as its canonical address; without it the crawlers use the URL that was actually shared.
+         The app sets the per-page og:url in the browser. Per-page titles and descriptions for
+         these crawlers need server rendering (WHA-17). -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://www.whatcyber.com/threatfeed">
     <meta property="og:title" content="WhatCyber - ThreatFeed">
     <meta property="og:description" content="Stay updated with the latest cybersecurity threats, vulnerabilities, and intelligence from trusted sources.">
     <meta property="og:image" content="https://www.whatcyber.com/og-image.jpg">
@@ -20,7 +25,6 @@
     
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://www.whatcyber.com/threatfeed">
     <meta property="twitter:title" content="WhatCyber - ThreatFeed">
     <meta property="twitter:description" content="Stay updated with the latest cybersecurity threats, vulnerabilities, and intelligence from trusted sources.">
     <meta property="twitter:image" content="https://www.whatcyber.com/og-image.jpg">
