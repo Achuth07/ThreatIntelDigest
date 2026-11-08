@@ -106,8 +106,8 @@ export default function LoginPage() {
 
           // Check if user has onboarded
           if (userData.hasOnboarded) {
-            console.log('Login page - User has onboarded, navigating to /threatfeed/');
-            navigate('/threatfeed/');
+            console.log('Login page - User has onboarded, navigating to /threatfeed');
+            navigate('/threatfeed');
           } else {
             console.log('Login page - User needs onboarding, navigating to /onboarding');
             navigate('/onboarding');
@@ -124,7 +124,7 @@ export default function LoginPage() {
     localStorage.setItem('guestToken', 'true');
 
     // Navigate to threatfeed
-    navigate('/threatfeed/');
+    navigate('/threatfeed');
   };
 
   const handleEmailLogin = async (e: React.FormEvent) => {
@@ -167,7 +167,7 @@ export default function LoginPage() {
 
         // Redirect based on onboarding status
         if (data.user.hasOnboarded) {
-          navigate('/threatfeed/');
+          navigate('/threatfeed');
         } else {
           navigate('/onboarding');
         }

@@ -1224,7 +1224,7 @@ const FooterSection = () => {
             <div>
               <h3 className="text-white font-semibold mb-4">Platform</h3>
               <ul className="space-y-2 text-[#888]">
-                <li><Link href="/threatfeed/" className="hover:text-[#00d4ff] transition-colors">Security News Feed</Link></li>
+                <li><Link href="/threatfeed" className="hover:text-[#00d4ff] transition-colors">Security News Feed</Link></li>
                 <li><Link href="/vulnerabilities" className="hover:text-[#00d4ff] transition-colors">Latest CVEs</Link></li>
                 <li><Link href="/exploited-vulnerabilities" className="hover:text-[#00d4ff] transition-colors">CISA KEV Catalog</Link></li>
                 <li><Link href="/threat-actors" className="hover:text-[#00d4ff] transition-colors">Threat Actors</Link></li>
@@ -1288,8 +1288,8 @@ export default function LandingPage() {
       {
         "@type": "Organization",
         "name": "WhatCyber",
-        "url": "https://whatcyber.com",
-        "logo": "https://whatcyber.com/android-chrome-192x192.png",
+        "url": "https://www.whatcyber.com",
+        "logo": "https://www.whatcyber.com/android-chrome-192x192.png",
         "sameAs": [
           "https://x.com/WhatCyber_",
           "https://www.linkedin.com/company/whatcyber/"

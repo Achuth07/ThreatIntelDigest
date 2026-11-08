@@ -24,7 +24,7 @@ type Entry = { path: string; lastmod?: Date | string | null };
 // Paths must match what client/src/components/seo.tsx emits as canonical.
 const CORE_PATHS = [
   '/',
-  '/threatfeed/',
+  '/threatfeed',
   '/vulnerabilities',
   '/exploited-vulnerabilities',
   '/threat-actors',

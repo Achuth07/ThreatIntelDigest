@@ -7,16 +7,14 @@ const SITE_URL = 'https://www.whatcyber.com';
  * Builds the self-referencing canonical URL for a path on the www host.
  *
  * - No query string, except `?page=N` (N > 1) so paginated hubs are not collapsed into page 1.
- * - No trailing slash, except the root and /threatfeed/, which vercel.json
- *   permanently redirects to its trailing-slash form. (A single site-wide
- *   trailing-slash rule is tracked in WHA-10.)
+ * - No trailing slash, except the root. vercel.json permanently redirects
+ *   every other trailing-slash URL to the slashless one (WHA-10).
  */
 export function canonicalFor(pathname: string, search = ''): string {
   const path = pathname.split(/[?#]/)[0] || '/';
   if (path === '/') return `${SITE_URL}/`;
 
   const trimmed = path.replace(/\/+$/, '');
-  if (trimmed === '/threatfeed') return `${SITE_URL}/threatfeed/`;
 
   const page = parseInt(new URLSearchParams(search).get('page') ?? '', 10);
   return `${SITE_URL}${trimmed}${page > 1 ? `?page=${page}` : ''}`;

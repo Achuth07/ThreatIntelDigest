@@ -1,16 +1,21 @@
+# WhatCyber robots.txt
+# All crawlers, including search engines and AI crawlers, may read public pages.
 User-agent: *
 Allow: /
 
-Sitemap: https://whatcyber.com/sitemap.xml
-
-# Rate limiting for crawlers
-Crawl-delay: 10
-
-# Directories
-Disallow: /api/
+# Private areas
 Disallow: /admin/
 Disallow: /private/
 
-# File types
-Disallow: /*.json$
-Disallow: /*.txt$
+# Public pages load their data from these endpoints in the browser, and Google
+# obeys robots.txt for those requests, so they must stay fetchable. They send
+# X-Robots-Tag: noindex (vercel.json) so the JSON itself is not indexed.
+# Revisit when public pages are server-rendered (WHA-17).
+# Allow rules come first: Google and Bing use the longest matching rule.
+Allow: /api/kev
+Allow: /api/vulnerabilities
+Allow: /api/threat-groups
+Allow: /api/articles
+Disallow: /api/
+
+Sitemap: https://www.whatcyber.com/sitemap.xml

@@ -21,7 +21,7 @@ export default function PrivacyPolicy() {
 
   const metaDescription = "Learn about WhatCyber's privacy practices. We are committed to protecting your personal information and ensuring your privacy while using our cybersecurity news aggregator platform.";
   const metaKeywords = "privacy policy, data protection, cybersecurity privacy, personal information, user privacy, privacy practices";
-  const ogImage = "https://whatcyber.com/og-image-privacy.png";
+  const ogImage = "https://www.whatcyber.com/og-image-privacy.png";
 
   return (
     <>
@@ -303,7 +303,7 @@ export default function PrivacyPolicy() {
                   </p>
                   <ul className="list-disc list-inside text-[#ccc] mb-8 space-y-2">
                     <li>By email: contact@whatcyber.com</li>
-                    <li>By visiting our contact page: <Link href="/contact" className="text-whatcyber-teal hover:underline">https://whatcyber.com/contact</Link></li>
+                    <li>By visiting our contact page: <Link href="/contact" className="text-whatcyber-teal hover:underline">https://www.whatcyber.com/contact</Link></li>
                   </ul>
                 </div>
               </motion.div>

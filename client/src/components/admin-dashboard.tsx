@@ -494,7 +494,7 @@ export function AdminDashboard() {
                         <SelectItem value="all">All time</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Link href="/threatfeed/">
+                    <Link href="/threatfeed">
                       <Button variant="outline" size="sm" className="bg-slate-900 border-slate-700 text-slate-200 hover:bg-slate-800 hover:text-white">
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Back to ThreatFeed

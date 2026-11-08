@@ -24,7 +24,7 @@ export default function AboutPage() {
   ];
 
   const handleGetStarted = () => {
-    window.open('https://www.whatcyber.com/threatfeed/', '_blank');
+    window.open('https://www.whatcyber.com/threatfeed', '_blank');
   };
 
   const metaDescription = "Learn about WhatCyber's mission to make cybersecurity accessible and effective for everyone. Discover our story, values, and team behind the cybersecurity news aggregator platform.";

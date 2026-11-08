@@ -409,7 +409,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/admin/indexnow/submit', async (req, res) => {
     try {
       const { urls } = req.body;
-      const urlsToSubmit = urls || ['https://whatcyber.com/'];
+      const urlsToSubmit = urls || ['https://www.whatcyber.com/'];
 
       await submitUrl(urlsToSubmit);
 

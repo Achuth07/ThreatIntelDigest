@@ -112,7 +112,7 @@ export default function ArticlePage() {
                 {/* Header */}
                 <header className="bg-whatcyber-dark border-b border-whatcyber-light-gray/30 sticky top-0 z-50 backdrop-blur-sm bg-whatcyber-dark/95 mb-8">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center">
-                        <a href="https://www.whatcyber.com/threatfeed/" className="flex items-center space-x-3 hover:opacity-90 transition-opacity">
+                        <a href="https://www.whatcyber.com/threatfeed" className="flex items-center space-x-3 hover:opacity-90 transition-opacity">
                             <img src={logoImage} alt="WhatCyber Logo" className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg" />
                             <div className="flex flex-col">
                                 <h1 className="text-lg lg:text-xl font-bold text-slate-100 leading-tight">WhatCyber</h1>
@@ -136,7 +136,7 @@ export default function ArticlePage() {
             {/* Header */}
             <header className="bg-whatcyber-dark border-b border-whatcyber-light-gray/30 sticky top-0 z-50 backdrop-blur-sm bg-whatcyber-dark/95 mb-8">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center">
-                    <a href="https://www.whatcyber.com/threatfeed/" className="flex items-center space-x-3 hover:opacity-90 transition-opacity">
+                    <a href="https://www.whatcyber.com/threatfeed" className="flex items-center space-x-3 hover:opacity-90 transition-opacity">
                         <img src={logoImage} alt="WhatCyber Logo" className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg" />
                         <div className="flex flex-col">
                             <h1 className="text-lg lg:text-xl font-bold text-slate-100 leading-tight">WhatCyber</h1>

@@ -21,7 +21,7 @@ export default function TermsOfService() {
 
   const metaDescription = "Review WhatCyber's Terms of Service to understand the rules and regulations for using our cybersecurity news aggregator platform and services.";
   const metaKeywords = "terms of service, terms and conditions, user agreement, cybersecurity platform terms, whatcyber terms, service agreement";
-  const ogImage = "https://whatcyber.com/og-image-terms.png";
+  const ogImage = "https://www.whatcyber.com/og-image-terms.png";
 
   return (
     <>
@@ -289,7 +289,7 @@ export default function TermsOfService() {
                   </p>
                   <ul className="list-disc list-inside text-[#ccc] mb-8 space-y-2">
                     <li>By email: contact@whatcyber.com</li>
-                    <li>By visiting our contact page: <Link href="/contact" className="text-whatcyber-teal hover:underline">https://whatcyber.com/contact</Link></li>
+                    <li>By visiting our contact page: <Link href="/contact" className="text-whatcyber-teal hover:underline">https://www.whatcyber.com/contact</Link></li>
                   </ul>
                 </div>
               </motion.div>

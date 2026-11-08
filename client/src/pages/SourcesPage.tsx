@@ -24,7 +24,7 @@ export default function SourcesPage() {
   ];
 
   const handleGetStarted = () => {
-    window.open('https://www.whatcyber.com/threatfeed/', '_blank');
+    window.open('https://www.whatcyber.com/threatfeed', '_blank');
   };
 
   if (isLoading) {

@@ -73,7 +73,7 @@ export default function Contact() {
 
   const metaDescription = "Get in touch with WhatCyber. Have questions about our cybersecurity news aggregator or threat intelligence platform? Contact our team for support, partnerships, or feedback.";
   const metaKeywords = "contact us, cybersecurity support, threat intelligence contact, security platform feedback, get in touch";
-  const ogImage = "https://whatcyber.com/og-image-contact.png";
+  const ogImage = "https://www.whatcyber.com/og-image-contact.png";
 
   return (
     <>

@@ -1,5 +1,7 @@
 # WhatCyber SEO Implementation Summary
 
+> **Superseded (WHA-10, Nov 2026):** the canonical host is `www.whatcyber.com` and URLs have no trailing slash (except the root). Statements below about non-www and trailing-slash enforcement describe the earlier setup and are kept as history.
+
 ## Overview
 This document summarizes all SEO improvements implemented for WhatCyber ThreatFeed to enhance search engine visibility and ranking.
 

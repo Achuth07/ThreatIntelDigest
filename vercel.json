@@ -21,8 +21,8 @@
   ],
   "redirects": [
     {
-      "source": "/threatfeed",
-      "destination": "/threatfeed/",
+      "source": "/:path((?!api/).+)/",
+      "destination": "/:path",
       "permanent": true
     }
   ],
@@ -75,6 +75,10 @@
         {
           "key": "Access-Control-Allow-Headers",
           "value": "Content-Type, Authorization"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
         }
       ]
     }

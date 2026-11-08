@@ -1,6 +1,6 @@
 import https from 'https';
 
-const HOST = 'whatcyber.com';
+const HOST = 'www.whatcyber.com';
 const KEY = '9ab9a8c4087e4e4f860f308d4d0daee4';
 const KEY_LOCATION = `https://${HOST}/${KEY}.txt`;
 

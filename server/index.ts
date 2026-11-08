@@ -67,11 +67,9 @@ app.use((req, res, next) => {
   const path = req.path;
   const query = req.url.includes('?') ? req.url.split('?')[1] : '';
 
-  // Redirect www to non-www
-  if (host && host.startsWith('www.')) {
-    const newHost = host.replace('www.', '');
-    const redirectUrl = `https://${newHost}${req.url}`;
-    return res.redirect(301, redirectUrl);
+  // Redirect the apex domain to www (the canonical host)
+  if (host === 'whatcyber.com') {
+    return res.redirect(301, `https://www.whatcyber.com${req.url}`);
   }
 
   // Redirect HTTP to HTTPS in production
@@ -80,9 +78,10 @@ app.use((req, res, next) => {
     return res.redirect(301, redirectUrl);
   }
 
-  // Redirect non-trailing-slash URLs to trailing-slash URLs (except for file extensions, API routes, and Vite internal paths)
-  if (path !== '/' && !path.endsWith('/') && !path.includes('.') && !path.startsWith('/api/') && !path.startsWith('/@') && !req.query.noRedirect) {
-    const redirectUrl = `${req.protocol}://${host || 'www.whatcyber.com'}${path}/${query ? `?${query}` : ''}`;
+  // Redirect trailing-slash URLs to the slashless URL (API routes and Vite internal paths excluded).
+  // Mirrors the redirect rule in vercel.json.
+  if (path !== '/' && path.endsWith('/') && !path.startsWith('/api/') && !path.startsWith('/@')) {
+    const redirectUrl = `${path.replace(/\/+$/, '')}${query ? `?${query}` : ''}`;
     return res.redirect(301, redirectUrl);
   }
 

@@ -183,7 +183,7 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
               {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </Button>
 
-            <div className="flex items-center space-x-3 cursor-pointer" onClick={() => window.location.href = '/threatfeed/'}>
+            <div className="flex items-center space-x-3 cursor-pointer" onClick={() => window.location.href = '/threatfeed'}>
               <img
                 src={logoImage}
                 alt="WhatCyber Logo"
@@ -272,7 +272,7 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
                 <div className="absolute right-0 mt-2 w-48 bg-whatcyber-dark border border-whatcyber-light-gray rounded-md shadow-lg z-50">
                   <div className="py-1">
                     {user && user.isAdmin && (
-                      <Link href="/admin/">
+                      <Link href="/admin">
                         <button
                           className="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-whatcyber-gray hover:text-slate-100"
                           onClick={() => setIsSettingsOpen(false)}
@@ -313,7 +313,7 @@ export function Header({ onSearch, bookmarkCount, onBookmarksClick, onSidebarTog
                         </button>
                       </Link>
                     )}
-                    <Link href="/settings/">
+                    <Link href="/settings">
                       <button
                         className="block w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-whatcyber-gray hover:text-slate-100"
                         onClick={() => setIsSettingsOpen(false)}

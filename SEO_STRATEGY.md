@@ -14,9 +14,9 @@ This document outlines the comprehensive SEO strategy implemented for WhatCyber 
 
 ### 2. Canonical URLs
 - Implemented canonical tag generation for all pages
-- Enforced URL standard: `https://whatcyber.com/path/`
+- Enforced URL standard: `https://www.whatcyber.com/path` (www host, no trailing slash except the root)
 - Added server-side redirect rules for URL consistency
-- Configured Vercel redirects for trailing slash enforcement
+- Configured a Vercel redirect that removes trailing slashes (apex-to-www is set on the Vercel domain, not in the repo)
 
 ### 3. Sitemap and Robots
 - Created XML sitemap for search engine crawling
@@ -34,8 +34,8 @@ This document outlines the comprehensive SEO strategy implemented for WhatCyber 
 
 ### 1. URL Structure
 - Enforced HTTPS protocol
-- Removed www subdomain (non-www preferred)
-- Added trailing slash to all URLs
+- www is the canonical host; the apex domain redirects to it permanently
+- Trailing-slash URLs redirect permanently to the slashless URL (the root keeps its slash)
 - Implemented 301 redirects for canonicalization
 
 ### 2. Performance Optimization

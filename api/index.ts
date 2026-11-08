@@ -5110,7 +5110,7 @@ async function handleIndexNowEndpoint(req: VercelRequest, res: VercelResponse) {
   try {
     const { submitUrl } = await import('../server/services/indexnow.js');
     const { urls } = req.body || {};
-    const urlsToSubmit = urls || ['https://whatcyber.com/'];
+    const urlsToSubmit = urls || ['https://www.whatcyber.com/'];
 
     await submitUrl(urlsToSubmit);
 
