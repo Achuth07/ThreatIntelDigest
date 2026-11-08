@@ -9,6 +9,7 @@ export default function NotFound() {
         title="Page Not Found - WhatCyber ThreatFeed"
         description="The page you're looking for doesn't exist on WhatCyber ThreatFeed."
         keywords="404, not found, cybersecurity, threat intelligence"
+        noindex
       />
       <Card className="w-full max-w-md mx-4">
         <CardContent className="pt-6">

@@ -10,6 +10,7 @@ const SITE_URL = 'https://www.whatcyber.com';
 // (Goes away with server rendering, WHA-17.)
 const STATIC_HEAD_TAGS =
   'head meta[name="description"]:not([data-rh]), head meta[name="keywords"]:not([data-rh]), ' +
+  'head meta[name="robots"]:not([data-rh]), ' +
   'head meta[property^="og:"]:not([data-rh]), head meta[name^="twitter:"]:not([data-rh]), ' +
   'head meta[property^="twitter:"]:not([data-rh])';
 
@@ -34,6 +35,28 @@ export function canonicalFor(pathname: string, search = ''): string {
   return `${SITE_URL}${trimmed}${page > 1 ? `?page=${page}` : ''}`;
 }
 
+// Pages that must stay out of search results: account and utility pages, and /article, which
+// shows third-party article text. Keep in step with the X-Robots-Tag rule in vercel.json, which
+// covers crawlers that do not run JavaScript.
+const NOINDEX_PATHS = [
+  '/login',
+  '/register',
+  '/forgot-password',
+  '/reset-password',
+  '/set-password',
+  '/onboarding',
+  '/settings',
+  '/watchlist',
+  '/admin',
+  '/report-bugs',
+  '/article',
+];
+
+export function isNoindexPath(pathname: string): boolean {
+  const path = pathname.split(/[?#]/)[0].replace(/\/+$/, '') || '/';
+  return NOINDEX_PATHS.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+}
+
 interface SEOProps {
   title?: string;
   description?: string;
@@ -43,6 +66,8 @@ interface SEOProps {
   type?: string;
   keywords?: string;
   structuredData?: Record<string, any>;
+  /** Defaults to true on the account, utility and /article paths, false elsewhere. */
+  noindex?: boolean;
 }
 
 export const SEO: React.FC<SEOProps> = ({
@@ -52,11 +77,13 @@ export const SEO: React.FC<SEOProps> = ({
   url,
   type = 'website',
   keywords,
-  structuredData
+  structuredData,
+  noindex
 }) => {
   const [location] = useLocation();
   const search = useSearch();
   const canonicalUrl = url || canonicalFor(location, search);
+  const hidden = noindex ?? isNoindexPath(location);
 
   useEffect(removeStaticHeadTags, []);
 
@@ -66,7 +93,7 @@ export const SEO: React.FC<SEOProps> = ({
       <meta name="description" content={description} />
       {keywords && <meta name="keywords" content={keywords} />}
       <meta name="author" content="WhatCyber" />
-      <meta name="robots" content="index, follow" />
+      <meta name="robots" content={hidden ? 'noindex, follow' : 'index, follow'} />
 
       {/* Open Graph tags */}
       <meta property="og:type" content={type} />

@@ -81,6 +81,24 @@
           "value": "noindex"
         }
       ]
+    },
+    {
+      "source": "/(login|register|forgot-password|reset-password|set-password|onboarding|settings|watchlist|report-bugs)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/(admin|article)/:path*",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
     }
   ],
   "regions": [
