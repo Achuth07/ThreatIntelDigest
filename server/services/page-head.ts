@@ -13,10 +13,10 @@ import {
   SITE_URL,
   canonicalFor,
   isNoindexPath,
-} from '../../client/src/lib/seo-core';
-import { NOT_FOUND_META, STATIC_PAGE_META } from '../../client/src/lib/page-meta';
-import { actorSeo, cveSeo } from '../../client/src/lib/seo-text';
-import type { HeadTags } from './head-inject';
+} from '../../client/src/lib/seo-core.js';
+import { NOT_FOUND_META, STATIC_PAGE_META } from '../../client/src/lib/page-meta.js';
+import { actorSeo, cveSeo } from '../../client/src/lib/seo-text.js';
+import type { HeadTags } from './head-inject.js';
 
 export interface PageHead extends HeadTags {
   status: 200 | 404;

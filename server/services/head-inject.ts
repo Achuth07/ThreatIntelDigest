@@ -10,7 +10,7 @@
  * values, see removeStaticHeadTags in client/src/components/seo.tsx.
  */
 
-import { DEFAULT_OG_IMAGE, DEFAULT_OG_IMAGE_ALT } from '../../client/src/lib/seo-core';
+import { DEFAULT_OG_IMAGE, DEFAULT_OG_IMAGE_ALT } from '../../client/src/lib/seo-core.js';
 
 export interface HeadTags {
   title: string;
