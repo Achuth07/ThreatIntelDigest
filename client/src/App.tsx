@@ -4,45 +4,53 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
-import Home from "@/pages/home";
-import Settings from "@/pages/settings";
-import LoginPage from "@/pages/login";
-import RegisterPage from "@/pages/register";
-import ForgotPasswordPage from "@/pages/forgot-password";
-import ResetPasswordPage from "@/pages/reset-password";
-import SetPasswordPage from "@/pages/set-password";
 import NotFound from "@/pages/not-found";
 import { Footer } from "@/components/footer";
-import { useEffect, useState } from "react";
-import { AdminDashboard } from "@/components/admin-dashboard";
-import { LoginPopup } from "@/components/login-popup";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { getAuthenticatedUser, updateAuthToken } from "@/lib/auth";
 import { SEO } from "@/components/seo";
 import { RouteErrorBoundary } from "@/components/error-boundary";
 import LandingPage from "@/pages/landing-page";
-import Dashboard from "@/pages/dashboard";
-import AboutPage from "@/pages/AboutPage";
-import SourcesPage from "@/pages/SourcesPage";
-import ContactPage from "@/pages/contact";
-import PrivacyPolicyPage from "@/pages/privacy";
-import TermsOfServicePage from "@/pages/terms";
-import OnboardingPage from "@/pages/onboarding";
-import ReportBugs from "@/pages/report-bugs";
-import ArticlePage from "@/pages/ArticlePage";
-import ThreatActorsPage from "@/pages/threat-actors";
-import ThreatActorDetailPage from "@/pages/threat-actor-detail";
-import ExploitedVulnerabilitiesPage from "@/pages/exploited-vulnerabilities";
-import CVEDetailPage from "@/pages/cve-detail";
-import VulnerabilitiesPage from '@/pages/vulnerabilities';
-import Blog from "@/pages/blog";
-import BlogPost from "@/pages/blog-post";
-import WatchlistPage from "@/pages/watchlist";
 import { KofiBanner } from "@/components/kofi-banner";
 
 
 // Import context from separate file to prevent HMR issues
 import { LoginPopupContext, useLoginPopup } from "@/contexts/login-popup-context";
 export { useLoginPopup };
+
+// Pages load on demand so the first visit downloads only the code for the page being opened.
+const Home = lazy(() => import("@/pages/home"));
+const Settings = lazy(() => import("@/pages/settings"));
+const LoginPage = lazy(() => import("@/pages/login"));
+const RegisterPage = lazy(() => import("@/pages/register"));
+const ForgotPasswordPage = lazy(() => import("@/pages/forgot-password"));
+const ResetPasswordPage = lazy(() => import("@/pages/reset-password"));
+const SetPasswordPage = lazy(() => import("@/pages/set-password"));
+const Dashboard = lazy(() => import("@/pages/dashboard"));
+const AboutPage = lazy(() => import("@/pages/AboutPage"));
+const SourcesPage = lazy(() => import("@/pages/SourcesPage"));
+const ContactPage = lazy(() => import("@/pages/contact"));
+const PrivacyPolicyPage = lazy(() => import("@/pages/privacy"));
+const TermsOfServicePage = lazy(() => import("@/pages/terms"));
+const OnboardingPage = lazy(() => import("@/pages/onboarding"));
+const ReportBugs = lazy(() => import("@/pages/report-bugs"));
+const ArticlePage = lazy(() => import("@/pages/ArticlePage"));
+const ThreatActorsPage = lazy(() => import("@/pages/threat-actors"));
+const ThreatActorDetailPage = lazy(() => import("@/pages/threat-actor-detail"));
+const ExploitedVulnerabilitiesPage = lazy(() => import("@/pages/exploited-vulnerabilities"));
+const CVEDetailPage = lazy(() => import("@/pages/cve-detail"));
+const VulnerabilitiesPage = lazy(() => import("@/pages/vulnerabilities"));
+const Blog = lazy(() => import("@/pages/blog"));
+const BlogPost = lazy(() => import("@/pages/blog-post"));
+const WatchlistPage = lazy(() => import("@/pages/watchlist"));
+const AdminDashboard = lazy(() => import("@/components/admin-dashboard").then((m) => ({ default: m.AdminDashboard })));
+const LoginPopup = lazy(() => import("@/components/login-popup").then((m) => ({ default: m.LoginPopup })));
+
+const PageFallback = () => (
+  <div className="flex items-center justify-center min-h-[60vh]">
+    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-whatcyber-teal"></div>
+  </div>
+);
 
 // ScrollToTop component to handle automatic scrolling on route changes
 const ScrollToTop = () => {
@@ -64,6 +72,7 @@ function Router() {
       <SEO />
       <ScrollToTop />
       <RouteErrorBoundary resetKey={location}>
+      <Suspense fallback={<PageFallback />}>
       <Switch>
         <Route path="/" component={LandingPage} />
         <Route path="/dashboard" component={Dashboard} />
@@ -117,6 +126,7 @@ function Router() {
         <Route path="/blog/:slug" component={BlogPost} />
         <Route component={NotFound} />
       </Switch>
+      </Suspense>
       </RouteErrorBoundary>
     </>
   );
@@ -249,9 +259,11 @@ function App() {
           <LoginPopupContext.Provider value={{ showLoginPopup: () => setShowLoginPopup(true) }}>
             <Toaster />
             {showLoginPopup && (
-              <LoginPopup
-                onLogin={handleLogin}
-              />
+              <Suspense fallback={null}>
+                <LoginPopup
+                  onLogin={handleLogin}
+                />
+              </Suspense>
             )}
             <div className="flex flex-col min-h-screen">
               <KofiBanner />
