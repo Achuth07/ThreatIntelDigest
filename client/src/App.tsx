@@ -18,6 +18,7 @@ import { AdminDashboard } from "@/components/admin-dashboard";
 import { LoginPopup } from "@/components/login-popup";
 import { getAuthenticatedUser, updateAuthToken } from "@/lib/auth";
 import { SEO } from "@/components/seo";
+import { RouteErrorBoundary } from "@/components/error-boundary";
 import LandingPage from "@/pages/landing-page";
 import Dashboard from "@/pages/dashboard";
 import AboutPage from "@/pages/AboutPage";
@@ -56,10 +57,13 @@ const ScrollToTop = () => {
 };
 
 function Router() {
+  const [location] = useLocation();
+
   return (
     <>
       <SEO />
       <ScrollToTop />
+      <RouteErrorBoundary resetKey={location}>
       <Switch>
         <Route path="/" component={LandingPage} />
         <Route path="/dashboard" component={Dashboard} />
@@ -113,6 +117,7 @@ function Router() {
         <Route path="/blog/:slug" component={BlogPost} />
         <Route component={NotFound} />
       </Switch>
+      </RouteErrorBoundary>
     </>
   );
 }
