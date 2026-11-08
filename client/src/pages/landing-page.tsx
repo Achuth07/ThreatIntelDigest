@@ -5,6 +5,7 @@ import { Shield, Menu, X, Database, Eye, Settings, Zap, Target, Github, Linkedin
 import * as THREE from 'three';
 import { Helmet } from "react-helmet-async";
 import { SEO } from '@/components/seo';
+import { STATIC_PAGE_META } from '@/lib/page-meta';
 import { getAuthenticatedUser } from '@/lib/auth';
 
 // CyberSphere Component
@@ -1322,9 +1323,7 @@ export default function LandingPage() {
   return (
     <div className="bg-black min-h-screen text-white selection:bg-[#00d4ff] selection:text-black font-sans overflow-x-hidden">
       <SEO
-        title="Threat Intelligence: CVEs, CISA KEV & Threat Actors | WhatCyber"
-        description="Threat intelligence in one dashboard: CISA KEV tracking, 215,000+ CVEs, 175+ threat actor profiles and cybersecurity news from trusted sources."
-        keywords="cybersecurity, threat intelligence, CVE, vulnerabilities, security news, cyber threats"
+        {...STATIC_PAGE_META['/']}
         structuredData={structuredData}
       />
 

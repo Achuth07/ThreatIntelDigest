@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Link, useLocation } from 'wouter';
 import { Menu, X } from 'lucide-react';
 import { SEO } from '@/components/seo';
+import { STATIC_PAGE_META } from '@/lib/page-meta';
 
 export default function PrivacyPolicy() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
@@ -19,14 +20,14 @@ export default function PrivacyPolicy() {
     navigate('/threatfeed');
   };
 
-  const metaDescription = "Learn about WhatCyber's privacy practices. We are committed to protecting your personal information and ensuring your privacy while using our cybersecurity news aggregator platform.";
-  const metaKeywords = "privacy policy, data protection, cybersecurity privacy, personal information, user privacy, privacy practices";
+  const metaDescription = STATIC_PAGE_META['/privacy'].description;
+  const metaKeywords = STATIC_PAGE_META['/privacy'].keywords!;
   const ogImage = "https://www.whatcyber.com/og-image.jpg";
 
   return (
     <>
       <SEO 
-        title="Privacy Policy - WhatCyber | Cybersecurity News Aggregator"
+        title={STATIC_PAGE_META['/privacy'].title}
         description={metaDescription}
         keywords={metaKeywords}
         image={ogImage}

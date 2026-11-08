@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Link, useLocation } from 'wouter';
 import { Menu, X } from 'lucide-react';
 import { SEO } from '@/components/seo';
+import { STATIC_PAGE_META } from '@/lib/page-meta';
 
 export default function TermsOfService() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
@@ -19,14 +20,14 @@ export default function TermsOfService() {
     navigate('/threatfeed');
   };
 
-  const metaDescription = "Review WhatCyber's Terms of Service to understand the rules and regulations for using our cybersecurity news aggregator platform and services.";
-  const metaKeywords = "terms of service, terms and conditions, user agreement, cybersecurity platform terms, whatcyber terms, service agreement";
+  const metaDescription = STATIC_PAGE_META['/terms'].description;
+  const metaKeywords = STATIC_PAGE_META['/terms'].keywords!;
   const ogImage = "https://www.whatcyber.com/og-image.jpg";
 
   return (
     <>
       <SEO 
-        title="Terms of Service - WhatCyber | Cybersecurity News Aggregator"
+        title={STATIC_PAGE_META['/terms'].title}
         description={metaDescription}
         keywords={metaKeywords}
         image={ogImage}

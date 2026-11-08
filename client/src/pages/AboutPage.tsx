@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
+import { STATIC_PAGE_META } from '@/lib/page-meta';
 import { Link } from 'wouter';
 import { Menu, X } from 'lucide-react';
 
@@ -27,14 +28,14 @@ export default function AboutPage() {
     window.open('https://www.whatcyber.com/threatfeed', '_blank');
   };
 
-  const metaDescription = "Learn about WhatCyber's mission to make cybersecurity accessible and effective for everyone. Discover our story, values, and team behind the cybersecurity news aggregator platform.";
-  const metaKeywords = "cybersecurity, about us, company story, cybersecurity team, threat intelligence platform, security mission";
+  const metaDescription = STATIC_PAGE_META['/about'].description;
+  const metaKeywords = STATIC_PAGE_META['/about'].keywords!;
   const ogImage = "https://www.whatcyber.com/og-image.jpg";
 
   return (
     <>
       <Helmet>
-        <title>About WhatCyber - Our Mission & Team | Cybersecurity News Aggregator</title>
+        <title>{STATIC_PAGE_META['/about'].title}</title>
         <meta name="description" content={metaDescription} />
         <meta name="keywords" content={metaKeywords} />
         <meta name="robots" content="index, follow" />
@@ -42,14 +43,14 @@ export default function AboutPage() {
         {/* Open Graph / Facebook */}
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://www.whatcyber.com/about" />
-        <meta property="og:title" content="About WhatCyber - Our Mission & Team | Cybersecurity News Aggregator" />
+        <meta property="og:title" content={STATIC_PAGE_META['/about'].title} />
         <meta property="og:description" content={metaDescription} />
         <meta property="og:image" content={ogImage} />
         
         {/* Twitter */}
         <meta property="twitter:card" content="summary_large_image" />
         <meta property="twitter:url" content="https://www.whatcyber.com/about" />
-        <meta property="twitter:title" content="About WhatCyber - Our Mission & Team | Cybersecurity News Aggregator" />
+        <meta property="twitter:title" content={STATIC_PAGE_META['/about'].title} />
         <meta property="twitter:description" content={metaDescription} />
         <meta property="twitter:image" content={ogImage} />
         

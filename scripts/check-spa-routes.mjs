@@ -1,7 +1,8 @@
 // Guards the "real 404" setup in vercel.json.
 //
-// vercel.json lists the app's page routes explicitly and sends them to index.html; any other URL
-// falls through to dist/public/404.html and a 404 status. That list has to match the routes in
+// vercel.json lists the app's page routes explicitly and sends them to the page function
+// (api/page.ts), which serves index.html with the right head tags; any other URL falls through to
+// dist/public/404.html and a 404 status. That list has to match the routes in
 // client/src/App.tsx, or a real page would start returning 404 in production.
 //
 // This script fails (exit 1) when a route in App.tsx has no matching rewrite, or when a made-up
@@ -26,7 +27,7 @@ const toRegExp = (source) =>
   );
 
 const pageRewrites = (config.rewrites ?? [])
-  .filter((rewrite) => rewrite.destination === '/index.html')
+  .filter((rewrite) => rewrite.destination === '/api/page' || rewrite.destination === '/index.html')
   .map((rewrite) => ({ source: rewrite.source, pattern: toRegExp(rewrite.source) }));
 
 const servedAsPage = (urlPath) => urlPath === '/' || pageRewrites.some(({ pattern }) => pattern.test(urlPath));

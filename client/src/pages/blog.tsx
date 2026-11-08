@@ -5,6 +5,7 @@ import { BlogCard, BlogPost } from '@/components/blog-card';
 import { AppShell } from '@/components/layout/app-shell';
 import { DashboardSidebar } from '@/components/layout/sidebars/dashboard-sidebar';
 import { SEO } from '@/components/seo';
+import { STATIC_PAGE_META } from '@/lib/page-meta';
 
 export default function Blog() {
     const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -43,8 +44,7 @@ export default function Blog() {
 
     // SEO Configuration
     const seoProps = {
-        title: "WhatCyber Blog - Cybersecurity Insights & Industry Updates",
-        description: "Read the latest articles on cybersecurity trends, threat intelligence analysis, and updates from the WhatCyber team.",
+        ...STATIC_PAGE_META['/blog'],
         url: "https://www.whatcyber.com/blog",
         type: "website"
     };

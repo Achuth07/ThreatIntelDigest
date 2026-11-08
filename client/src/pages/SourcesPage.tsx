@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
+import { STATIC_PAGE_META } from '@/lib/page-meta';
 import { getQueryFn } from '@/lib/queryClient';
 import type { RssSource } from '@shared/schema';
 import { VENDOR_THREAT_RESEARCH, GOVERNMENT_ALERTS, MALWARE_RESEARCH, GENERAL_SECURITY_NEWS, LEGACY_SOURCES } from '@/lib/rss-sources';
@@ -104,15 +105,9 @@ export default function SourcesPage() {
   return (
     <>
       <Helmet>
-        <title>Our Cybersecurity Sources | WhatCyber</title>
-        <meta 
-          name="description" 
-          content="Explore the 25+ trusted cybersecurity sources that feed into WhatCyber's threat intelligence aggregator. We curate content from leading vendors, government agencies, and research teams." 
-        />
-        <meta 
-          name="keywords" 
-          content="cybersecurity sources, threat intelligence feeds, security research, cyber news sources, vulnerability feeds" 
-        />
+        <title>{STATIC_PAGE_META['/sources'].title}</title>
+        <meta name="description" content={STATIC_PAGE_META['/sources'].description} />
+        <meta name="keywords" content={STATIC_PAGE_META['/sources'].keywords} />
         <meta name="robots" content="index, follow" />
         
         {/* Open Graph / Facebook */}

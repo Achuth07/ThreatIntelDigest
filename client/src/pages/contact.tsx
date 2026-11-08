@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Link, useLocation } from 'wouter';
 import { Mail, Menu, X, Send } from 'lucide-react';
 import { SEO } from '@/components/seo';
+import { STATIC_PAGE_META } from '@/lib/page-meta';
 
 interface FormData {
   name: string;
@@ -71,14 +72,14 @@ export default function Contact() {
     }
   };
 
-  const metaDescription = "Get in touch with WhatCyber. Have questions about our cybersecurity news aggregator or threat intelligence platform? Contact our team for support, partnerships, or feedback.";
-  const metaKeywords = "contact us, cybersecurity support, threat intelligence contact, security platform feedback, get in touch";
+  const metaDescription = STATIC_PAGE_META['/contact'].description;
+  const metaKeywords = STATIC_PAGE_META['/contact'].keywords!;
   const ogImage = "https://www.whatcyber.com/og-image.jpg";
 
   return (
     <>
       <SEO
-        title="Contact WhatCyber - Get in Touch | Cybersecurity News Aggregator"
+        title={STATIC_PAGE_META['/contact'].title}
         description={metaDescription}
         keywords={metaKeywords}
         image={ogImage}

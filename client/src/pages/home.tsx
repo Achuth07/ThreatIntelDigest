@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronDown, Clock } from 'lucide-react';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { SEO } from '@/components/seo';
+import { STATIC_PAGE_META } from '@/lib/page-meta';
 import type { Article, Bookmark, RssSource } from '@shared/schema';
 
 type FeedView = 'feed' | 'bookmarks' | 'follow';
@@ -177,13 +178,7 @@ export default function Home() {
     hour12: true,
   });
 
-  const seoProps = {
-    title: 'Live Cybersecurity News Feed | WhatCyber',
-    description:
-      'Your live, aggregated feed of the latest cybersecurity news. Stay updated on vulnerabilities, threat intel, and breaking stories from around the web.',
-    keywords:
-      'cybersecurity news, threat intelligence, vulnerability feed, security alerts, cyber threats, security updates',
-  };
+  const seoProps = STATIC_PAGE_META['/threatfeed'];
 
   return (
     <AppShell

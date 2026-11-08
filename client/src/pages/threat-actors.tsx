@@ -10,6 +10,7 @@ import { formatDistanceToNow } from "date-fns";
 import { AppShell } from "@/components/layout/app-shell";
 import { ActorsSidebar } from "@/components/layout/sidebars/actors-sidebar";
 import { SEO } from "@/components/seo";
+import { STATIC_PAGE_META } from "@/lib/page-meta";
 
 export default function ThreatActorsPage() {
     const [, setLocation] = useLocation();
@@ -34,8 +35,7 @@ export default function ThreatActorsPage() {
     return (
         <AppShell activeTab="actors" sidebar={<ActorsSidebar />}>
             <SEO
-                title="Threat Actors Directory: APT Groups and Intrusion Sets | WhatCyber"
-                description="Profiles of known APT groups, intrusion sets and other threat actors, with aliases, descriptions and related news. Based on MITRE ATT&CK."
+                {...STATIC_PAGE_META['/threat-actors']}
             />
             <div className="container mx-auto p-4 lg:p-8 space-y-6">
                 <div className="flex flex-col gap-4">

@@ -11,6 +11,10 @@
   "functions": {
     "api/index.ts": {
       "maxDuration": 60
+    },
+    "api/page.ts": {
+      "maxDuration": 10,
+      "includeFiles": "dist/public/index.html"
     }
   },
   "crons": [
@@ -57,11 +61,11 @@
     },
     {
       "source": "/:page(dashboard|threatfeed|watchlist|login|register|onboarding|forgot-password|reset-password|set-password|settings|admin|about|sources|contact|privacy|terms|report-bugs|blog|threat-actors|exploited-vulnerabilities|vulnerabilities)",
-      "destination": "/index.html"
+      "destination": "/api/page"
     },
     {
       "source": "/:section(article|blog|threat-actors|exploited-vulnerabilities|vulnerabilities)/:id",
-      "destination": "/index.html"
+      "destination": "/api/page"
     }
   ],
   "headers": [
