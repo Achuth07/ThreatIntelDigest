@@ -46,8 +46,9 @@ const WatchlistPage = lazy(() => import("@/pages/watchlist"));
 const AdminDashboard = lazy(() => import("@/components/admin-dashboard").then((m) => ({ default: m.AdminDashboard })));
 const LoginPopup = lazy(() => import("@/components/login-popup").then((m) => ({ default: m.LoginPopup })));
 
+// Fills the screen so the footer stays below the fold until the page arrives (no layout shift).
 const PageFallback = () => (
-  <div className="flex items-center justify-center min-h-[60vh]">
+  <div className="flex flex-1 items-center justify-center min-h-screen">
     <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-whatcyber-teal"></div>
   </div>
 );
