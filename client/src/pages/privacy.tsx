@@ -21,7 +21,7 @@ export default function PrivacyPolicy() {
 
   const metaDescription = "Learn about WhatCyber's privacy practices. We are committed to protecting your personal information and ensuring your privacy while using our cybersecurity news aggregator platform.";
   const metaKeywords = "privacy policy, data protection, cybersecurity privacy, personal information, user privacy, privacy practices";
-  const ogImage = "https://www.whatcyber.com/og-image-privacy.png";
+  const ogImage = "https://www.whatcyber.com/og-image.jpg";
 
   return (
     <>

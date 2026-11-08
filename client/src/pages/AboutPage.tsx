@@ -29,7 +29,7 @@ export default function AboutPage() {
 
   const metaDescription = "Learn about WhatCyber's mission to make cybersecurity accessible and effective for everyone. Discover our story, values, and team behind the cybersecurity news aggregator platform.";
   const metaKeywords = "cybersecurity, about us, company story, cybersecurity team, threat intelligence platform, security mission";
-  const ogImage = "https://www.whatcyber.com/og-image-about.png";
+  const ogImage = "https://www.whatcyber.com/og-image.jpg";
 
   return (
     <>

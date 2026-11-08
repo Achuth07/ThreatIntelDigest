@@ -21,7 +21,7 @@ export default function TermsOfService() {
 
   const metaDescription = "Review WhatCyber's Terms of Service to understand the rules and regulations for using our cybersecurity news aggregator platform and services.";
   const metaKeywords = "terms of service, terms and conditions, user agreement, cybersecurity platform terms, whatcyber terms, service agreement";
-  const ogImage = "https://www.whatcyber.com/og-image-terms.png";
+  const ogImage = "https://www.whatcyber.com/og-image.jpg";
 
   return (
     <>

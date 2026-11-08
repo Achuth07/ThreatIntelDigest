@@ -56,7 +56,11 @@
       "destination": "/robots.txt"
     },
     {
-      "source": "/(.*)",
+      "source": "/:page(dashboard|threatfeed|watchlist|login|register|onboarding|forgot-password|reset-password|set-password|settings|admin|about|sources|contact|privacy|terms|report-bugs|blog|threat-actors|exploited-vulnerabilities|vulnerabilities)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/:section(article|blog|threat-actors|exploited-vulnerabilities|vulnerabilities)/:id",
       "destination": "/index.html"
     }
   ],

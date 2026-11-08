@@ -55,6 +55,7 @@ export default function ThreatActorDetailPage() {
     if (isError || !group) {
         return (
             <AppShell activeTab="actors" sidebar={<ActorsSidebar />}>
+                <SEO title="Threat Actor Not Found | WhatCyber" description="This threat actor profile could not be loaded." noindex />
                 <div className="container mx-auto p-8 flex flex-col items-center justify-center text-red-400 gap-4 py-24">
                     <AlertTriangle className="w-12 h-12" />
                     <h2 className="text-xl font-bold">Failed to load threat actor</h2>

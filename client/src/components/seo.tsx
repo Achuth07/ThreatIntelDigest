@@ -4,6 +4,10 @@ import { useLocation, useSearch } from 'wouter';
 
 const SITE_URL = 'https://www.whatcyber.com';
 
+// Shared social preview image: client/public/og-image.jpg, 1200x630.
+const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.jpg`;
+const DEFAULT_OG_IMAGE_ALT = 'WhatCyber: threat intelligence for security teams';
+
 // index.html ships generic description, Open Graph and Twitter tags for crawlers that do not run
 // JavaScript. Helmet adds its own page-specific copies next to them instead of replacing them, so
 // a rendered page would carry two descriptions. Once a page renders, drop the static ones.
@@ -73,7 +77,7 @@ interface SEOProps {
 export const SEO: React.FC<SEOProps> = ({
   title = 'WhatCyber - ThreatFeed',
   description = 'Threat intelligence dashboard: track CISA Known Exploited Vulnerabilities, CVEs, threat actor profiles and cybersecurity news in one place.',
-  image = `${SITE_URL}/og-image.jpg`,
+  image = DEFAULT_OG_IMAGE,
   url,
   type = 'website',
   keywords,
@@ -101,6 +105,10 @@ export const SEO: React.FC<SEOProps> = ({
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
       <meta property="og:image" content={image} />
+      {/* Width, height and alt are only known for the shared image (no fragments: Helmet rejects them) */}
+      {image === DEFAULT_OG_IMAGE && <meta property="og:image:width" content="1200" />}
+      {image === DEFAULT_OG_IMAGE && <meta property="og:image:height" content="630" />}
+      {image === DEFAULT_OG_IMAGE && <meta property="og:image:alt" content={DEFAULT_OG_IMAGE_ALT} />}
 
       {/* Twitter tags */}
       <meta name="twitter:card" content="summary_large_image" />

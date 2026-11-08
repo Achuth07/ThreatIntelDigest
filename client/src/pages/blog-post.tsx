@@ -180,6 +180,7 @@ export default function BlogPost() {
     if (!post) {
         return (
             <div className="min-h-screen bg-whatcyber-darker flex flex-col items-center justify-center text-slate-300">
+                <SEO title="Post not found | WhatCyber" description="This blog post could not be found." noindex />
                 <h1 className="text-2xl font-bold mb-4">Post not found</h1>
                 <Link href="/blog">
                     <Button>Back to Blog</Button>
