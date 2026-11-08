@@ -1,7 +1,21 @@
+import { useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useLocation, useSearch } from 'wouter';
 
 const SITE_URL = 'https://www.whatcyber.com';
+
+// index.html ships generic description, Open Graph and Twitter tags for crawlers that do not run
+// JavaScript. Helmet adds its own page-specific copies next to them instead of replacing them, so
+// a rendered page would carry two descriptions. Once a page renders, drop the static ones.
+// (Goes away with server rendering, WHA-17.)
+const STATIC_HEAD_TAGS =
+  'head meta[name="description"]:not([data-rh]), head meta[name="keywords"]:not([data-rh]), ' +
+  'head meta[property^="og:"]:not([data-rh]), head meta[name^="twitter:"]:not([data-rh]), ' +
+  'head meta[property^="twitter:"]:not([data-rh])';
+
+function removeStaticHeadTags() {
+  document.querySelectorAll(STATIC_HEAD_TAGS).forEach((element) => element.remove());
+}
 
 /**
  * Builds the self-referencing canonical URL for a path on the www host.
@@ -33,7 +47,7 @@ interface SEOProps {
 
 export const SEO: React.FC<SEOProps> = ({
   title = 'WhatCyber - ThreatFeed',
-  description = 'Free threat intelligence dashboard: track CISA Known Exploited Vulnerabilities, CVEs, threat actor profiles and cybersecurity news in one place.',
+  description = 'Threat intelligence dashboard: track CISA Known Exploited Vulnerabilities, CVEs, threat actor profiles and cybersecurity news in one place.',
   image = `${SITE_URL}/og-image.jpg`,
   url,
   type = 'website',
@@ -43,6 +57,8 @@ export const SEO: React.FC<SEOProps> = ({
   const [location] = useLocation();
   const search = useSearch();
   const canonicalUrl = url || canonicalFor(location, search);
+
+  useEffect(removeStaticHeadTags, []);
 
   return (
     <Helmet>

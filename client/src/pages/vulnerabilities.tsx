@@ -7,8 +7,8 @@ export default function VulnerabilitiesPage() {
   return (
     <AppShell activeTab="vulnerabilities" sidebar={<VulnsSidebar />}>
       <SEO
-        title="Latest Vulnerabilities (CVEs) | WhatCyber"
-        description="Browse the latest Common Vulnerabilities and Exposures (CVEs). Stay updated on security flaws and potential exploits."
+        title="Latest CVEs Today: New Vulnerabilities by Severity | WhatCyber"
+        description="Browse newly published CVEs, filter by severity and vendor, and see CVSS scores. Data from the National Vulnerability Database."
         keywords="CVE, vulnerabilities, security flaws, exploit, cvss, nvd"
       />
       <CVEList />

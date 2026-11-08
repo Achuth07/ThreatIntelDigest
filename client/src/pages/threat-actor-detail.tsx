@@ -9,6 +9,7 @@ import { ArticleCard } from "@/components/article-card";
 import { AppShell } from "@/components/layout/app-shell";
 import { ActorsSidebar } from "@/components/layout/sidebars/actors-sidebar";
 import { SEO } from "@/components/seo";
+import { actorSeo } from "@/lib/seo-text";
 
 export default function ThreatActorDetailPage() {
     const [, params] = useRoute("/threat-actors/:id");
@@ -68,8 +69,7 @@ export default function ThreatActorDetailPage() {
     return (
         <AppShell activeTab="actors" sidebar={<ActorsSidebar />}>
             <SEO
-                title={`${group.name} | Threat Actor Profile`}
-                description={`Threat intelligence profile for ${group.name}. Aliases: ${group.aliases?.join(', ') || 'None'}.`}
+                {...actorSeo(group)}
             />
             <div className="container mx-auto p-4 lg:p-8 space-y-8 max-w-5xl">
                 {/* Header */}

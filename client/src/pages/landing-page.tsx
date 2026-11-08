@@ -468,26 +468,13 @@ const Header = () => {
 // HeroSection Component
 const HeroSection = () => {
   const [, setLocation] = useLocation();
-  const [currentText, setCurrentText] = useState(0);
   const [scrollY, setScrollY] = useState(0);
 
-  const heroTexts = [
-    "Cybersecurity News",
-    "Latest CVEs",
-    "Threat Intelligence",
-    "Security Updates"
-  ];
-
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentText((prev) => (prev + 1) % heroTexts.length);
-    }, 3000);
-
     const handleScroll = () => setScrollY(window.scrollY);
     window.addEventListener('scroll', handleScroll);
 
     return () => {
-      clearInterval(interval);
       window.removeEventListener('scroll', handleScroll);
     };
   }, []);
@@ -591,26 +578,16 @@ const HeroSection = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.3 }}
             >
-              <span className="text-[#666]">Stay Ahead with</span>{' '}
+              {/* Static text: a rotating headline means crawlers only ever see one random variant */}
+              <span className="text-[#666]">Threat intelligence for</span>{' '}
               <span className="relative">
                 <motion.span
-                  key={currentText}
                   className="bg-gradient-to-r from-[#00d4ff] via-[#00ff88] to-[#00d4ff] bg-clip-text text-transparent"
                   style={{ backgroundSize: '200% 100%' }}
-                  animate={{
-                    backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
-                    opacity: 1,
-                    y: 0
-                  }}
-                  initial={{ opacity: 0, y: 20 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{
-                    backgroundPosition: { duration: 5, repeat: Infinity },
-                    opacity: { duration: 0.5 },
-                    y: { duration: 0.5 }
-                  }}
+                  animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
+                  transition={{ backgroundPosition: { duration: 5, repeat: Infinity } }}
                 >
-                  {heroTexts[currentText]}
+                  security teams
                 </motion.span>
               </span>
             </motion.h1>
@@ -622,8 +599,7 @@ const HeroSection = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
             >
-              Actionable Intelligence. Aggregated Daily.
-              Your centralized hub for real-time cybersecurity news, vulnerability tracking, and threat actor intelligence.
+              Track exploited vulnerabilities from the CISA KEV catalog, 215,000+ CVEs and threat actor profiles, with cybersecurity news from trusted sources, in one dashboard.
             </motion.p>
 
             {/* CTA Button */}
@@ -676,8 +652,8 @@ const HeroSection = () => {
 const StatsSection = () => {
   const stats = [
     { icon: FileText, value: "20,000+", label: "News Articles Indexed" },
-    { icon: ShieldAlert, value: "1,100+", label: "Known Exploited Vulnerabilities" },
-    { icon: Users, value: "140+", label: "Threat Actor Profiles" },
+    { icon: ShieldAlert, value: "1,750+", label: "Known Exploited Vulnerabilities" },
+    { icon: Users, value: "175+", label: "Threat Actor Profiles" },
     { icon: Activity, value: "Real-Time", label: "Updates" }
   ];
 
@@ -1346,8 +1322,8 @@ export default function LandingPage() {
   return (
     <div className="bg-black min-h-screen text-white selection:bg-[#00d4ff] selection:text-black font-sans overflow-x-hidden">
       <SEO
-        title="WhatCyber - ThreatFeed"
-        description="Stay updated with the latest cybersecurity threats, vulnerabilities, and intelligence from trusted sources."
+        title="Threat Intelligence: CVEs, CISA KEV & Threat Actors | WhatCyber"
+        description="Threat intelligence in one dashboard: CISA KEV tracking, 215,000+ CVEs, 175+ threat actor profiles and cybersecurity news from trusted sources."
         keywords="cybersecurity, threat intelligence, CVE, vulnerabilities, security news, cyber threats"
         structuredData={structuredData}
       />

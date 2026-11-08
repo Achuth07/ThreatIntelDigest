@@ -34,8 +34,8 @@ export default function ThreatActorsPage() {
     return (
         <AppShell activeTab="actors" sidebar={<ActorsSidebar />}>
             <SEO
-                title="Threat Actors Directory | WhatCyber"
-                description="Explore known threat groups, intrusion sets, and APTs. Data sourced from MITRE ATT&CK and enriched with real-time news."
+                title="Threat Actors Directory: APT Groups and Intrusion Sets | WhatCyber"
+                description="Profiles of known APT groups, intrusion sets and other threat actors, with aliases, descriptions and related news. Based on MITRE ATT&CK."
             />
             <div className="container mx-auto p-4 lg:p-8 space-y-6">
                 <div className="flex flex-col gap-4">
