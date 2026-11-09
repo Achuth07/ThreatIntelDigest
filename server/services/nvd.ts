@@ -3,12 +3,81 @@ import { sql } from 'drizzle-orm';
 import { getDb } from '../db.js';
 import { uploadCveToR2 } from './r2.js';
 
-export async function fetchAndStoreNvdCves(startDate: Date, endDate: Date, startIndex = 0, resultsPerPage = 1000) {
+// NVD allows at most 120 days per request; smaller windows also keep each run's memory use low.
+const NVD_WINDOW_DAYS = 30;
+const NVD_MAX_ATTEMPTS = 5;
+const NVD_RETRYABLE_STATUSES = new Set([403, 429, 500, 502, 503, 504]);
+// Older CVEs were pruned to save storage. Updates must not bring them back one by one.
+const COVERAGE_START = '2021-01-01';
+
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+export function splitNvdWindows(start: Date, end: Date): { start: Date; end: Date }[] {
+    const windows: { start: Date; end: Date }[] = [];
+    let current = start;
+    while (current < end) {
+        const next = new Date(Math.min(current.getTime() + NVD_WINDOW_DAYS * 86_400_000, end.getTime()));
+        windows.push({ start: current, end: next });
+        current = next;
+    }
+    return windows;
+}
+
+export async function fetchNvdJson(url: string): Promise<any> {
+    for (let attempt = 1; ; attempt++) {
+        const response = await fetch(url, {
+            headers: {
+                'apiKey': process.env.NVD_API_KEY || '',
+                'User-Agent': 'ThreatIntelDigest/1.0',
+                'Accept': 'application/json'
+            }
+        });
+        if (response.ok) {
+            return response.json();
+        }
+        if (attempt >= NVD_MAX_ATTEMPTS || !NVD_RETRYABLE_STATUSES.has(response.status)) {
+            throw new Error(`NVD API error: ${response.status} ${response.statusText}`);
+        }
+        // NVD signals rate limiting with 403 over a rolling 30-second window.
+        const delay = response.status === 403 || response.status === 429 ? 35_000 : 5_000 * attempt;
+        console.warn(`[NVD Service] ${response.status} from NVD. Retrying in ${delay / 1000}s...`);
+        await wait(delay);
+    }
+}
+
+// Maps each stored CVE ID to its last-modified time, in NVD's timestamp format.
+export async function getStoredLastModified(cveIds: string[]): Promise<Map<string, string>> {
+    const db = getDb();
+    const stored = new Map<string, string>();
+    for (let i = 0; i < cveIds.length; i += 1000) {
+        const result = await db.execute(sql`
+          SELECT id, to_char(last_modified_date, 'YYYY-MM-DD"T"HH24:MI:SS.MS') AS last_modified
+          FROM vulnerabilities
+          WHERE id IN ${cveIds.slice(i, i + 1000)}
+        `);
+        for (const row of result.rows as { id: string; last_modified: string }[]) {
+            stored.set(row.id, row.last_modified);
+        }
+    }
+    return stored;
+}
+
+export async function fetchAndStoreNvdCves(
+    startDate: Date,
+    endDate: Date,
+    startIndex = 0,
+    resultsPerPage = 1000,
+    dateField: 'published' | 'modified' = 'published'
+) {
     const db = getDb();
     if (!db) throw new Error('Database not initialized');
 
     const startDateStr = startDate.toISOString().split('T')[0];
     const endDateStr = endDate.toISOString().split('T')[0];
+    const dateRange = dateField === 'modified'
+        ? `lastModStartDate=${startDate.toISOString()}&lastModEndDate=${endDate.toISOString()}`
+        : `pubStartDate=${startDateStr}T00:00:00.000&pubEndDate=${endDateStr}T23:59:59.999`;
+    let uploadFailures = 0;
     let totalResults = 0;
     let processedCount = 0;
     let pageCount = 0;
@@ -23,26 +92,9 @@ export async function fetchAndStoreNvdCves(startDate: Date, endDate: Date, start
             await new Promise(resolve => setTimeout(resolve, 2000));
         }
 
-        const url = `https://services.nvd.nist.gov/rest/json/cves/2.0/?pubStartDate=${startDateStr}T00:00:00.000&pubEndDate=${endDateStr}T23:59:59.999&resultsPerPage=${resultsPerPage}&startIndex=${currentStartIndex}`;
-
-        const response = await fetch(url, {
-            headers: {
-                'apiKey': process.env.NVD_API_KEY || '',
-                'User-Agent': 'ThreatIntelDigest/1.0',
-                'Accept': 'application/json'
-            }
-        });
-
-        if (!response.ok) {
-            if (response.status === 503) {
-                console.warn('[NVD Service] Service Unavailable (503). Retrying in 5s...');
-                await new Promise(resolve => setTimeout(resolve, 5000));
-                continue;
-            }
-            throw new Error(`NVD API error: ${response.status} ${response.statusText}`);
-        }
-
-        const data = await response.json();
+        const data = await fetchNvdJson(
+            `https://services.nvd.nist.gov/rest/json/cves/2.0/?${dateRange}&resultsPerPage=${resultsPerPage}&startIndex=${currentStartIndex}`
+        );
         const vulnerabilities = data.vulnerabilities || [];
         totalResults = data.totalResults || 0;
 
@@ -51,11 +103,21 @@ export async function fetchAndStoreNvdCves(startDate: Date, endDate: Date, start
         if (vulnerabilities.length > 0) {
             const valuesChunks: any[] = [];
             const errors: string[] = [];
+            const stored = dateField === 'modified'
+                ? await getStoredLastModified(vulnerabilities.map((vuln: any) => vuln.cve.id))
+                : null;
 
             for (const vuln of vulnerabilities) {
                 try {
                     const cve = vuln.cve;
                     const cveId = cve.id;
+                    if (stored) {
+                        const storedLastModified = stored.get(cveId);
+                        const isUnchanged = storedLastModified === cve.lastModified.slice(0, 23);
+                        const isOutOfCoverage = storedLastModified === undefined && cve.published < COVERAGE_START;
+                        if (isUnchanged || isOutOfCoverage) continue;
+                    }
+
                     const description = cve.descriptions?.find((desc: any) => desc.lang === 'en')?.value || 'No description available';
                     const metrics = cve.metrics;
 
@@ -164,7 +226,10 @@ export async function fetchAndStoreNvdCves(startDate: Date, endDate: Date, start
                     const searchVector = `${cveId} ${description} ${searchProd}`.substring(0, 10000);
 
                     // Perform R2 Upload
-                    await uploadCveToR2(cveId, fullData);
+                    if (!(await uploadCveToR2(cveId, fullData))) {
+                        uploadFailures++;
+                        continue;
+                    }
 
                     valuesChunks.push(sql`(${cveId}, ${cve.published}, ${cve.lastModified}, ${cve.vulnStatus}, ${cvssV3Score !== null ? String(cvssV3Score) : null}, ${cvssV3Severity}, ${cvssV2Score !== null ? String(cvssV2Score) : null}, ${cvssV2Severity}, ${weaknessesLiteral}::text[], ${JSON.stringify(vendorsArray)}::jsonb, ${cvssVector}, ${exploitabilityScore !== null ? String(exploitabilityScore) : null}, ${impactScore !== null ? String(impactScore) : null}, ${true}, ${searchVector})`);
                     processedCount++;
@@ -212,5 +277,9 @@ export async function fetchAndStoreNvdCves(startDate: Date, endDate: Date, start
         } else {
             hasMore = false;
         }
+    }
+
+    if (uploadFailures > 0) {
+        throw new Error(`${uploadFailures} CVE record(s) failed to upload to R2`);
     }
 }

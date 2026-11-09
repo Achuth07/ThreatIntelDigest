@@ -521,6 +521,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Generic Vulnerability Endpoint - Routes to consolidated API handler with R2 support
+  app.get('/api/vulnerabilities/:id/history', async (req, res) => {
+    const { mockReq, mockRes } = createMockHandlers(req, res, `/api/vulnerabilities/${req.params.id}/history`);
+    await consolidatedApiHandler(mockReq as any, mockRes as any);
+  });
+
   app.get('/api/vulnerabilities/:id', async (req, res) => {
     const { mockReq, mockRes } = createMockHandlers(req, res, `/api/vulnerabilities/${req.params.id}`);
     await consolidatedApiHandler(mockReq as any, mockRes as any);

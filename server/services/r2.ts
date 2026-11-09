@@ -1,5 +1,6 @@
 
 import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
+import type { CveChangeEvent } from '../../shared/cve-history.js';
 
 if (!process.env.R2_ACCOUNT_ID || !process.env.R2_ACCESS_KEY_ID || !process.env.R2_SECRET_ACCESS_KEY || !process.env.R2_BUCKET_NAME) {
     console.error("Missing R2 environment variables");
@@ -64,6 +65,50 @@ export async function fetchCveFromR2(cveId: string) {
         console.error(`Failed to fetch ${cveId} from R2:`, error);
         return null; // Return null to fallback (though fallback data is empty now)
     }
+}
+
+// Unlike fetchCveFromR2, a failed read throws: callers merge into what they read,
+// so treating an outage as "no file" would overwrite stored data.
+async function readR2Json<T>(key: string): Promise<T | null> {
+    try {
+        const response = await getR2().send(new GetObjectCommand({ Bucket: BUCKET_NAME, Key: key }));
+        if (!response.Body) return null;
+        return JSON.parse(await response.Body.transformToString()) as T;
+    } catch (error: any) {
+        if (error?.name === 'NoSuchKey' || error?.$metadata?.httpStatusCode === 404) {
+            return null;
+        }
+        throw error;
+    }
+}
+
+async function writeR2Json(key: string, data: unknown): Promise<void> {
+    await getR2().send(new PutObjectCommand({
+        Bucket: BUCKET_NAME,
+        Key: key,
+        Body: JSON.stringify(data),
+        ContentType: 'application/json',
+    }));
+}
+
+export async function getCveHistory(cveId: string): Promise<CveChangeEvent[]> {
+    return (await readR2Json<CveChangeEvent[]>(`cve-history/${cveId}.json`)) ?? [];
+}
+
+export async function saveCveHistory(cveId: string, changes: CveChangeEvent[]): Promise<void> {
+    await writeR2Json(`cve-history/${cveId}.json`, changes);
+}
+
+export interface NvdSyncState {
+    lastSyncedAt: string;
+}
+
+export async function getNvdSyncState(): Promise<NvdSyncState | null> {
+    return readR2Json<NvdSyncState>('sync/nvd-state.json');
+}
+
+export async function saveNvdSyncState(state: NvdSyncState): Promise<void> {
+    await writeR2Json('sync/nvd-state.json', state);
 }
 
 export async function checkCveInR2(cveId: string) {
