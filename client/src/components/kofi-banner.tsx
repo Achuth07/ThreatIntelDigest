@@ -1,18 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, Heart } from 'lucide-react';
 import { useLocation } from 'wouter';
 
 export function KofiBanner() {
-  const [isVisible, setIsVisible] = useState(false);
-  const [location] = useLocation();
-
-  useEffect(() => {
-    // Check if user has previously dismissed the banner
-    const isDismissed = localStorage.getItem('kofi-banner-dismissed');
-    if (!isDismissed) {
-      setIsVisible(true);
+  // Decide before the first render, so the banner is there from the first paint. Showing it from an
+  // effect pushed the whole page down after load (layout shift).
+  const [isVisible, setIsVisible] = useState(() => {
+    try {
+      return !localStorage.getItem('kofi-banner-dismissed');
+    } catch {
+      return true;
     }
-  }, []);
+  });
+  const [location] = useLocation();
 
   const handleDismiss = () => {
     localStorage.setItem('kofi-banner-dismissed', 'true');
