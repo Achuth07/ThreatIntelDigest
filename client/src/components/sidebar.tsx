@@ -700,9 +700,9 @@ export function Sidebar({
 
           <div className="space-y-2">
             <button
-              className={`w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${location === '/vulnerabilities' ? 'bg-slate-700' : 'hover:bg-slate-700'}`}
+              className={`w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${location === '/cve' ? 'bg-slate-700' : 'hover:bg-slate-700'}`}
               onClick={() => {
-                setLocation('/vulnerabilities');
+                setLocation('/cve');
                 if (onClose) onClose();
               }}
               data-testid="button-vulnerabilities"
@@ -711,15 +711,15 @@ export function Sidebar({
                 <div className="w-5 h-5 bg-red-500 rounded-sm flex items-center justify-center text-white text-xs">
                   CVE
                 </div>
-                <span className={`font-medium ${location === '/vulnerabilities' ? 'text-whatcyber-teal' : 'text-slate-100'}`}>Latest CVEs</span>
+                <span className={`font-medium ${location === '/cve' ? 'text-whatcyber-teal' : 'text-slate-100'}`}>Latest CVEs</span>
               </div>
 
             </button>
 
             <button
-              className={`w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${location.startsWith('/exploited-vulnerabilities') ? 'bg-slate-700' : 'hover:bg-slate-700'}`}
+              className={`w-full flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${location.startsWith('/cisa-kev') ? 'bg-slate-700' : 'hover:bg-slate-700'}`}
               onClick={() => {
-                setLocation('/exploited-vulnerabilities');
+                setLocation('/cisa-kev');
                 onClose?.();
               }}
             >
@@ -727,7 +727,7 @@ export function Sidebar({
                 <div className="w-5 h-5 bg-orange-500 rounded-sm flex items-center justify-center text-white text-xs">
                   KEV
                 </div>
-                <span className={`font-medium ${location.startsWith('/exploited-vulnerabilities') ? 'text-whatcyber-teal' : 'text-slate-100'}`}>Exploited Vulnerabilities</span>
+                <span className={`font-medium ${location.startsWith('/cisa-kev') ? 'text-whatcyber-teal' : 'text-slate-100'}`}>Exploited Vulnerabilities</span>
               </div>
               <span className="bg-whatcyber-teal text-whatcyber-dark text-xs px-2 py-1 rounded-full font-bold animate-pulse">
                 NEW

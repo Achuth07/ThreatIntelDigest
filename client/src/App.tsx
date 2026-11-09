@@ -1,4 +1,4 @@
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route, Redirect, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -119,10 +119,14 @@ function Router() {
 
         <Route path="/threat-actors" component={ThreatActorsPage} />
         <Route path="/threat-actors/:id" component={ThreatActorDetailPage} />
-        <Route path="/exploited-vulnerabilities" component={ExploitedVulnerabilitiesPage} />
-        <Route path="/exploited-vulnerabilities/:id" component={CVEDetailPage} />
-        <Route path="/vulnerabilities" component={VulnerabilitiesPage} />
-        <Route path="/vulnerabilities/:id" component={CVEDetailPage} />
+        <Route path="/cisa-kev" component={ExploitedVulnerabilitiesPage} />
+        <Route path="/cve" component={VulnerabilitiesPage} />
+        <Route path="/cve/:id" component={CVEDetailPage} />
+        {/* Old addresses. The server answers these with a permanent redirect; this covers in-app links and local dev. */}
+        <Route path="/exploited-vulnerabilities">{() => <Redirect to="/cisa-kev" replace />}</Route>
+        <Route path="/exploited-vulnerabilities/:id">{(params) => <Redirect to={`/cve/${params.id}`} replace />}</Route>
+        <Route path="/vulnerabilities">{() => <Redirect to="/cve" replace />}</Route>
+        <Route path="/vulnerabilities/:id">{(params) => <Redirect to={`/cve/${params.id}`} replace />}</Route>
         <Route path="/blog" component={Blog} />
         <Route path="/blog/:slug" component={BlogPost} />
         <Route component={NotFound} />

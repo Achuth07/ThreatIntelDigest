@@ -46,7 +46,7 @@ export default function Home() {
     const params = new URLSearchParams(searchString || window.location.search);
     const v = params.get('view');
     if (v === 'cve' || v === 'cveList') {
-      setLocation('/vulnerabilities');
+      setLocation('/cve');
     }
   }, [location, searchString, setLocation]);
 

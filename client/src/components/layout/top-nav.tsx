@@ -39,7 +39,7 @@ export type AppTab = 'dashboard' | 'feeds' | 'vulnerabilities' | 'actors';
 export const APP_TABS: { id: AppTab; label: string; href: string; icon: typeof Rss }[] = [
   { id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { id: 'feeds', label: 'Threat Feeds', href: '/threatfeed', icon: Rss },
-  { id: 'vulnerabilities', label: 'Vulnerabilities', href: '/vulnerabilities', icon: ShieldAlert },
+  { id: 'vulnerabilities', label: 'Vulnerabilities', href: '/cve', icon: ShieldAlert },
   { id: 'actors', label: 'Threat Actors', href: '/threat-actors', icon: Users },
 ];
 

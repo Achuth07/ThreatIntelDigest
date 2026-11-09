@@ -267,6 +267,8 @@ export const threatGroups = pgTable("threat_groups", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
   stixId: text("stix_id").notNull().unique(), // The STIX ID
   name: text("name").notNull(),
+  // Readable address, e.g. "salt-typhoon". Set once and kept, so the public URL stays stable.
+  slug: text("slug").unique(),
   description: text("description"),
   aliases: jsonb("aliases").$type<string[]>().default([]),
   lastUpdated: timestamp("last_updated"),

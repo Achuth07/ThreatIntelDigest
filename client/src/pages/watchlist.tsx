@@ -263,7 +263,7 @@ export default function WatchlistPage() {
                                                                 {feed?.cves?.map((cve) => (
                                                                     <TableRow key={cve.id} className="border-slate-700 hover:bg-slate-800/50">
                                                                         <TableCell className="font-medium text-slate-200">
-                                                                            <Link href={`/vulnerabilities/${cve.id}`} className="text-whatcyber-teal hover:underline">
+                                                                            <Link href={`/cve/${cve.id}`} className="text-whatcyber-teal hover:underline">
                                                                                 {cve.id}
                                                                             </Link>
                                                                         </TableCell>
@@ -302,7 +302,7 @@ export default function WatchlistPage() {
                                                                 {feed?.kevs?.map((kev) => (
                                                                     <TableRow key={kev.cveID} className="border-slate-700 hover:bg-slate-800/50">
                                                                         <TableCell className="font-medium text-slate-200">
-                                                                            <Link href={`/exploited-vulnerabilities/${kev.cveID}`} className="text-whatcyber-teal hover:underline">
+                                                                            <Link href={`/cve/${kev.cveID}`} className="text-whatcyber-teal hover:underline">
                                                                                 {kev.cveID}
                                                                             </Link>
                                                                         </TableCell>

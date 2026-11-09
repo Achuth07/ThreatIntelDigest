@@ -5,6 +5,7 @@ import { neon } from '@neondatabase/serverless';
 import { createClient } from '@sanity/client';
 import { createImageUrlBuilder } from '@sanity/image-url';
 import { DEFAULT_DESCRIPTION, DEFAULT_TITLE, canonicalFor, isNoindexPath } from '../client/src/lib/seo-core.js';
+import { UUID_PATTERN } from '../client/src/lib/urls.js';
 import { injectHead } from '../server/services/head-inject.js';
 import { resolvePageHead, type PageData } from '../server/services/page-head.js';
 
@@ -77,9 +78,19 @@ function createDataSource(): PageData {
       }
     },
 
-    async getActor(id) {
-      const rows = await sql()`SELECT name, aliases, description FROM threat_groups WHERE id = ${id}`;
-      return (rows[0] as any) ?? null;
+    async getActor(idOrSlug) {
+      const isId = UUID_PATTERN.test(idOrSlug);
+      try {
+        const rows = isId
+          ? await sql()`SELECT id, slug, name, aliases, description FROM threat_groups WHERE id = ${idOrSlug}`
+          : await sql()`SELECT id, slug, name, aliases, description FROM threat_groups WHERE slug = ${idOrSlug}`;
+        return (rows[0] as any) ?? null;
+      } catch (error) {
+        // The slug column may not exist yet (migration 005 not run). Old id-based links still work.
+        if (!isId) throw error;
+        const rows = await sql()`SELECT id, name, aliases, description FROM threat_groups WHERE id = ${idOrSlug}`;
+        return rows[0] ? ({ ...rows[0], slug: null } as any) : null;
+      }
     },
 
     async getPost(slug) {
@@ -120,6 +131,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const head = await resolvePageHead(pathname, createDataSource());
+    if (head.status === 301 && head.redirect) {
+      const search = new URL(req.url!, 'https://placeholder.invalid').search;
+      res.setHeader('Cache-Control', CACHE.found);
+      res.setHeader('Location', `${head.redirect}${search}`);
+      return res.status(301).send('');
+    }
     res.setHeader('Cache-Control', head.status === 404 ? CACHE.notFound : CACHE.found);
     return res.status(head.status).send(injectHead(shell, head));
   } catch (error) {

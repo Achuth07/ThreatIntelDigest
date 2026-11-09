@@ -4,6 +4,7 @@ import { getDb } from "../server/db";
 import { threatGroups } from "../shared/schema";
 import { sql } from "drizzle-orm";
 import https from "https";
+import { assignMissingSlugs } from "../server/services/threat-group-slugs";
 
 const MITRE_URL = "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json";
 
@@ -93,6 +94,10 @@ async function main() {
         }
 
         console.log(`\nSuccessfully processed ${count} threat groups.`);
+
+        // New groups get their public address; existing ones keep theirs.
+        const assigned = await assignMissingSlugs(db);
+        console.log(`Assigned ${assigned} new slugs.`);
     } catch (error) {
         console.error("Error ingestion failed:", error);
         process.exit(1);

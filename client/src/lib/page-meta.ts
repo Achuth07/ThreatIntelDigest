@@ -26,13 +26,13 @@ export const STATIC_PAGE_META: Record<string, PageMeta> = {
     keywords:
       'cybersecurity news, threat intelligence, vulnerability feed, security alerts, cyber threats, security updates',
   },
-  '/exploited-vulnerabilities': {
+  '/cisa-kev': {
     title: 'CISA KEV Tracker: Known Exploited Vulnerabilities | WhatCyber',
     description:
       "Track CISA's Known Exploited Vulnerabilities (KEV) catalog: newly added CVEs, ransomware use, affected vendors and remediation due dates, updated daily.",
     keywords: 'CISA KEV, exploited vulnerabilities, active exploitation, ransomware, cve, security dashboard',
   },
-  '/vulnerabilities': {
+  '/cve': {
     title: 'Latest CVEs Today: New Vulnerabilities by Severity | WhatCyber',
     description:
       'Browse newly published CVEs, filter by severity and vendor, and see CVSS scores. Data from the National Vulnerability Database.',

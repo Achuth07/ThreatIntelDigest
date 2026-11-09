@@ -505,7 +505,7 @@ const FeaturesSection = () => {
       video: "/latest-cves-demo.mp4",
       webm: "/latest-cves-demo.webm",
       align: "right",
-      href: "/vulnerabilities",
+      href: "/cve",
       cta: "Browse the latest CVEs"
     },
     {
@@ -514,7 +514,7 @@ const FeaturesSection = () => {
       video: "/exploited-vulnerabilities-demo.mp4",
       webm: "/exploited-vulnerabilities-demo.webm",
       align: "left",
-      href: "/exploited-vulnerabilities",
+      href: "/cisa-kev",
       cta: "Open the CISA KEV catalog"
     },
     {
@@ -986,8 +986,8 @@ const FooterSection = () => {
               <h3 className="text-white font-semibold mb-4">Platform</h3>
               <ul className="space-y-2 text-[#888]">
                 <li><Link href="/threatfeed" className="hover:text-[#00d4ff] transition-colors">Security News Feed</Link></li>
-                <li><Link href="/vulnerabilities" className="hover:text-[#00d4ff] transition-colors">Latest CVEs</Link></li>
-                <li><Link href="/exploited-vulnerabilities" className="hover:text-[#00d4ff] transition-colors">CISA KEV Catalog</Link></li>
+                <li><Link href="/cve" className="hover:text-[#00d4ff] transition-colors">Latest CVEs</Link></li>
+                <li><Link href="/cisa-kev" className="hover:text-[#00d4ff] transition-colors">CISA KEV Catalog</Link></li>
                 <li><Link href="/threat-actors" className="hover:text-[#00d4ff] transition-colors">Threat Actors</Link></li>
               </ul>
             </div>

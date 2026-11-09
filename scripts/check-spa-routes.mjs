@@ -30,13 +30,19 @@ const pageRewrites = (config.rewrites ?? [])
   .filter((rewrite) => rewrite.destination === '/api/page' || rewrite.destination === '/index.html')
   .map((rewrite) => ({ source: rewrite.source, pattern: toRegExp(rewrite.source) }));
 
+// Old addresses that now permanently redirect to a new page (WHA-18) also count as handled.
+const redirectPatterns = (config.redirects ?? [])
+  .filter((redirect) => redirect.permanent && !redirect.source.includes('('))
+  .map((redirect) => toRegExp(redirect.source));
+
 const servedAsPage = (urlPath) => urlPath === '/' || pageRewrites.some(({ pattern }) => pattern.test(urlPath));
+const redirected = (urlPath) => redirectPatterns.some((pattern) => pattern.test(urlPath));
 
 const failures = [];
 
 for (const route of routes) {
   const sample = route.replace(/:[A-Za-z]+/g, 'sample-1');
-  if (!servedAsPage(sample)) failures.push(`App.tsx route ${route} (tested as ${sample}) is not in vercel.json rewrites`);
+  if (!servedAsPage(sample) && !redirected(sample)) failures.push(`App.tsx route ${route} (tested as ${sample}) is not in vercel.json rewrites`);
 }
 
 for (const bogus of ['/definitely-not-a-page', '/threatfeed/login', '/blog/a/b', '/admin/users', '/og-image.png']) {

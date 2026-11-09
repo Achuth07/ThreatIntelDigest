@@ -1,5 +1,6 @@
 import { createClient } from '@sanity/client';
 import { sql } from 'drizzle-orm';
+import { actorUrl, cveUrl } from '../../client/src/lib/urls.js';
 
 export const SITE_URL = 'https://www.whatcyber.com';
 
@@ -25,8 +26,8 @@ type Entry = { path: string; lastmod?: Date | string | null };
 const CORE_PATHS = [
   '/',
   '/threatfeed',
-  '/vulnerabilities',
-  '/exploited-vulnerabilities',
+  '/cve',
+  '/cisa-kev',
   '/threat-actors',
   '/blog',
   '/about',
@@ -111,7 +112,7 @@ export async function renderSitemap(
       return urlset(
         rows
           .filter((row) => CVE_ID.test(row.cve_id))
-          .map((row) => ({ path: `/exploited-vulnerabilities/${row.cve_id}`, lastmod: row.lastmod }))
+          .map((row) => ({ path: cveUrl(row.cve_id), lastmod: row.lastmod }))
       );
     }
 
@@ -119,10 +120,11 @@ export async function renderSitemap(
       const db = await getDb();
       const rows = rowsOf(
         await db.execute(
-          sql`SELECT id, COALESCE(last_updated, created_at) AS lastmod FROM threat_groups ORDER BY name`
+          // Only groups with a slug: the slug is their one public address.
+          sql`SELECT slug, COALESCE(last_updated, created_at) AS lastmod FROM threat_groups WHERE slug IS NOT NULL ORDER BY name`
         )
       );
-      return urlset(rows.map((row) => ({ path: `/threat-actors/${row.id}`, lastmod: row.lastmod })));
+      return urlset(rows.map((row) => ({ path: actorUrl({ id: '', slug: row.slug }), lastmod: row.lastmod })));
     }
   }
 }

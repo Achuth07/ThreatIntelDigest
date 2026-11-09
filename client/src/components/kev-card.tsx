@@ -37,7 +37,7 @@ export function KEVCard({ kev, onRelatedNewsClick }: KEVCardProps) {
                     <div className="space-y-1">
                         <CardTitle className="text-xl text-slate-100 font-mono tracking-tight hover:underline decoration-whatcyber-teal/50 underline-offset-4 cursor-pointer">
                             <Link
-                                href={`/exploited-vulnerabilities/${kev.cveID}`}
+                                href={`/cve/${kev.cveID}`}
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 {kev.cveID}

@@ -5370,8 +5370,13 @@ async function handleThreatGroupsEndpoints(req: VercelRequest, res: VercelRespon
       console.log('Raw pathname:', pathname);
       console.log('Extracted ID:', id);
 
-      // Get group details
-      const groupResult = await db.select().from(threatGroups).where(eq(threatGroups.id, id)).limit(1);
+      // Get group details. The public address is the slug; the old id-based links still resolve.
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+      const groupResult = await db
+        .select()
+        .from(threatGroups)
+        .where(isUuid ? eq(threatGroups.id, id) : eq(threatGroups.slug, id.toLowerCase()))
+        .limit(1);
 
       if (groupResult.length === 0) {
         return res.status(404).json({ message: 'Threat group not found' });
@@ -5391,7 +5396,7 @@ async function handleThreatGroupsEndpoints(req: VercelRequest, res: VercelRespon
         })
         .from(articleThreatGroups)
         .innerJoin(articles, eq(articleThreatGroups.articleId, articles.id))
-        .where(eq(articleThreatGroups.threatGroupId, id))
+        .where(eq(articleThreatGroups.threatGroupId, group.id))
         .orderBy(desc(articles.publishedAt))
         .limit(20);
 

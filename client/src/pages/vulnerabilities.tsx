@@ -8,7 +8,7 @@ export default function VulnerabilitiesPage() {
   return (
     <AppShell activeTab="vulnerabilities" sidebar={<VulnsSidebar />}>
       <SEO
-        {...STATIC_PAGE_META['/vulnerabilities']}
+        {...STATIC_PAGE_META['/cve']}
       />
       <CVEList />
     </AppShell>

@@ -11,15 +11,15 @@ export function VulnsSidebar() {
         <SidebarItem
           icon={Bug}
           label="Latest CVEs"
-          href="/vulnerabilities"
-          active={location.startsWith('/vulnerabilities')}
+          href="/cve"
+          active={location.startsWith('/cve')}
           testId="button-vulnerabilities"
         />
         <SidebarItem
           icon={Flame}
           label="CISA KEV Catalog"
-          href="/exploited-vulnerabilities"
-          active={location.startsWith('/exploited-vulnerabilities')}
+          href="/cisa-kev"
+          active={location.startsWith('/cisa-kev')}
           badge={<SidebarBadge tone="accent">LIVE</SidebarBadge>}
           testId="button-kev-catalog"
         />

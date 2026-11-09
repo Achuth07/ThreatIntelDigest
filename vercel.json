@@ -25,6 +25,26 @@
   ],
   "redirects": [
     {
+      "source": "/vulnerabilities",
+      "destination": "/cve",
+      "permanent": true
+    },
+    {
+      "source": "/vulnerabilities/:id",
+      "destination": "/cve/:id",
+      "permanent": true
+    },
+    {
+      "source": "/exploited-vulnerabilities",
+      "destination": "/cisa-kev",
+      "permanent": true
+    },
+    {
+      "source": "/exploited-vulnerabilities/:id",
+      "destination": "/cve/:id",
+      "permanent": true
+    },
+    {
       "source": "/:path((?!api/).+)/",
       "destination": "/:path",
       "permanent": true
@@ -60,11 +80,11 @@
       "destination": "/robots.txt"
     },
     {
-      "source": "/:page(dashboard|threatfeed|watchlist|login|register|onboarding|forgot-password|reset-password|set-password|settings|admin|about|sources|contact|privacy|terms|report-bugs|blog|threat-actors|exploited-vulnerabilities|vulnerabilities)",
+      "source": "/:page(dashboard|threatfeed|watchlist|login|register|onboarding|forgot-password|reset-password|set-password|settings|admin|about|sources|contact|privacy|terms|report-bugs|blog|threat-actors|cve|cisa-kev)",
       "destination": "/api/page"
     },
     {
-      "source": "/:section(article|blog|threat-actors|exploited-vulnerabilities|vulnerabilities)/:id",
+      "source": "/:section(article|blog|threat-actors|cve)/:id",
       "destination": "/api/page"
     }
   ],

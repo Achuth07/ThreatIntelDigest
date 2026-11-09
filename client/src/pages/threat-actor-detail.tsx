@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { actorUrl } from "@/lib/urls";
 import { useRoute, useLocation } from "wouter";
 import { Loader2, AlertTriangle, ArrowLeft, Activity, Calendar, ExternalLink, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,6 +27,14 @@ export default function ThreatActorDetailPage() {
         },
         enabled: !!id
     });
+
+    // Opened by the old id-based address? Move to the readable one (the server redirects too;
+    // this covers in-app navigation).
+    useEffect(() => {
+        if (group?.slug && id && id !== group.slug) {
+            setLocation(actorUrl(group), { replace: true });
+        }
+    }, [group, id, setLocation]);
 
     // Helper function to clean up Markdown links and citations from text
     const cleanDescription = (text: string) => {

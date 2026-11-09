@@ -3,8 +3,8 @@ import { Link } from 'wouter';
 // Site-wide footer. Plain links to every public hub so crawlers can reach them from any page.
 const FOOTER_LINKS = [
   { href: '/threatfeed', label: 'Security News Feed' },
-  { href: '/vulnerabilities', label: 'Latest CVEs' },
-  { href: '/exploited-vulnerabilities', label: 'CISA KEV Catalog' },
+  { href: '/cve', label: 'Latest CVEs' },
+  { href: '/cisa-kev', label: 'CISA KEV Catalog' },
   { href: '/threat-actors', label: 'Threat Actors' },
   { href: '/blog', label: 'Blog' },
   { href: '/sources', label: 'Sources' },

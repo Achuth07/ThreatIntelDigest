@@ -1,3 +1,4 @@
+import { actorUrl } from '@/lib/urls';
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
@@ -77,7 +78,7 @@ export default function ThreatActorsPage() {
                                 <Card
                                     key={group.id}
                                     className="bg-card border-border hover:border-whatcyber-teal/50 hover:-translate-y-1 hover:shadow-lg hover:shadow-whatcyber-teal/10 transition-all duration-300 cursor-pointer group h-full"
-                                    onClick={() => setLocation(`/threat-actors/${group.id}`)}
+                                    onClick={() => setLocation(actorUrl(group))}
                                 >
                                     <CardHeader className="flex flex-row items-center gap-4 space-y-0 pb-4">
                                         <div className="w-12 h-12 rounded-md bg-secondary shrink-0 border border-border overflow-hidden flex items-center justify-center">
@@ -90,7 +91,7 @@ export default function ThreatActorsPage() {
                                         <div className="flex flex-col flex-1">
                                             <CardTitle className="text-slate-100 group-hover:text-whatcyber-teal transition-colors text-lg">
                                                 <Link
-                                                    href={`/threat-actors/${group.id}`}
+                                                    href={actorUrl(group)}
                                                     onClick={(e) => e.stopPropagation()}
                                                 >
                                                     {group.name}

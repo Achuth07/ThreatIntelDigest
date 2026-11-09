@@ -16,10 +16,13 @@ import {
 } from '../../client/src/lib/seo-core.js';
 import { NOT_FOUND_META, STATIC_PAGE_META } from '../../client/src/lib/page-meta.js';
 import { actorSeo, cveSeo } from '../../client/src/lib/seo-text.js';
+import { UUID_PATTERN, actorUrl, cveUrl } from '../../client/src/lib/urls.js';
 import type { HeadTags } from './head-inject.js';
 
 export interface PageHead extends HeadTags {
-  status: 200 | 404;
+  status: 200 | 301 | 404;
+  /** Where a 301 sends the visitor. */
+  redirect?: string;
 }
 
 export interface PageData {
@@ -32,7 +35,14 @@ export interface PageData {
   getVulnerability(cveId: string): Promise<{ vendors: string[]; hasR2Backing: boolean } | null>;
   /** The NVD description for CVEs whose text is stored outside the database; '' when unavailable. */
   getVulnerabilityDescription(cveId: string): Promise<string>;
-  getActor(id: string): Promise<{ name: string; aliases: string[] | null; description: string | null } | null>;
+  /** Looks a threat actor up by slug or by id (the old address). */
+  getActor(idOrSlug: string): Promise<{
+    id: string;
+    slug: string | null;
+    name: string;
+    aliases: string[] | null;
+    description: string | null;
+  } | null>;
   getPost(slug: string): Promise<{
     title: string;
     seoTitle?: string | null;
@@ -43,7 +53,12 @@ export interface PageData {
 }
 
 const CVE_ID = /^CVE-\d{4}-\d{4,}$/;
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const redirectTo = (path: string): PageHead => ({
+  status: 301,
+  redirect: path,
+  title: DEFAULT_TITLE,
+  description: DEFAULT_DESCRIPTION,
+});
 
 const notFound = (title: string, description: string): PageHead => ({
   status: 404,
@@ -89,8 +104,10 @@ export async function resolvePageHead(rawPathname: string, data: PageData): Prom
     };
   }
 
-  if (segments.length === 2 && (section === 'exploited-vulnerabilities' || section === 'vulnerabilities')) {
-    if (!CVE_ID.test(id)) return notFound('Vulnerability Not Found | WhatCyber', 'This vulnerability could not be found.');
+  if (segments.length === 2 && section === 'cve') {
+    if (!/^CVE-\d{4}-\d{4,}$/i.test(id)) return notFound('Vulnerability Not Found | WhatCyber', 'This vulnerability could not be found.');
+    // One address per CVE: the id is upper case.
+    if (!CVE_ID.test(id)) return redirectTo(cveUrl(id.toUpperCase()));
 
     const [kev, nvd] = await Promise.all([data.getKev(id), data.getVulnerability(id)]);
     if (!kev && !nvd) return notFound('Vulnerability Not Found | WhatCyber', 'This vulnerability could not be found.');
@@ -111,16 +128,15 @@ export async function resolvePageHead(rawPathname: string, data: PageData): Prom
       description,
     });
 
-    // Each CVE has two routes until they are merged; KEV entries canonicalise to the KEV URL.
-    const canonicalPath = `${kev ? '/exploited-vulnerabilities/' : '/vulnerabilities/'}${id}`;
-    return { status: 200, ...seo, canonical: `${SITE_URL}${canonicalPath}` };
+    return { status: 200, ...seo, canonical: `${SITE_URL}${cveUrl(id)}` };
   }
 
   if (segments.length === 2 && section === 'threat-actors') {
-    if (!UUID.test(id)) return notFound('Threat Actor Not Found | WhatCyber', 'This threat actor profile could not be loaded.');
-
-    const actor = await data.getActor(id);
+    const actor = await data.getActor(UUID_PATTERN.test(id) ? id : id.toLowerCase());
     if (!actor) return notFound('Threat Actor Not Found | WhatCyber', 'This threat actor profile could not be loaded.');
+
+    // The old id-based address, or a slug in the wrong case, moves to the readable one.
+    if (actor.slug && id !== actor.slug) return redirectTo(actorUrl(actor));
 
     return {
       status: 200,

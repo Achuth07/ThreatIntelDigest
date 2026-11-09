@@ -1,4 +1,5 @@
 
+import { actorUrl } from '@/lib/urls';
 import * as React from "react";
 import {
     Calculator,
@@ -109,7 +110,7 @@ export function CommandPalette({
                         {results.kevs.map((kev) => (
                             <CommandItem
                                 key={kev.cveID}
-                                onSelect={() => handleSelect(() => setLocation(`/exploited-vulnerabilities/${kev.cveID}`))}
+                                onSelect={() => handleSelect(() => setLocation(`/cve/${kev.cveID}`))}
                             >
                                 <ShieldAlert className="mr-2 h-4 w-4 text-red-500" />
                                 <span>{kev.cveID} - {kev.vulnerabilityName}</span>
@@ -125,10 +126,10 @@ export function CommandPalette({
                             <CommandItem
                                 key={cve.id}
                                 // Determine if we have a detailed view for generic CVEs or just KEVs
-                                // Existing routes show /exploited-vulnerabilities/:id
+                                // Every CVE, KEV or not, lives at /cve/:id
                                 // We might want to just show basic info or link to NVD if no local page
                                 // For now, let's assume we can view them if we have them
-                                onSelect={() => handleSelect(() => setLocation(`/vulnerabilities/${cve.id}`))}
+                                onSelect={() => handleSelect(() => setLocation(`/cve/${cve.id}`))}
                             >
                                 <Bug className="mr-2 h-4 w-4" />
                                 <span>{cve.id}</span>
@@ -143,7 +144,7 @@ export function CommandPalette({
                         {results.threat_actors.map((actor) => (
                             <CommandItem
                                 key={actor.id}
-                                onSelect={() => handleSelect(() => setLocation(`/threat-actors/${actor.id}`))}
+                                onSelect={() => handleSelect(() => setLocation(actorUrl(actor)))}
                             >
                                 <Skull className="mr-2 h-4 w-4" />
                                 <span>{actor.name}</span>
