@@ -127,6 +127,8 @@ function Router() {
         <Route path="/blog/:slug" component={BlogPost} />
         <Route component={NotFound} />
       </Switch>
+      {/* Inside the Suspense so the footer appears together with the page, not before it. */}
+      <Footer />
       </Suspense>
       </RouteErrorBoundary>
     </>
@@ -269,7 +271,6 @@ function App() {
             <div className="flex flex-col min-h-screen">
               <KofiBanner />
               <Router />
-              <Footer />
             </div>
           </LoginPopupContext.Provider>
         </TooltipProvider>
