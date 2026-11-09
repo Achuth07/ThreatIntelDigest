@@ -156,8 +156,8 @@ The application comes pre-configured with 25+ categorized cybersecurity news sou
 1. **Authenticate:** Click "Sign In" to authenticate with Google OAuth
 2. **Add RSS Sources:** Use the "Add RSS Source" dialog to select from categorized built-in cybersecurity RSS feeds
 3. **Manage Sources:** Remove sources from sidebar by hovering and clicking minus icon - they can be re-added later
-4. **Fetch Articles:** Click "Refresh All Feeds" to populate the application with latest articles
-5. **Get CVE Data:** Navigate to the Vulnerabilities section and click refresh to fetch latest CVE data from NVD
+4. **Read Articles:** New articles arrive automatically through the scheduled feed fetch
+5. **Browse CVE Data:** CVE data from NVD is loaded automatically by a scheduled job. Open the Vulnerabilities section to browse it
 6. **Explore:** Browse articles, filter by threat level, explore CVE data, and bookmark important intelligence
 
 ## 📁 Project Structure
@@ -328,7 +328,6 @@ DATABASE_URL=postgresql://username:password@host:port/database
 
 ### CVE/Vulnerabilities
 - `GET /api/vulnerabilities` - Fetch CVE data with filtering and pagination
-- `POST /api/fetch-cves` - Fetch latest CVE data from NVD API
 
 ### RSS Sources  
 - `GET /api/sources` - Get all RSS sources
@@ -356,7 +355,7 @@ DATABASE_URL=postgresql://username:password@host:port/database
 - `GET /api/auth?action=status` - Check authentication status
 
 ### Feed Management
-- `POST /api/fetch-feeds` - Manually refresh all RSS feeds
+- `POST /api/fetch-feeds` - Refresh all RSS feeds (requires an admin login or `CRON_SECRET`)
 - `POST /api/fetch-article` - Extract full article content from URL
 
 ### Database Management
@@ -500,7 +499,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Verify NVD_API_KEY is set correctly in environment variables
 - Check internet connectivity to National Vulnerability Database
 - Run database initialization: `POST /api/database?action=init`
-- Manually fetch CVE data: `POST /api/fetch-cves`
+- Manually fetch CVE data: run the `daily_cve_update.yml` GitHub workflow
 - Check database connectivity: `GET /api/database?action=check`
 - Run detailed database tests: `GET /api/database?action=test-steps`
 
