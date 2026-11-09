@@ -132,9 +132,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const head = await resolvePageHead(pathname, createDataSource());
     if (head.status === 301 && head.redirect) {
-      const search = new URL(req.url!, 'https://placeholder.invalid').search;
+      // Keep the visitor's own query string, but not the parameters Vercel adds when it rewrites
+      // /cve/:id to this function (section and id).
+      const query = new URL(req.url!, 'https://placeholder.invalid').searchParams;
+      query.delete('section');
+      query.delete('id');
+      const search = query.toString();
       res.setHeader('Cache-Control', CACHE.found);
-      res.setHeader('Location', `${head.redirect}${search}`);
+      res.setHeader('Location', `${head.redirect}${search ? `?${search}` : ''}`);
       return res.status(301).send('');
     }
     res.setHeader('Cache-Control', head.status === 404 ? CACHE.notFound : CACHE.found);
