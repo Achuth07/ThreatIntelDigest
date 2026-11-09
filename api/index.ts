@@ -45,6 +45,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Handle different API endpoints based on pathname and action
   try {
+    const accessFailure = getPrivilegedRouteFailure(req, pathname, action);
+    if (accessFailure) {
+      return res.status(accessFailure.status).json({ message: accessFailure.message });
+    }
+
     // Auth endpoints - handle email auth separately from Google OAuth
     if (pathname.startsWith('/api/auth/email')) {
       return handleEmailAuthEndpoints(req, res);
@@ -124,7 +129,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (pathname.startsWith('/api/stats/top-malware')) {
       try {
-        const days = req.query.days ? parseInt(req.query.days as string) : 7;
+        const days = parseBoundedInt(req.query.days, 7, MAX_STATS_DAYS);
         const stats = await storage.getTopMalware(days);
         res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
         return res.status(200).json(stats);
@@ -690,6 +695,89 @@ function verifyToken(token: string): any | null {
     console.error('Token verification error:', error);
     return null;
   }
+}
+
+// Fails closed: without a configured secret, no request can match it.
+function hasCronSecret(req: VercelRequest): boolean {
+  const secret = process.env.CRON_SECRET;
+  const authHeader = req.headers.authorization;
+  if (!secret || !authHeader) {
+    return false;
+  }
+
+  const expected = Buffer.from(`Bearer ${secret}`);
+  const actual = Buffer.from(authHeader);
+  return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
+}
+
+function getAdminTokenStatus(req: VercelRequest): 'admin' | 'not-admin' | 'invalid' {
+  // Without SESSION_SECRET, verifyToken falls back to a key that is public in this repo.
+  if (!process.env.SESSION_SECRET && process.env.NODE_ENV === 'production') {
+    return 'invalid';
+  }
+
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return 'invalid';
+  }
+
+  const payload = verifyToken(authHeader.substring(7));
+  if (!payload) {
+    return 'invalid';
+  }
+  return payload.isAdmin === true ? 'admin' : 'not-admin';
+}
+
+// Path checks use the same prefixes as the dispatcher, so no variant can skip the guard.
+function getPrivilegedRouteFailure(
+  req: VercelRequest,
+  pathname: string,
+  action: string
+): { status: number; message: string } | null {
+  if (pathname.startsWith('/api/cron')) {
+    return hasCronSecret(req) ? null : { status: 401, message: 'Unauthorized' };
+  }
+
+  const isAdminRoute =
+    pathname.startsWith('/api/admin') ||
+    pathname.startsWith('/api/fetch-feeds') ||
+    pathname.startsWith('/api/fetch-cves') ||
+    (pathname.startsWith('/api/database') && action !== 'ping');
+  if (!isAdminRoute || hasCronSecret(req)) {
+    return null;
+  }
+
+  const status = getAdminTokenStatus(req);
+  if (status === 'admin') {
+    return null;
+  }
+  return status === 'not-admin'
+    ? { status: 403, message: 'Admin access required' }
+    : { status: 401, message: 'Unauthorized' };
+}
+
+const MAX_LIST_LIMIT = 100;
+const MAX_STATS_DAYS = 366;
+
+function parseBoundedInt(value: unknown, fallback: number, max: number): number {
+  const parsed = parseInt(String(value), 10);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return fallback;
+  }
+  return Math.min(parsed, max);
+}
+
+function parseListLimit(value: unknown, fallback: number): number {
+  return parseBoundedInt(value, fallback, MAX_LIST_LIMIT);
+}
+
+function parseListPage(value: unknown): number {
+  return parseBoundedInt(value, 1, Number.MAX_SAFE_INTEGER);
+}
+
+function parseListOffset(value: unknown): number {
+  const parsed = parseInt(String(value), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
 async function handleGoogleCallback(req: VercelRequest, res: VercelResponse) {
@@ -1737,8 +1825,8 @@ async function handleArticlesEndpoints(req: VercelRequest, res: VercelResponse, 
         }
 
         // Apply pagination
-        const limitNum = parseInt(limit as string);
-        const offsetNum = parseInt(offset as string);
+        const limitNum = parseListLimit(limit, 10);
+        const offsetNum = parseListOffset(offset);
         const paginatedArticles = filteredArticles.slice(offsetNum, offsetNum + limitNum);
 
         console.log(`Successfully fetched ${paginatedArticles.length} articles`);
@@ -1944,8 +2032,8 @@ async function handleArticlesEndpoints(req: VercelRequest, res: VercelResponse, 
       }
 
       // Add pagination
-      const limitNum = parseInt(limit as string);
-      const offsetNum = parseInt(offset as string);
+      const limitNum = parseListLimit(limit, 10);
+      const offsetNum = parseListOffset(offset);
       query = sql`${query} LIMIT ${limitNum} OFFSET ${offsetNum}`;
 
       const result = await db.execute(query);
@@ -3116,11 +3204,8 @@ async function handleUserPreferencesEndpoints(req: VercelRequest, res: VercelRes
 }
 
 async function handleVisitorCountEndpoints(req: VercelRequest, res: VercelResponse, action: string) {
-  // Get the origin from the request
-  const origin = req.headers.origin || '*';
-
   // Set CORS headers
-  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Origin', 'https://www.whatcyber.com');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
@@ -3256,7 +3341,7 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
             count: 0,
             lastUpdated: new Date().toISOString(),
             message: 'No vulnerabilities found. Run CVE fetch process to populate data.',
-            debug: 'POST /api/fetch-cves to fetch data from NVD'
+            debug: 'CVE data is loaded by the scheduled daily_cve_update workflow'
           },
         });
       }
@@ -5141,10 +5226,6 @@ async function handleKevEndpoints(req: VercelRequest, res: VercelResponse, actio
   // GET /api/cron/fetch-kev
   if (pathname === '/api/cron/fetch-kev' && method === 'GET') {
     try {
-      // Basic security for cron (check for header if needed, but Vercel Cron uses specific header)
-      // For now we allow it open or check for CRON_SECRET if we set it up.
-      // Vercel Cron requests include 'Authorization' header with 'Bearer <CRON_SECRET>' if configured.
-
       const { fetchCisaKevData } = await import('../server/services/cisa-service.js');
       const result = await fetchCisaKevData(storage);
       return res.json(result);
@@ -5165,8 +5246,8 @@ async function handleKevEndpoints(req: VercelRequest, res: VercelResponse, actio
   // GET /api/kev
   if ((pathname === '/api/kev' || pathname === '/api/kev/') && method === 'GET') {
     try {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 50;
+      const page = parseListPage(req.query.page);
+      const limit = parseListLimit(req.query.limit, 50);
       const offset = (page - 1) * limit;
       const vendorProject = req.query.vendorProject as string;
       const knownRansomwareCampaignUse = req.query.knownRansomwareCampaignUse as string;
@@ -5241,7 +5322,7 @@ async function handleKevEndpoints(req: VercelRequest, res: VercelResponse, actio
   if (relatedArticlesMatch && relatedArticlesMatch[1] && method === 'GET') {
     try {
       const cveId = relatedArticlesMatch[1];
-      const limit = parseInt(req.query.limit as string) || 10;
+      const limit = parseListLimit(req.query.limit, 10);
 
       // First, get the KEV entry to extract product/vendor info
       const kev = await storage.getKnownExploitedVulnerability(cveId);
@@ -5322,8 +5403,8 @@ async function handleThreatGroupsEndpoints(req: VercelRequest, res: VercelRespon
 
     // GET /api/threat-groups (List/Search)
     if (pathname === '/api/threat-groups' || pathname === '/api/threat-groups/') {
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 20;
+      const page = parseListPage(req.query.page);
+      const limit = parseListLimit(req.query.limit, 20);
       const offset = (page - 1) * limit;
       const search = req.query.search as string;
 
@@ -5374,12 +5455,6 @@ async function handleWeeklyDigestCronEndpoint(req: VercelRequest, res: VercelRes
   }
 
   try {
-    // Basic security for cron
-    const authHeader = req.headers.authorization;
-    if (process.env.CRON_SECRET && (!authHeader || authHeader !== `Bearer ${process.env.CRON_SECRET}`)) {
-      return res.status(401).json({ message: 'Unauthorized' });
-    }
-
     // Import digest service dynamically
     const { digestService } = await import('../server/services/digest-service.js');
     console.log('Triggering weekly digest generation via cron...');

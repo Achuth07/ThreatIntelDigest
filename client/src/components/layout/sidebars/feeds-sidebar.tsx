@@ -6,7 +6,6 @@ import {
   Rss,
   Filter,
   Zap,
-  RefreshCw,
   Download,
   Plus,
   Minus,
@@ -91,17 +90,6 @@ export function FeedsSidebar({
 
   const sources = user?.isGuest ? guestSources() : fetchedSources;
   const activeSources = sources.filter((source) => source.isActive !== false);
-
-  const refreshFeedsMutation = useMutation({
-    mutationFn: () => apiRequest('POST', '/api/fetch-feeds/'),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
-      toast({ title: 'Feeds Updated', description: 'Fetched the latest articles from all sources.' });
-    },
-    onError: () => {
-      toast({ title: 'Error', description: 'Failed to refresh feeds. Please try again.', variant: 'destructive' });
-    },
-  });
 
   const exportBookmarksMutation = useMutation({
     mutationFn: exportBookmarks,
@@ -295,13 +283,6 @@ export function FeedsSidebar({
       </SidebarSection>
 
       <SidebarSection label="Quick Actions" icon={Zap}>
-        <SidebarItem
-          icon={RefreshCw}
-          label={refreshFeedsMutation.isPending ? 'Refreshing…' : 'Refresh All Feeds'}
-          onClick={() => refreshFeedsMutation.mutate()}
-          disabled={refreshFeedsMutation.isPending}
-          testId="button-refresh-feeds"
-        />
         <SidebarItem
           icon={Download}
           label={exportBookmarksMutation.isPending ? 'Exporting…' : 'Export Bookmarks'}

@@ -5,7 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Check, Globe, Rss, Filter, Zap, RefreshCw, Download, Plus, Minus, Shield, ChevronDown, ChevronUp, X, Bookmark, Bug, Settings, Home, LifeBuoy, Users, BookOpen, Eye, Telescope } from 'lucide-react';
+import { Check, Globe, Rss, Filter, Zap, Download, Plus, Minus, Shield, ChevronDown, ChevronUp, X, Bookmark, Bug, Settings, Home, LifeBuoy, Users, BookOpen, Eye, Telescope } from 'lucide-react';
 import { useLocation, Link } from "wouter";
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
@@ -150,24 +150,6 @@ export function Sidebar({
     fetchUserSources();
   }, [fetchUserSources]);
 
-  const refreshFeedsMutation = useMutation({
-    mutationFn: () => apiRequest('POST', '/api/fetch-feeds/'),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/articles/'] });
-      toast({
-        title: "Feeds Updated",
-        description: "Successfully fetched latest articles from all sources",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to refresh feeds. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
   const exportBookmarksMutation = useMutation({
     mutationFn: exportBookmarks,
     onSuccess: () => {
@@ -180,23 +162,6 @@ export function Sidebar({
       toast({
         title: "Export Failed",
         description: error.message || "Failed to export bookmarks. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const fetchCVEsMutation = useMutation({
-    mutationFn: () => apiRequest('POST', '/api/fetch-cves/'),
-    onSuccess: () => {
-      toast({
-        title: "CVEs Updated",
-        description: "Successfully fetched latest CVEs from NVD",
-      });
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to fetch CVEs. Please try again.",
         variant: "destructive",
       });
     },
@@ -583,18 +548,6 @@ export function Sidebar({
               variant="ghost"
               size="sm"
               className="w-full justify-start p-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-700"
-              onClick={() => refreshFeedsMutation.mutate()}
-              disabled={refreshFeedsMutation.isPending}
-              data-testid="button-refresh-feeds"
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${refreshFeedsMutation.isPending ? 'animate-spin' : ''}`} />
-              {refreshFeedsMutation.isPending ? 'Refreshing...' : 'Refresh All Feeds'}
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start p-2 text-sm text-slate-300 hover:text-slate-100 hover:bg-slate-700"
               onClick={() => exportBookmarksMutation.mutate()}
               disabled={exportBookmarksMutation.isPending}
               data-testid="button-export-bookmarks"
@@ -743,16 +696,6 @@ export function Sidebar({
               <Shield className="w-5 h-5 text-whatcyber-teal mr-2" />
               Vulnerabilities
             </h2>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-8 w-8 p-0 text-slate-400 hover:text-slate-100 hover:bg-slate-700"
-              onClick={() => fetchCVEsMutation.mutate()}
-              disabled={fetchCVEsMutation.isPending}
-              title="Refresh CVEs from NVD"
-            >
-              <RefreshCw className={`w-4 h-4 ${fetchCVEsMutation.isPending ? 'animate-spin' : ''}`} />
-            </Button>
           </div>
 
           <div className="space-y-2">

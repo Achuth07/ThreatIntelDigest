@@ -4,7 +4,8 @@ import { digestService } from '../../server/services/digest-service.js';
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Verify cron secret
     const authHeader = req.headers.authorization;
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    const secret = process.env.CRON_SECRET;
+    if (!secret || authHeader !== `Bearer ${secret}`) {
         return res.status(401).json({ error: 'Unauthorized' });
     }
 

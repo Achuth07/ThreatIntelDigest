@@ -70,11 +70,24 @@
   ],
   "headers": [
     {
-      "source": "/api/(.*)",
+      "source": "/api/rss/(.*)",
       "headers": [
         {
           "key": "Access-Control-Allow-Origin",
           "value": "*"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
+      "source": "/api/((?!rss/).*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "https://www.whatcyber.com"
         },
         {
           "key": "Access-Control-Allow-Methods",
