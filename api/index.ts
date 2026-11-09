@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from 'drizzle-orm';
 import { storage, initializeStorage } from '../server/storage.js';
-import { fetchCveFromR2 } from '../server/services/r2.js';
+import { fetchCveFromR2, getCveHistory } from '../server/services/r2.js';
 
 // Module-level guard: only initialize storage once per warm function invocation
 let storageInitialized = false;
@@ -179,6 +179,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Vulnerabilities endpoints
     if (pathname.startsWith('/api/vulnerabilities/vendors')) {
       return handleVulnerabilitiesVendorsEndpoint(req, res);
+    }
+
+    const cveHistoryMatch = pathname.match(/^\/api\/vulnerabilities\/(CVE-\d{4}-\d{4,})\/history$/);
+    if (cveHistoryMatch) {
+      if (req.method !== 'GET') {
+        return res.status(405).json({ message: 'Method not allowed' });
+      }
+      const changes = await getCveHistory(cveHistoryMatch[1]);
+      res.setHeader('Cache-Control', 'public, s-maxage=900, stale-while-revalidate=3600');
+      return res.status(200).json({ cveId: cveHistoryMatch[1], changes });
     }
 
     // Check for specific CVE ID in the path

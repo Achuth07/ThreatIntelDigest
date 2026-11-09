@@ -1,19 +1,27 @@
-name: Daily CVE Update
+name: Hourly CVE Update
 
 on:
   schedule:
-    # Run daily at 03:00 UTC (after malware load)
-    - cron: '0 3 * * *'
+    # Off the hour, when GitHub's scheduler is less congested
+    - cron: '17 * * * *'
   workflow_dispatch:
     inputs:
       days:
-        description: 'Number of days to backfill (default: 2; e.g. 300 to backfill gap since Jan 2026)'
+        description: 'Days to reach back (blank: continue from the last successful sync)'
         required: false
-        default: '2'
+      history_only:
+        description: 'Only load change history, for backfilling timelines'
+        type: boolean
+        default: false
+
+concurrency:
+  group: cve-update
+  cancel-in-progress: false
 
 jobs:
   update_cves:
     runs-on: ubuntu-latest
+    timeout-minutes: 350
 
     steps:
     - name: Checkout code
@@ -37,4 +45,10 @@ jobs:
         R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
         R2_ENDPOINT_URL: ${{ secrets.R2_ENDPOINT_URL }}
-      run: npx tsx scripts/backfill_nvd.ts --days ${{ github.event.inputs.days || '2' }}
+        DAYS: ${{ github.event.inputs.days }}
+        HISTORY_ONLY: ${{ github.event.inputs.history_only }}
+      run: |
+        args=()
+        if [ -n "$DAYS" ]; then args+=(--days "$DAYS"); fi
+        if [ "$HISTORY_ONLY" = "true" ]; then args+=(--history-only); fi
+        npx tsx scripts/sync_nvd.ts "${args[@]}"
