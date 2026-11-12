@@ -6,6 +6,8 @@ import { uploadCveToR2 } from './r2.js';
 // NVD allows at most 120 days per request; smaller windows also keep each run's memory use low.
 const NVD_WINDOW_DAYS = 30;
 const NVD_MAX_ATTEMPTS = 5;
+// A full page is several MB; without a limit a stalled response would hang the job.
+const NVD_REQUEST_TIMEOUT_MS = 120_000;
 const NVD_RETRYABLE_STATUSES = new Set([403, 429, 500, 502, 503, 504]);
 // Older CVEs were pruned to save storage. Updates must not bring them back one by one.
 const COVERAGE_START = '2021-01-01';
@@ -25,15 +27,28 @@ export function splitNvdWindows(start: Date, end: Date): { start: Date; end: Dat
 
 export async function fetchNvdJson(url: string): Promise<any> {
     for (let attempt = 1; ; attempt++) {
-        const response = await fetch(url, {
-            headers: {
-                'apiKey': process.env.NVD_API_KEY || '',
-                'User-Agent': 'ThreatIntelDigest/1.0',
-                'Accept': 'application/json'
+        let response: Response;
+        try {
+            response = await fetch(url, {
+                headers: {
+                    'apiKey': process.env.NVD_API_KEY || '',
+                    'User-Agent': 'ThreatIntelDigest/1.0',
+                    'Accept': 'application/json'
+                },
+                signal: AbortSignal.timeout(NVD_REQUEST_TIMEOUT_MS),
+            });
+            if (response.ok) {
+                // Read the body here too: NVD sometimes drops the connection partway through a page.
+                return await response.json();
             }
-        });
-        if (response.ok) {
-            return response.json();
+        } catch (error) {
+            if (attempt >= NVD_MAX_ATTEMPTS) {
+                throw error;
+            }
+            const delay = 5_000 * attempt;
+            console.warn(`[NVD Service] Request failed (${error instanceof Error ? error.message : error}). Retrying in ${delay / 1000}s...`);
+            await wait(delay);
+            continue;
         }
         if (attempt >= NVD_MAX_ATTEMPTS || !NVD_RETRYABLE_STATUSES.has(response.status)) {
             throw new Error(`NVD API error: ${response.status} ${response.statusText}`);
