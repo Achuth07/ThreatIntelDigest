@@ -82,6 +82,7 @@ export interface IStorage {
 
   // Known Exploited Vulnerabilities (KEV)
   getKnownExploitedVulnerabilities(params?: { limit?: number; offset?: number; vendorProject?: string; knownRansomwareCampaignUse?: string; sort?: string }): Promise<(KnownExploitedVulnerability & { cvssV3Score: number | null, cvssV3Severity: string | null })[]>;
+  countKnownExploitedVulnerabilities(params?: { vendorProject?: string; knownRansomwareCampaignUse?: string }): Promise<number>;
   getKnownExploitedVulnerability(cveID: string): Promise<KnownExploitedVulnerability | undefined>;
   createKnownExploitedVulnerability(kev: InsertKnownExploitedVulnerability): Promise<KnownExploitedVulnerability>;
   batchCreateKnownExploitedVulnerabilities(kevs: InsertKnownExploitedVulnerability[]): Promise<KnownExploitedVulnerability[]>;
@@ -725,6 +726,10 @@ export class MemStorage implements IStorage {
   // KEV (stubs)
   async getKnownExploitedVulnerabilities(params?: { limit?: number; offset?: number; vendorProject?: string; knownRansomwareCampaignUse?: string; sort?: string }): Promise<(KnownExploitedVulnerability & { cvssV3Score: number | null, cvssV3Severity: string | null })[]> {
     return [];
+  }
+
+  async countKnownExploitedVulnerabilities(params?: { vendorProject?: string; knownRansomwareCampaignUse?: string }): Promise<number> {
+    return 0;
   }
 
   async getKnownExploitedVulnerability(cveID: string): Promise<KnownExploitedVulnerability | undefined> {

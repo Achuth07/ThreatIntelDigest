@@ -5276,10 +5276,14 @@ async function handleKevEndpoints(req: VercelRequest, res: VercelResponse, actio
       // But query might be heavy. Let's add a specific endpoint for metadata or include it if requested.
       // For now, just return the list.
 
+      const total = await storage.countKnownExploitedVulnerabilities({ vendorProject, knownRansomwareCampaignUse });
+
       return res.json({
         data: kevs,
         page,
-        limit
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit))
       });
     } catch (error) {
       console.error('Error fetching KEVs:', error);

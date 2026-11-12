@@ -1,4 +1,5 @@
 import { actorUrl } from '@/lib/urls';
+import { Pagination } from '@/components/pagination';
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
@@ -128,31 +129,14 @@ export default function ThreatActorsPage() {
                             </div>
                         )}
 
-                        {/* Pagination */}
+                        {/* Pagination: numbered plain links, so every page is reachable from the first */}
                         {data?.pagination && (
-                            <div className="flex justify-between items-center mt-6">
-                                {page > 1 ? (
-                                    <Button asChild variant="outline" size="sm">
-                                        <Link href={hrefFor(page - 1)} rel="prev">Previous</Link>
-                                    </Button>
-                                ) : (
-                                    <Button variant="outline" size="sm" disabled>
-                                        Previous
-                                    </Button>
-                                )}
-                                <span className="text-slate-400 text-sm font-mono">
-                                    Page {page} of {data.pagination.totalPages}
-                                </span>
-                                {page < data.pagination.totalPages ? (
-                                    <Button asChild variant="outline" size="sm">
-                                        <Link href={hrefFor(page + 1)} rel="next">Next</Link>
-                                    </Button>
-                                ) : (
-                                    <Button variant="outline" size="sm" disabled>
-                                        Next
-                                    </Button>
-                                )}
-                            </div>
+                            <Pagination
+                                page={page}
+                                totalPages={data.pagination.totalPages}
+                                hrefFor={hrefFor}
+                                label="Threat actor pages"
+                            />
                         )}
                     </>
                 )}

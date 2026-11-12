@@ -444,10 +444,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         sort
       });
 
+      const total = await storage.countKnownExploitedVulnerabilities({ vendorProject, knownRansomwareCampaignUse });
+
       res.json({
         data: kevs,
         page,
-        limit
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit))
       });
     } catch (error) {
       console.error('Error fetching KEVs:', error);

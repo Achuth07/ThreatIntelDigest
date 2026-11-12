@@ -976,6 +976,26 @@ export class PostgresStorage implements IStorage {
     }
   }
 
+  /** How many KEV entries match the same filters as getKnownExploitedVulnerabilities (for page counts). */
+  async countKnownExploitedVulnerabilities(params?: { vendorProject?: string; knownRansomwareCampaignUse?: string }): Promise<number> {
+    try {
+      const conditions = [];
+      if (params?.vendorProject) {
+        conditions.push(eq(knownExploitedVulnerabilities.vendorProject, params.vendorProject));
+      }
+      if (params?.knownRansomwareCampaignUse) {
+        conditions.push(eq(knownExploitedVulnerabilities.knownRansomwareCampaignUse, params.knownRansomwareCampaignUse));
+      }
+      const query = this.db.select({ count: sql<number>`count(*)` }).from(knownExploitedVulnerabilities);
+      // @ts-ignore - complex query builder types
+      const rows = await (conditions.length > 0 ? query.where(and(...conditions)) : query);
+      return Number(rows[0]?.count ?? 0);
+    } catch (error) {
+      console.error('Error counting KEVs:', error);
+      return 0;
+    }
+  }
+
   async getKnownExploitedVulnerability(cveID: string): Promise<KnownExploitedVulnerability | undefined> {
     try {
       const result = await this.db.select().from(knownExploitedVulnerabilities).where(eq(knownExploitedVulnerabilities.cveID, cveID)).limit(1);
