@@ -66,7 +66,7 @@ const STYLE = `
 #ssr-content .warn{border-color:#ef4444;color:#fca5a5}
 #ssr-content footer{border-top:1px solid #1e293b;padding:16px 20px;font-size:14px;color:#94a3b8}
 #ssr-content:not([data-handed-off]) ~ #root{position:absolute;left:-99999px;top:0;width:100%}
-#ssr-content[data-handed-off]{visibility:hidden;position:absolute;left:-99999px;top:0;height:0;overflow:hidden}
+#ssr-content[data-handed-off]{visibility:hidden;position:absolute;left:-99999px;top:0;height:0;min-height:0;overflow:hidden}
 `.replace(/\n/g, '');
 
 function shell(title: string, inner: string): string {
