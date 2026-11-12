@@ -18,23 +18,23 @@ import { NOT_FOUND_META, STATIC_PAGE_META } from '../../client/src/lib/page-meta
 import { actorSeo, cveSeo } from '../../client/src/lib/seo-text.js';
 import { UUID_PATTERN, actorUrl, cveUrl } from '../../client/src/lib/urls.js';
 import type { HeadTags } from './head-inject.js';
+import { renderActorBody, renderCveBody, type CveBodyData } from './page-body.js';
 
 export interface PageHead extends HeadTags {
   status: 200 | 301 | 404;
   /** Where a 301 sends the visitor. */
   redirect?: string;
+  /** Readable page content written into the HTML (see page-body.ts). */
+  body?: string;
 }
 
 export interface PageData {
-  /** null = no such record. Throws only when the data source itself fails. */
-  getKev(cveId: string): Promise<{
-    vendor_project: string;
-    product: string;
-    short_description: string;
-  } | null>;
-  getVulnerability(cveId: string): Promise<{ vendors: string[]; hasR2Backing: boolean } | null>;
-  /** The NVD description for CVEs whose text is stored outside the database; '' when unavailable. */
-  getVulnerabilityDescription(cveId: string): Promise<string>;
+  /**
+   * Everything the CVE page shows: the KEV entry and the NVD record, with the description and
+   * references read from storage when they live there. null = no such CVE. Throws only when the
+   * data source itself fails.
+   */
+  getCve(cveId: string): Promise<CveBodyData | null>;
   /** Looks a threat actor up by slug or by id (the old address). */
   getActor(idOrSlug: string): Promise<{
     id: string;
@@ -109,26 +109,23 @@ export async function resolvePageHead(rawPathname: string, data: PageData): Prom
     // One address per CVE: the id is upper case.
     if (!CVE_ID.test(id)) return redirectTo(cveUrl(id.toUpperCase()));
 
-    const [kev, nvd] = await Promise.all([data.getKev(id), data.getVulnerability(id)]);
-    if (!kev && !nvd) return notFound('Vulnerability Not Found | WhatCyber', 'This vulnerability could not be found.');
+    const record = await data.getCve(id);
+    if (!record) return notFound('Vulnerability Not Found | WhatCyber', 'This vulnerability could not be found.');
+    const { kev, nvd } = record;
 
     // Same inputs as client/src/pages/cve-detail.tsx: KEV text when it is in the KEV catalog.
     const vendors = nvd?.vendors ?? [];
-    const description = kev
-      ? kev.short_description
-      : nvd?.hasR2Backing
-        ? await data.getVulnerabilityDescription(id)
-        : '';
+    const description = kev ? kev.shortDescription : nvd?.description ?? '';
 
     const seo = cveSeo({
       cveID: id,
-      vendor: kev ? kev.vendor_project : vendors.length > 0 ? vendors.join(', ') : 'Unknown Vendor',
+      vendor: kev ? kev.vendorProject : vendors.length > 0 ? vendors.join(', ') : 'Unknown Vendor',
       product: kev ? kev.product : '',
       isKev: Boolean(kev),
       description,
     });
 
-    return { status: 200, ...seo, canonical: `${SITE_URL}${cveUrl(id)}` };
+    return { status: 200, ...seo, canonical: `${SITE_URL}${cveUrl(id)}`, body: renderCveBody(record) };
   }
 
   if (segments.length === 2 && section === 'threat-actors') {
@@ -142,6 +139,7 @@ export async function resolvePageHead(rawPathname: string, data: PageData): Prom
       status: 200,
       ...actorSeo({ name: actor.name, aliases: actor.aliases, description: actor.description }),
       canonical: canonicalFor(pathname),
+      body: renderActorBody(actor),
     };
   }
 

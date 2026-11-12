@@ -4,6 +4,7 @@ import "./index.css";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { HelmetProvider } from "react-helmet-async";
+import { installSsrFallbacks } from "./lib/ssr-handoff";
 
 createRoot(document.getElementById("root")!).render(
   <>
@@ -14,3 +15,5 @@ createRoot(document.getElementById("root")!).render(
     </HelmetProvider>
   </>
 );
+
+installSsrFallbacks();

@@ -7,6 +7,7 @@ import { createImageUrlBuilder } from '@sanity/image-url';
 import { DEFAULT_DESCRIPTION, DEFAULT_TITLE, canonicalFor, isNoindexPath } from '../client/src/lib/seo-core.js';
 import { UUID_PATTERN } from '../client/src/lib/urls.js';
 import { injectHead } from '../server/services/head-inject.js';
+import { injectBody } from '../server/services/page-body.js';
 import { resolvePageHead, type PageData } from '../server/services/page-head.js';
 
 /**
@@ -52,30 +53,70 @@ function createDataSource(): PageData {
   const imageBuilder = createImageUrlBuilder(sanity);
 
   return {
-    async getKev(cveId) {
-      const rows = await sql()`
-        SELECT vendor_project, product, short_description
-        FROM known_exploited_vulnerabilities WHERE cve_id = ${cveId}`;
-      return (rows[0] as any) ?? null;
-    },
+    async getCve(cveId) {
+      const query = sql();
+      const [kevRows, vulnRows] = await Promise.all([
+        query`SELECT vendor_project, product, vulnerability_name, date_added, short_description, required_action, due_date,
+                     known_ransomware_campaign_use, notes
+              FROM known_exploited_vulnerabilities WHERE cve_id = ${cveId}`,
+        query`SELECT published_date, last_modified_date, vuln_status, cvss_v3_score, cvss_v3_severity, cvss_v2_score,
+                     cvss_v2_severity, cvss_vector, weaknesses, vendors, has_r2_backing
+              FROM vulnerabilities WHERE id = ${cveId}`,
+      ]);
+      const k = kevRows[0] as any;
+      const v = vulnRows[0] as any;
+      if (!k && !v) return null;
 
-    async getVulnerability(cveId) {
-      const rows = await sql()`SELECT vendors, has_r2_backing FROM vulnerabilities WHERE id = ${cveId}`;
-      const row = rows[0] as any;
-      return row ? { vendors: row.vendors ?? [], hasR2Backing: Boolean(row.has_r2_backing) } : null;
-    },
-
-    async getVulnerabilityDescription(cveId) {
-      try {
-        const { fetchCveFromR2 } = await import('../server/services/r2.js');
-        const record = await Promise.race([
-          fetchCveFromR2(cveId),
-          new Promise<null>((resolve) => setTimeout(() => resolve(null), 2500)),
-        ]);
-        return typeof record?.description === 'string' ? record.description : '';
-      } catch {
-        return '';
+      // The description, references and product list of many CVEs live in storage, not the database.
+      let stored: any = null;
+      if (v?.has_r2_backing) {
+        try {
+          const { fetchCveFromR2 } = await import('../server/services/r2.js');
+          stored = await Promise.race([
+            fetchCveFromR2(cveId),
+            new Promise<null>((resolve) => setTimeout(() => resolve(null), 2500)),
+          ]);
+        } catch {
+          stored = null;
+        }
       }
+
+      const num = (value: unknown) => (value === null || value === undefined || value === '' ? null : Number(value));
+      const list = (value: unknown) => (Array.isArray(value) ? value : []);
+
+      return {
+        id: cveId,
+        kev: k
+          ? {
+              vendorProject: k.vendor_project,
+              product: k.product,
+              vulnerabilityName: k.vulnerability_name,
+              dateAdded: k.date_added,
+              shortDescription: k.short_description,
+              requiredAction: k.required_action,
+              dueDate: k.due_date,
+              knownRansomwareCampaignUse: k.known_ransomware_campaign_use,
+              notes: k.notes,
+            }
+          : null,
+        nvd: v
+          ? {
+              publishedDate: v.published_date,
+              lastModifiedDate: v.last_modified_date,
+              status: v.vuln_status ?? null,
+              cvssV3Score: num(stored?.cvssV3Score ?? v.cvss_v3_score),
+              cvssV3Severity: stored?.cvssV3Severity ?? v.cvss_v3_severity ?? null,
+              cvssV2Score: num(stored?.cvssV2Score ?? v.cvss_v2_score),
+              cvssV2Severity: stored?.cvssV2Severity ?? v.cvss_v2_severity ?? null,
+              cvssVector: stored?.cvssVector ?? stored?.cvss_vector ?? v.cvss_vector ?? null,
+              weaknesses: list(v.weaknesses).length ? list(v.weaknesses) : list(stored?.weaknesses),
+              vendors: list(v.vendors),
+              description: typeof stored?.description === 'string' ? stored.description : '',
+              affectedProducts: list(stored?.affectedProducts),
+              references: list(stored?.references).length ? list(stored?.references) : list(stored?.referenceUrls),
+            }
+          : null,
+      };
     },
 
     async getActor(idOrSlug) {
@@ -143,7 +184,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(301).send('');
     }
     res.setHeader('Cache-Control', head.status === 404 ? CACHE.notFound : CACHE.found);
-    return res.status(head.status).send(injectHead(shell, head));
+    const html = injectHead(shell, head);
+    return res.status(head.status).send(head.body ? injectBody(html, head.body) : html);
   } catch (error) {
     // Database or CMS problem: serve the app with neutral tags for this URL (the shell itself carries
     // the landing page's tags, which would be wrong here), and do not cache the answer.
