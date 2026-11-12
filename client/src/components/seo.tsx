@@ -27,6 +27,12 @@ function removeStaticHeadTags() {
   document.querySelectorAll(STATIC_HEAD_TAGS).forEach((element) => element.remove());
 }
 
+// Structured data the server wrote into the HTML stays unless the page supplies its own (the landing
+// page and blog posts do), in which case Helmet's copy replaces it so a page never carries two.
+function removeServerJsonLd() {
+  document.querySelectorAll('head script[data-ssr-jsonld]').forEach((element) => element.remove());
+}
+
 interface SEOProps {
   title?: string;
   description?: string;
@@ -55,7 +61,10 @@ export const SEO: React.FC<SEOProps> = ({
   const canonicalUrl = url || canonicalFor(location, search);
   const hidden = noindex ?? isNoindexPath(location);
 
-  useEffect(removeStaticHeadTags, []);
+  useEffect(() => {
+    removeStaticHeadTags();
+    if (structuredData) removeServerJsonLd();
+  }, []);
 
   return (
     <Helmet>

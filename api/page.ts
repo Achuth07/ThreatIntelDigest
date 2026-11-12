@@ -136,7 +136,7 @@ function createDataSource(): PageData {
 
     async getPost(slug) {
       const post = await sanity.fetch(
-        `*[_type == "post" && slug.current == $slug][0] { title, seoTitle, seoDescription, excerpt, mainImage }`,
+        `*[_type == "post" && slug.current == $slug][0] { title, seoTitle, seoDescription, excerpt, mainImage, publishedAt, _updatedAt, "authorName": author->name }`,
         { slug }
       );
       if (!post) return null;
@@ -146,6 +146,9 @@ function createDataSource(): PageData {
         seoDescription: post.seoDescription,
         excerpt: post.excerpt,
         imageUrl: post.mainImage ? imageBuilder.image(post.mainImage).width(1200).height(630).url() : null,
+        publishedAt: post.publishedAt,
+        updatedAt: post._updatedAt,
+        authorName: post.authorName,
       };
     },
   };

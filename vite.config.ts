@@ -5,6 +5,7 @@ import path from "path";
 import { readFileSync, writeFileSync } from "fs";
 import { injectHead } from "./server/services/head-inject";
 import { canonicalFor } from "./client/src/lib/seo-core";
+import { landingJsonLd } from "./client/src/lib/jsonld";
 import { NOT_FOUND_META, STATIC_PAGE_META } from "./client/src/lib/page-meta";
 
 // Writes the page-specific <head> tags into the built HTML shell for crawlers that do not run
@@ -24,7 +25,12 @@ const staticHtmlPages = (): PluginOption => ({
 
     writeFileSync(
       path.join(outDir, "index.html"),
-      injectHead(shell, { title: home.title, description: home.description, canonical: canonicalFor("/") })
+      injectHead(shell, {
+        title: home.title,
+        description: home.description,
+        canonical: canonicalFor("/"),
+        jsonLd: landingJsonLd(),
+      })
     );
     writeFileSync(
       path.join(outDir, "404.html"),

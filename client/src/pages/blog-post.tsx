@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRoute } from 'wouter';
+import { blogPostJsonLd } from '@/lib/jsonld';
 import { client, urlFor } from '@/lib/sanity';
 import { Header } from '@/components/header';
 import { SEO } from '@/components/seo';
@@ -189,20 +190,15 @@ export default function BlogPost() {
         );
     }
 
-    // Structured Data (JSON-LD)
-    const structuredData = {
-        "@context": "https://schema.org",
-        "@type": "BlogPosting",
-        "headline": post.seoTitle || post.title,
-        "image": post.mainImage ? [urlFor(post.mainImage).width(1200).height(630).url()] : [],
-        "datePublished": post.publishedAt,
-        "dateModified": post.publishedAt, // Or updatedAt if available
-        "author": [{
-            "@type": "Person",
-            "name": post.author?.name || "WhatCyber Team",
-            "url": "https://www.whatcyber.com"
-        }]
-    };
+    // Structured Data (JSON-LD): the same builder the server uses for the raw HTML
+    const structuredData = blogPostJsonLd({
+        slug: post.slug?.current || params?.slug || '',
+        title: post.seoTitle || post.title,
+        description: post.seoDescription || post.excerpt,
+        image: post.mainImage ? urlFor(post.mainImage).width(1200).height(630).url() : null,
+        published: post.publishedAt,
+        authorName: post.author?.name,
+    });
 
     // Smart Keyword Generation
     const generateKeywords = (post: PostDetail) => {

@@ -17,6 +17,7 @@ import {
 import { NOT_FOUND_META, STATIC_PAGE_META } from '../../client/src/lib/page-meta.js';
 import { actorSeo, cveSeo } from '../../client/src/lib/seo-text.js';
 import { UUID_PATTERN, actorUrl, cveUrl } from '../../client/src/lib/urls.js';
+import { actorJsonLd, blogPostJsonLd, cveJsonLd, hubJsonLd } from '../../client/src/lib/jsonld.js';
 import type { HeadTags } from './head-inject.js';
 import { renderActorBody, renderCveBody, type CveBodyData } from './page-body.js';
 
@@ -49,10 +50,20 @@ export interface PageData {
     seoDescription?: string | null;
     excerpt?: string | null;
     imageUrl?: string | null;
+    publishedAt?: string | null;
+    updatedAt?: string | null;
+    authorName?: string | null;
   } | null>;
 }
 
 const CVE_ID = /^CVE-\d{4}-\d{4,}$/;
+// Listing pages that get a CollectionPage and breadcrumb.
+const HUB_NAMES: Record<string, string> = {
+  '/cve': 'Latest CVEs',
+  '/cisa-kev': 'CISA KEV catalog',
+  '/threat-actors': 'Threat actors',
+};
+
 const redirectTo = (path: string): PageHead => ({
   status: 301,
   redirect: path,
@@ -75,12 +86,16 @@ export async function resolvePageHead(rawPathname: string, data: PageData): Prom
   // Fixed pages with their own title and description.
   const fixed = STATIC_PAGE_META[pathname];
   if (fixed && segments.length <= 1) {
+    const hubName = HUB_NAMES[pathname];
     return {
       status: 200,
       title: fixed.title,
       description: fixed.description,
       canonical: canonicalFor(pathname),
       noindex: isNoindexPath(pathname),
+      jsonLd: hubName
+        ? hubJsonLd({ path: pathname, name: hubName, title: fixed.title, description: fixed.description })
+        : undefined,
     };
   }
 
@@ -125,7 +140,20 @@ export async function resolvePageHead(rawPathname: string, data: PageData): Prom
       description,
     });
 
-    return { status: 200, ...seo, canonical: `${SITE_URL}${cveUrl(id)}`, body: renderCveBody(record) };
+    return {
+      status: 200,
+      ...seo,
+      canonical: `${SITE_URL}${cveUrl(id)}`,
+      body: renderCveBody(record),
+      jsonLd: cveJsonLd({
+        id,
+        title: seo.title,
+        description: seo.description,
+        isKev: Boolean(kev),
+        published: nvd?.publishedDate ?? kev?.dateAdded,
+        modified: nvd?.lastModifiedDate ?? kev?.dateAdded,
+      }),
+    };
   }
 
   if (segments.length === 2 && section === 'threat-actors') {
@@ -135,11 +163,19 @@ export async function resolvePageHead(rawPathname: string, data: PageData): Prom
     // The old id-based address, or a slug in the wrong case, moves to the readable one.
     if (actor.slug && id !== actor.slug) return redirectTo(actorUrl(actor));
 
+    const seo = actorSeo({ name: actor.name, aliases: actor.aliases, description: actor.description });
     return {
       status: 200,
-      ...actorSeo({ name: actor.name, aliases: actor.aliases, description: actor.description }),
+      ...seo,
       canonical: canonicalFor(pathname),
       body: renderActorBody(actor),
+      jsonLd: actorJsonLd({
+        slug: actor.slug || actor.id,
+        name: actor.name,
+        title: seo.title,
+        description: seo.description,
+        aliases: actor.aliases,
+      }),
     };
   }
 
@@ -154,6 +190,15 @@ export async function resolvePageHead(rawPathname: string, data: PageData): Prom
       canonical: canonicalFor(pathname),
       type: 'article',
       image: post.imageUrl || undefined,
+      jsonLd: blogPostJsonLd({
+        slug: id,
+        title: post.seoTitle || post.title,
+        description: post.seoDescription || post.excerpt || undefined,
+        image: post.imageUrl,
+        published: post.publishedAt,
+        modified: post.updatedAt,
+        authorName: post.authorName,
+      }),
     };
   }
 

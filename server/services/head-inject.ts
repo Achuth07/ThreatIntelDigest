@@ -22,10 +22,15 @@ export interface HeadTags {
   type?: string;
   /** Absolute image URL. Defaults to the shared social image (with its size and alt text). */
   image?: string;
+  /** Structured data (schema.org JSON-LD) for the page. Replaces the generic block in the shell. */
+  jsonLd?: Record<string, any> | Record<string, any>[];
 }
 
 const escapeAttribute = (value: string) =>
   value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+// JSON inside a <script> must not be able to close it: escape "<" (valid JSON, same value).
+const jsonForScript = (value: unknown) => JSON.stringify(value).replace(/</g, '\\u003c');
 
 const escapeText = (value: string) => value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -70,6 +75,11 @@ export function injectHead(shell: string, tags: HeadTags): string {
     lines.push(`<meta name="twitter:image:alt" content="${escapeAttribute(DEFAULT_OG_IMAGE_ALT)}">`);
   }
 
+  // Marked so the app can swap them for its own when a page supplies structured data (SEO component).
+  for (const block of tags.jsonLd ? ([] as Record<string, any>[]).concat(tags.jsonLd) : []) {
+    lines.push(`<script type="application/ld+json" data-ssr-jsonld>${jsonForScript(block)}</script>`);
+  }
+
   const withoutOldTags = shell
     .replace(/<title>[\s\S]*?<\/title>[ \t]*\r?\n?/gi, '')
     .replace(
@@ -77,7 +87,10 @@ export function injectHead(shell: string, tags: HeadTags): string {
       ''
     )
     .replace(/[ \t]*<link\s+rel="canonical"[^>]*>[ \t]*\r?\n?/gi, '')
-    .replace(/[ \t]*<!--\s*(?:Open Graph|Twitter)[\s\S]*?-->[ \t]*\r?\n?/gi, '');
+    .replace(/[ \t]*<!--\s*(?:Open Graph|Twitter)[\s\S]*?-->[ \t]*\r?\n?/gi, '')
+    // The shell's generic WebSite block described the feed page on every URL; pages now bring their own.
+    .replace(/[ \t]*<!--\s*Structured Data\s*-->[ \t]*\r?\n?/gi, '')
+    .replace(/[ \t]*<script type="application\/ld\+json"[^>]*>[\s\S]*?<\/script>[ \t]*\r?\n?/gi, '');
 
   return withoutOldTags.replace(/<\/head>/i, `    ${lines.join('\n    ')}\n  </head>`);
 }
