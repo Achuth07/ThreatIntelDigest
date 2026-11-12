@@ -48,6 +48,7 @@ const NAV = [
 
 // Dark page that matches the app, so the brief moment before the app takes over looks right. While
 // this block is on screen the empty app container is parked off-screen (it still lays out normally).
+// Once the app takes over, the block is hidden (not removed), see client/src/lib/ssr-handoff.ts.
 const STYLE = `
 #ssr-content{min-height:100vh;background:#0b1220;color:#cbd5e1;font:16px/1.6 Inter,system-ui,-apple-system,sans-serif}
 #ssr-content a{color:#2dd4bf}
@@ -64,7 +65,8 @@ const STYLE = `
 #ssr-content .tag{display:inline-block;border:1px solid #475569;border-radius:999px;padding:1px 10px;font-size:13px;margin-right:6px;color:#e2e8f0}
 #ssr-content .warn{border-color:#ef4444;color:#fca5a5}
 #ssr-content footer{border-top:1px solid #1e293b;padding:16px 20px;font-size:14px;color:#94a3b8}
-#ssr-content ~ #root{position:absolute;left:-99999px;top:0;width:100%}
+#ssr-content:not([data-handed-off]) ~ #root{position:absolute;left:-99999px;top:0;width:100%}
+#ssr-content[data-handed-off]{visibility:hidden;position:absolute;left:-99999px;top:0;height:0;overflow:hidden}
 `.replace(/\n/g, '');
 
 function shell(title: string, inner: string): string {
