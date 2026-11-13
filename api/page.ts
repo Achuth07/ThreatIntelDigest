@@ -135,6 +135,33 @@ function createDataSource(): PageData {
       }
     },
 
+    async getKevPage(page, pageSize) {
+      const query = sql();
+      const [countRows, rows] = await Promise.all([
+        query`SELECT count(*)::int AS total FROM known_exploited_vulnerabilities`,
+        query`SELECT cve_id, vendor_project, product, vulnerability_name, date_added, short_description,
+                     known_ransomware_campaign_use
+              FROM known_exploited_vulnerabilities
+              ORDER BY date_added DESC
+              LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`,
+      ]);
+      const total = Number((countRows[0] as any)?.total ?? 0);
+      return {
+        page,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / pageSize)),
+        entries: (rows as any[]).map((r) => ({
+          cveId: r.cve_id,
+          vendorProject: r.vendor_project,
+          product: r.product,
+          vulnerabilityName: r.vulnerability_name,
+          dateAdded: r.date_added,
+          shortDescription: r.short_description,
+          knownRansomwareCampaignUse: r.known_ransomware_campaign_use,
+        })),
+      };
+    },
+
     async getPost(slug) {
       const post = await sanity.fetch(
         `*[_type == "post" && slug.current == $slug][0] { title, seoTitle, seoDescription, excerpt, mainImage, publishedAt, _updatedAt, "authorName": author->name }`,
@@ -162,7 +189,9 @@ const CACHE = {
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const pathname = new URL(req.url!, `https://${req.headers.host}`).pathname;
+  const requestUrl = new URL(req.url!, `https://${req.headers.host}`);
+  const pathname = requestUrl.pathname;
+  const search = `?page=${requestUrl.searchParams.get('page') ?? ''}`;
 
   let shell: string;
   try {
@@ -175,7 +204,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
 
   try {
-    const head = await resolvePageHead(pathname, createDataSource());
+    const head = await resolvePageHead(pathname, createDataSource(), search);
     if (head.status === 301 && head.redirect) {
       // Keep the visitor's own query string, but not the parameters Vercel adds when it rewrites
       // /cve/:id to this function (section and id).
