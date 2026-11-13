@@ -9,8 +9,9 @@
  * Keep this in step with what the pages show: same facts, simpler layout.
  */
 
-import { ACTORS_HUB, CVE_HUB, KEV_HUB } from '../../client/src/lib/urls.js';
+import { ACTORS_HUB, CVE_HUB, KEV_HUB, cveUrl } from '../../client/src/lib/urls.js';
 import { LANDING_FAQ } from '../../client/src/lib/jsonld.js';
+import { pageList } from '../../client/src/lib/page-list.js';
 
 const esc = (value: unknown) =>
   String(value ?? '')
@@ -180,6 +181,62 @@ ${description ? `<h2>Overview</h2><p>${esc(description)}</p>` : ''}
 <ul><li><a href="${esc(ACTORS_HUB)}">All threat actor profiles</a></li><li><a href="${esc(KEV_HUB)}">CISA Known Exploited Vulnerabilities catalog</a></li><li><a href="${esc(CVE_HUB)}">Latest CVEs</a></li></ul>`;
 
   return shell(data.name, inner);
+}
+
+// ---------------------------------------------------------------------------------------------
+// CISA KEV hub (WHA-17 hubs)
+
+export interface KevHubData {
+  page: number;
+  totalPages: number;
+  total: number;
+  entries: {
+    cveId: string;
+    vendorProject: string;
+    product: string;
+    vulnerabilityName: string;
+    dateAdded: unknown;
+    shortDescription: string;
+    knownRansomwareCampaignUse: string | null;
+  }[];
+}
+
+/** Numbered page links, the same pages the app's pager shows. */
+function pager(basePath: string, page: number, totalPages: number, label: string): string {
+  if (totalPages <= 1) return '';
+  const href = (n: number) => (n > 1 ? `${basePath}?page=${n}` : basePath);
+  const items = pageList(page, totalPages)
+    .map((entry) =>
+      entry === 'gap'
+        ? '<span>&hellip;</span>'
+        : entry === page
+          ? `<strong aria-current="page">${entry}</strong>`
+          : `<a href="${esc(href(entry))}">${entry}</a>`
+    )
+    .join(' ');
+  const prev = page > 1 ? `<a href="${esc(href(page - 1))}" rel="prev">Previous</a> ` : '';
+  const next = page < totalPages ? ` <a href="${esc(href(page + 1))}" rel="next">Next</a>` : '';
+  return `<nav aria-label="${esc(label)}">${prev}${items}${next}</nav>`;
+}
+
+export function renderKevHubBody(data: KevHubData): string {
+  const { page, totalPages, total, entries } = data;
+  const inner = `
+<p class="crumbs"><a href="/">WhatCyber</a> / CISA KEV catalog</p>
+<h1>CISA Known Exploited Vulnerabilities (KEV) Catalog</h1>
+<p>Vulnerabilities that CISA has confirmed are being exploited in the wild${total ? `: ${total} in the catalog` : ''}. Newest additions first${totalPages > 1 ? `, page ${page} of ${totalPages}` : ''}.</p>
+<ul>${entries
+    .map((e) => {
+      const ransomware = e.knownRansomwareCampaignUse === 'Known' ? ' <span class="tag warn">Ransomware linked</span>' : '';
+      const description = plain(e.shortDescription);
+      return `<li><a href="${esc(cveUrl(e.cveId))}">${esc(e.cveId)}</a>: ${esc([e.vendorProject, e.product].filter(Boolean).join(' '))}${e.vulnerabilityName ? ` &ndash; ${esc(e.vulnerabilityName)}` : ''} (added ${esc(formatDate(e.dateAdded))})${ransomware}${description ? `<br>${esc(description.length > 220 ? description.slice(0, 217) + '...' : description)}` : ''}</li>`;
+    })
+    .join('')}</ul>
+${pager(KEV_HUB, page, totalPages, 'KEV catalog pages')}
+<h2>More on WhatCyber</h2>
+<ul><li><a href="${esc(CVE_HUB)}">Latest CVEs</a></li><li><a href="${esc(ACTORS_HUB)}">Threat actor profiles</a></li><li><a href="/threatfeed">Threat feed</a></li></ul>`;
+
+  return shell('CISA KEV catalog', inner);
 }
 
 // ---------------------------------------------------------------------------------------------

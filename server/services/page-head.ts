@@ -19,7 +19,7 @@ import { actorSeo, cveSeo } from '../../client/src/lib/seo-text.js';
 import { UUID_PATTERN, actorUrl, cveUrl } from '../../client/src/lib/urls.js';
 import { actorJsonLd, blogPostJsonLd, cveJsonLd, hubJsonLd, landingJsonLd } from '../../client/src/lib/jsonld.js';
 import type { HeadTags } from './head-inject.js';
-import { renderActorBody, renderCveBody, renderLandingBody, type CveBodyData } from './page-body.js';
+import { renderActorBody, renderCveBody, renderKevHubBody, renderLandingBody, type CveBodyData, type KevHubData } from './page-body.js';
 
 export interface PageHead extends HeadTags {
   status: 200 | 301 | 404;
@@ -44,6 +44,8 @@ export interface PageData {
     aliases: string[] | null;
     description: string | null;
   } | null>;
+  /** One page of the KEV catalog, newest first. Throws only when the data source itself fails. */
+  getKevPage(page: number, pageSize: number): Promise<KevHubData>;
   getPost(slug: string): Promise<{
     title: string;
     seoTitle?: string | null;
@@ -56,6 +58,8 @@ export interface PageData {
   } | null>;
 }
 
+/** Same page size as the app's KEV hub (client/src/pages/exploited-vulnerabilities.tsx). */
+const KEV_PAGE_SIZE = 50;
 const CVE_ID = /^CVE-\d{4}-\d{4,}$/;
 // Listing pages that get a CollectionPage and breadcrumb.
 const HUB_NAMES: Record<string, string> = {
@@ -78,7 +82,7 @@ const notFound = (title: string, description: string): PageHead => ({
   noindex: true,
 });
 
-export async function resolvePageHead(rawPathname: string, data: PageData): Promise<PageHead> {
+export async function resolvePageHead(rawPathname: string, data: PageData, search = ''): Promise<PageHead> {
   const pathname = rawPathname.split(/[?#]/)[0].replace(/\/+$/, '') || '/';
   const segments = pathname.split('/').filter(Boolean);
   const [section, id] = segments;
@@ -97,12 +101,19 @@ export async function resolvePageHead(rawPathname: string, data: PageData): Prom
   }
   if (fixed && segments.length <= 1) {
     const hubName = HUB_NAMES[pathname];
+    let body: string | undefined;
+    if (pathname === '/cisa-kev') {
+      const requested = parseInt(new URLSearchParams(search).get('page') ?? '1', 10);
+      const kev = await data.getKevPage(Number.isFinite(requested) && requested > 1 ? requested : 1, KEV_PAGE_SIZE);
+      body = renderKevHubBody(kev);
+    }
     return {
       status: 200,
       title: fixed.title,
       description: fixed.description,
-      canonical: canonicalFor(pathname),
+      canonical: canonicalFor(pathname, search),
       noindex: isNoindexPath(pathname),
+      body,
       jsonLd: hubName
         ? hubJsonLd({ path: pathname, name: hubName, title: fixed.title, description: fixed.description })
         : undefined,
