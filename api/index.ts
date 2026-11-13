@@ -3412,7 +3412,9 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
             weaknesses,
             vendors,
             created_at,
-            has_r2_backing
+            has_r2_backing,
+            epss_score,
+            epss_percentile
           FROM vulnerabilities
           WHERE (cvss_v3_severity = ${severityUpper} OR cvss_v2_severity = ${severityUpper})
           ${vendor ? sql`AND vendors @> ${JSON.stringify([vendor])}` : sql``}
@@ -3435,7 +3437,9 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
             weaknesses,
             vendors,
             created_at,
-            has_r2_backing
+            has_r2_backing,
+            epss_score,
+            epss_percentile
           FROM vulnerabilities
           ${vendor ? sql`WHERE vendors @> ${JSON.stringify([vendor])}` : sql``}
           ${sql.raw(orderByClause)}
@@ -3458,7 +3462,9 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
           weaknesses,
           vendors,
           created_at,
-          has_r2_backing
+          has_r2_backing,
+          epss_score,
+          epss_percentile
         FROM vulnerabilities
         ${vendor ? sql`WHERE vendors @> ${JSON.stringify([vendor])}` : sql``}
         ${sql.raw(orderByClause)}
@@ -3513,6 +3519,7 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
       vendors: row.vendors || [],
       references: [], // References are now in R2, not returned in list view
       createdAt: row.created_at,
+      ...epssFields(row),
     }));
 
     console.log(`Found ${vulnerabilities.length} vulnerabilities`);
@@ -3617,6 +3624,13 @@ async function handleVulnerabilitiesVendorsEndpoint(req: VercelRequest, res: Ver
 
 
 // Helper functions for fetch-feeds
+function epssFields(row: any): { epssScore: number | null; epssPercentile: number | null } {
+  return {
+    epssScore: row.epss_score != null ? parseFloat(row.epss_score) : null,
+    epssPercentile: row.epss_percentile != null ? parseFloat(row.epss_percentile) : null,
+  };
+}
+
 async function handleVulnerabilityDetailEndpoint(req: VercelRequest, res: VercelResponse, cveId: string) {
   if (req.method !== 'GET') {
     return res.status(405).json({ message: 'Method not allowed' });
@@ -3653,7 +3667,9 @@ async function handleVulnerabilityDetailEndpoint(req: VercelRequest, res: Vercel
         vendors,
         exploitability_score,
         impact_score,
-        has_r2_backing
+        has_r2_backing,
+        epss_score,
+        epss_percentile
       FROM vulnerabilities
       WHERE id = ${cveId}
       `);
@@ -3731,6 +3747,7 @@ async function handleVulnerabilityDetailEndpoint(req: VercelRequest, res: Vercel
           impactScore: row.impact_score ? parseFloat(row.impact_score) : null,
         };
       }
+      vulnerability = { ...vulnerability, ...epssFields(row) };
     }
 
     // If vulnerability record is missing or lacks CVSS data, attempt on-demand fetch from NVD API

@@ -60,6 +60,9 @@ export const vulnerabilities = pgTable("vulnerabilities", {
   cvssVector: text("cvss_vector"), // e.g. CVSS:3.1/AV:N/AC:L...
   exploitabilityScore: decimal("exploitability_score", { precision: 3, scale: 1 }),
   impactScore: decimal("impact_score", { precision: 3, scale: 1 }),
+  // FIRST EPSS: probability of exploitation in the next 30 days, and its rank among all CVEs.
+  epssScore: decimal("epss_score", { precision: 6, scale: 5 }),
+  epssPercentile: decimal("epss_percentile", { precision: 6, scale: 5 }),
   weaknesses: jsonb("weaknesses").$type<string[]>().default([]), // CWE IDs
 
   vendors: jsonb("vendors").$type<string[]>().default([]), // Extracted vendors

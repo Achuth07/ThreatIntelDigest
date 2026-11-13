@@ -1,0 +1,50 @@
+name: Daily EPSS Update
+
+on:
+  schedule:
+    # FIRST publishes new scores shortly after 13:30 UTC
+    - cron: '7 14 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Reload even if today''s file was already loaded'
+        type: boolean
+        default: false
+
+concurrency:
+  group: epss-update
+  cancel-in-progress: false
+
+jobs:
+  update_epss:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Load EPSS scores
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+        R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+        R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+        R2_ENDPOINT_URL: ${{ secrets.R2_ENDPOINT_URL }}
+        FORCE: ${{ github.event.inputs.force }}
+      run: |
+        if [ "$FORCE" = "true" ]; then
+          npx tsx scripts/ingest_epss.ts --force
+        else
+          npx tsx scripts/ingest_epss.ts
+        fi

@@ -111,6 +111,19 @@ export async function saveNvdSyncState(state: NvdSyncState): Promise<void> {
     await writeR2Json('sync/nvd-state.json', state);
 }
 
+export interface EpssSyncState {
+    scoreDate: string;
+    modelVersion: string;
+}
+
+export async function getEpssSyncState(): Promise<EpssSyncState | null> {
+    return readR2Json<EpssSyncState>('sync/epss-state.json');
+}
+
+export async function saveEpssSyncState(state: EpssSyncState): Promise<void> {
+    await writeR2Json('sync/epss-state.json', state);
+}
+
 export async function checkCveInR2(cveId: string) {
     try {
         const r2 = getR2();
