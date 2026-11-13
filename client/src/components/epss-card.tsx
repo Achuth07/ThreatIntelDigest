@@ -9,6 +9,15 @@ function likelihoodTone(score: number): { label: string; text: string } {
   return { label: 'Low', text: 'text-green-400' };
 }
 
+// Round normally, but never let a score below 1 read as a certain 100%, or a non-zero one as 0%.
+function formatPercent(value: number, digits: number): string {
+  const step = 10 ** -digits;
+  const pct = Number((value * 100).toFixed(digits));
+  if (value < 1 && pct >= 100) return `>${(100 - step).toFixed(digits)}%`;
+  if (value > 0 && pct === 0) return `<${step.toFixed(digits)}%`;
+  return `${pct.toFixed(digits)}%`;
+}
+
 export function EpssCard({ score, percentile }: { score: number; percentile: number | null }) {
   const tone = likelihoodTone(score);
   return (
@@ -21,15 +30,17 @@ export function EpssCard({ score, percentile }: { score: number; percentile: num
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          <span className={`font-mono text-3xl font-bold ${tone.text}`}>{(score * 100).toFixed(2)}%</span>
+          <span className={`font-mono text-3xl font-bold ${tone.text}`}>{formatPercent(score, 2)}</span>
           <span className={`whitespace-nowrap text-sm font-semibold ${tone.text}`}>{tone.label} likelihood</span>
         </div>
         <Progress value={score * 100} className="h-2 bg-slate-700" aria-label="EPSS score" />
         <p className="text-sm leading-relaxed text-slate-300">
           Estimated chance this vulnerability is exploited in the next 30 days.
-          {percentile !== null && (
-            <> Higher than <span className="font-semibold text-slate-100">{(percentile * 100).toFixed(1)}%</span> of all scored CVEs.</>
-          )}
+          {percentile !== null && (percentile >= 0.999 ? (
+            <> Among the <span className="font-semibold text-slate-100">top 0.1%</span> of all scored CVEs.</>
+          ) : (
+            <> Higher than <span className="font-semibold text-slate-100">{formatPercent(percentile, 1)}</span> of all scored CVEs.</>
+          ))}
         </p>
         <p className="text-xs text-slate-500">
           Score from{' '}
