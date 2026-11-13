@@ -5,6 +5,7 @@ import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
 import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
+import { stripBody } from "./services/page-body";
 
 const viteLogger = createLogger();
 
@@ -97,8 +98,9 @@ export function serveStatic(app: Express) {
       return next();
     }
 
-    // For all other routes, serve index.html
+    // For all other routes, serve index.html without the landing page copy it carries (WHA-96)
     console.log(`Serving index.html for route: ${req.path}`);
-    res.sendFile(path.resolve(distPath, "index.html"));
+    const html = fs.readFileSync(path.resolve(distPath, "index.html"), "utf8");
+    res.type("html").send(req.path === "/" ? html : stripBody(html));
   });
 }

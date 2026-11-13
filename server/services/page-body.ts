@@ -10,6 +10,7 @@
  */
 
 import { ACTORS_HUB, CVE_HUB, KEV_HUB } from '../../client/src/lib/urls.js';
+import { LANDING_FAQ } from '../../client/src/lib/jsonld.js';
 
 const esc = (value: unknown) =>
   String(value ?? '')
@@ -57,6 +58,7 @@ const STYLE = `
 #ssr-content main{max-width:960px;margin:0 auto;padding:24px 20px 56px}
 #ssr-content h1{color:#f1f5f9;font-size:30px;line-height:1.25;margin:8px 0 6px}
 #ssr-content h2{color:#f1f5f9;font-size:20px;margin:28px 0 8px;border-bottom:1px solid #1e293b;padding-bottom:6px}
+#ssr-content h3{color:#e2e8f0;font-size:17px;margin:18px 0 4px}
 #ssr-content ul{padding-left:20px}
 #ssr-content li{margin:4px 0}
 #ssr-content dl{display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;margin:8px 0}
@@ -180,8 +182,69 @@ ${description ? `<h2>Overview</h2><p>${esc(description)}</p>` : ''}
   return shell(data.name, inner);
 }
 
+// ---------------------------------------------------------------------------------------------
+// Landing page (WHA-96)
+
+const LANDING_SECTIONS = [
+  {
+    href: KEV_HUB,
+    title: 'CISA Known Exploited Vulnerabilities',
+    text: 'Every vulnerability in the CISA KEV catalog, with vendor, product, due date and ransomware use, so you can patch what attackers are already exploiting.',
+  },
+  {
+    href: CVE_HUB,
+    title: 'Latest CVEs',
+    text: 'Search 215,000+ CVEs from the National Vulnerability Database with CVSS scores, affected products, weaknesses and references.',
+  },
+  {
+    href: ACTORS_HUB,
+    title: 'Threat actor profiles',
+    text: 'Profiles of 175+ threat groups built on MITRE ATT&CK, with aliases, targeted sectors, techniques and related news.',
+  },
+  {
+    href: '/threatfeed',
+    title: 'Threat feed',
+    text: 'Cybersecurity news from trusted sources such as Bleeping Computer, Unit 42 and Dark Reading, aggregated in real time.',
+  },
+  {
+    href: '/blog',
+    title: 'Blog',
+    text: 'Analysis and guides on vulnerabilities, threat intelligence and security operations.',
+  },
+];
+
+/**
+ * The landing page as plain HTML. It needs no data, so the build writes it into index.html, the
+ * file Vercel serves for "/" (vite.config.ts). Same headline, sections and FAQ as the React page.
+ */
+export function renderLandingBody(): string {
+  const inner = `
+<h1>Threat intelligence for security teams</h1>
+<p>Track exploited vulnerabilities from the CISA KEV catalog, 215,000+ CVEs and threat actor profiles, with cybersecurity news from trusted sources, in one dashboard.</p>
+<p><a href="/threatfeed">Open the threat feed</a> &middot; <a href="/register">Create a free account</a></p>
+<h2>What you can track</h2>
+<ul>${LANDING_SECTIONS.map((section) => `<li><a href="${esc(section.href)}">${esc(section.title)}</a>: ${esc(section.text)}</li>`).join('')}</ul>
+<h2>Frequently asked questions</h2>
+${LANDING_FAQ.map(({ question, answer }) => `<h3>${esc(question)}</h3><p>${esc(answer)}</p>`).join('\n')}`;
+
+  return shell('WhatCyber', inner);
+}
+
+// The body block is wrapped in these markers so a shell that already carries one (index.html holds
+// the landing copy) can be cleaned before it is reused for another page.
+const BODY_START = '<!--ssr-body-->';
+const BODY_END = '<!--/ssr-body-->';
+
 /** Places the body block in front of the app's empty container. */
 export function injectBody(html: string, body: string): string {
-  return html.replace(/<div id="root"><\/div>/, `${body}\n    <div id="root"></div>`);
+  return stripBody(html).replace(/<div id="root"><\/div>/, `${BODY_START}${body}${BODY_END}\n    <div id="root"></div>`);
+}
+
+/** Removes a body block written by injectBody, leaving the bare app shell. */
+export function stripBody(html: string): string {
+  const start = html.indexOf(BODY_START);
+  const end = html.indexOf(BODY_END);
+  if (start === -1 || end === -1 || end < start) return html;
+  return html.slice(0, start) + html.slice(end + BODY_END.length).replace(/^\n\s*/, '');
 }
 

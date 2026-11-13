@@ -182,80 +182,62 @@ export function blogPostJsonLd(input: {
   };
 }
 
-/** Landing page: the site, the organisation, the product and the FAQ. */
+/**
+ * The landing page FAQ. Shown on the page, in the server-rendered copy (server/services/page-body.ts)
+ * and as FAQPage structured data, so all three say the same thing.
+ */
+export const LANDING_FAQ: { question: string; answer: string }[] = [
+  {
+    question: 'What is WhatCyber?',
+    answer:
+      "WhatCyber is a comprehensive cybersecurity threat intelligence aggregator. It collects and organizes the latest security news, CVE vulnerabilities, and threat reports from trusted sources like Bleeping Computer, Unit 42, and Dark Reading into a single, real-time dashboard.",
+  },
+  {
+    question: 'What are KEVs and why do they matter?',
+    answer:
+      "KEVs, or Known Exploited Vulnerabilities, are security flaws that are actively being used by attackers in the wild. We integrate the CISA KEV catalog to help you prioritize patching the most dangerous vulnerabilities first.",
+  },
+  {
+    question: 'What information is in the Threat Actor profiles?',
+    answer:
+      "Our Threat Actor Directory combines MITRE ATT&CK framework data with real-time news. You get detailed insights into an actor's aliases, targeted sectors, methods, and the latest activities associated with them.",
+  },
+  {
+    question: 'Is WhatCyber free to use?',
+    answer:
+      "Yes, WhatCyber offers a free tier that provides access to essential threat intelligence feeds, vulnerability updates, and threat actor profiles. We believe in democratizing access to cybersecurity information.",
+  },
+  {
+    question: 'How often is the threat feed updated?',
+    answer:
+      "Our threat feed is updated in real-time. As soon as our sources publish new information, it is automatically aggregated and displayed on your dashboard, ensuring you never miss critical security updates.",
+  },
+  {
+    question: 'Can I customize my news sources?',
+    answer:
+      "Absolutely. WhatCyber allows you to follow specific RSS feeds and customize your dashboard to focus on the sources and topics that matter most to you and your organization.",
+  },
+];
+
+/**
+ * Landing page: the site, the organisation and the FAQ.
+ *
+ * No SoftwareApplication node: Google only accepts one with an aggregateRating or review, which
+ * WhatCyber does not have, and the incomplete node showed as a markup error (WHA-97).
+ */
 export function landingJsonLd(): Json {
-  const graph: Json = {
-    "@context": "https://schema.org",
-    "@graph": [
+  return {
+    '@context': CONTEXT,
+    '@graph': [
+      ...siteNodes(),
       {
-        "@type": "SoftwareApplication",
-        "name": "WhatCyber",
-        "applicationCategory": "SecurityApplication",
-        "operatingSystem": "Web",
-        "offers": {
-          "@type": "Offer",
-          "price": "0",
-          "priceCurrency": "USD"
-        },
-        "description": "Real-time cybersecurity threat intelligence aggregator and CVE vulnerability tracker."
+        '@type': 'FAQPage',
+        mainEntity: LANDING_FAQ.map(({ question, answer }) => ({
+          '@type': 'Question',
+          name: question,
+          acceptedAnswer: { '@type': 'Answer', text: answer },
+        })),
       },
-      {
-        "@type": "Organization",
-        "name": "WhatCyber",
-        "url": "https://www.whatcyber.com",
-        "logo": "https://www.whatcyber.com/android-chrome-192x192.png",
-        "sameAs": [
-          "https://x.com/WhatCyber_",
-          "https://www.linkedin.com/company/whatcyber/"
-        ]
-      },
-      {
-        "@type": "FAQPage",
-        "mainEntity": [
-          {
-            "@type": "Question",
-            "name": "What is WhatCyber?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "WhatCyber is a comprehensive cybersecurity threat intelligence aggregator. It collects and organizes the latest security news, CVE vulnerabilities, and threat reports from trusted sources like Bleeping Computer, Unit 42, and Dark Reading into a single, real-time dashboard."
-            }
-          },
-          {
-            "@type": "Question",
-            "name": "Is WhatCyber free to use?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "Yes, WhatCyber offers a free tier that provides access to essential threat intelligence feeds and vulnerability updates. We believe in democratizing access to cybersecurity information."
-            }
-          },
-          {
-            "@type": "Question",
-            "name": "How often is the threat feed updated?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "Our threat feed is updated in real-time. As soon as our sources publish new information, it is automatically aggregated and displayed on your dashboard, ensuring you never miss critical security updates."
-            }
-          },
-          {
-            "@type": "Question",
-            "name": "Can I customize my news sources?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "Absolutely. WhatCyber allows you to follow specific RSS feeds and customize your dashboard to focus on the sources and topics that matter most to you and your organization."
-            }
-          },
-          {
-            "@type": "Question",
-            "name": "What kind of vulnerabilities does it track?",
-            "acceptedAnswer": {
-              "@type": "Answer",
-              "text": "We track Common Vulnerabilities and Exposures (CVEs) from the National Vulnerability Database (NVD) and other major security advisories, providing you with details on severity, affected systems, and available patches."
-            }
-          }
-        ]
-      }
-    ]
+    ],
   };
-  graph['@graph'] = [websiteNode(), organizationNode(), ...graph['@graph'].filter((node: Json) => node['@type'] !== 'Organization')];
-  return graph;
 }

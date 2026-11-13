@@ -7,7 +7,7 @@ import { createImageUrlBuilder } from '@sanity/image-url';
 import { DEFAULT_DESCRIPTION, DEFAULT_TITLE, canonicalFor, isNoindexPath } from '../client/src/lib/seo-core.js';
 import { UUID_PATTERN } from '../client/src/lib/urls.js';
 import { injectHead } from '../server/services/head-inject.js';
-import { injectBody } from '../server/services/page-body.js';
+import { injectBody, stripBody } from '../server/services/page-body.js';
 import { resolvePageHead, type PageData } from '../server/services/page-head.js';
 
 /**
@@ -26,7 +26,8 @@ async function loadShell(host: string | undefined): Promise<string> {
 
   // The build output is bundled into this function (includeFiles in vercel.json).
   try {
-    cachedShell = readFileSync(path.join(process.cwd(), 'dist', 'public', 'index.html'), 'utf8');
+    // index.html carries the landing page copy; other pages start from the bare shell.
+    cachedShell = stripBody(readFileSync(path.join(process.cwd(), 'dist', 'public', 'index.html'), 'utf8'));
     return cachedShell;
   } catch {
     // Fall back to the static copy of the same file.
@@ -34,7 +35,7 @@ async function loadShell(host: string | undefined): Promise<string> {
 
   const response = await fetch(`https://${host}/index.html`);
   if (!response.ok) throw new Error(`Could not load index.html (${response.status})`);
-  cachedShell = await response.text();
+  cachedShell = stripBody(await response.text());
   return cachedShell;
 }
 

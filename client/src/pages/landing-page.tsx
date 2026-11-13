@@ -5,7 +5,8 @@ import { Shield, Menu, X, Database, Eye, Settings, Zap, Target, Github, Linkedin
 import { Helmet } from "react-helmet-async";
 import { SEO } from '@/components/seo';
 import { STATIC_PAGE_META } from '@/lib/page-meta';
-import { landingJsonLd } from '@/lib/jsonld';
+import { LANDING_FAQ, landingJsonLd } from '@/lib/jsonld';
+import { useSsrHandoff } from '@/lib/ssr-handoff';
 import { getAuthenticatedUser } from '@/lib/auth';
 
 // The 3D sphere (three.js) loads separately so it does not weigh down every page.
@@ -636,32 +637,7 @@ const FeaturesSection = () => {
 const FAQSection = () => {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
-  const faqs = [
-    {
-      question: "What is WhatCyber?",
-      answer: "WhatCyber is a comprehensive cybersecurity threat intelligence aggregator. It collects and organizes the latest security news, CVE vulnerabilities, and threat reports from trusted sources like Bleeping Computer, Unit 42, and Dark Reading into a single, real-time dashboard."
-    },
-    {
-      question: "What are KEVs and why do they matter?",
-      answer: "KEVs, or Known Exploited Vulnerabilities, are security flaws that are actively being used by attackers in the wild. We integrate the CISA KEV catalog to help you prioritize patching the most dangerous vulnerabilities first."
-    },
-    {
-      question: "What information is in the Threat Actor profiles?",
-      answer: "Our Threat Actor Directory combines MITRE ATT&CK framework data with real-time news. You get detailed insights into an actor's aliases, targeted sectors, methods, and the latest activities associated with them."
-    },
-    {
-      question: "Is WhatCyber free to use?",
-      answer: "Yes, WhatCyber offers a free tier that provides access to essential threat intelligence feeds, vulnerability updates, and threat actor profiles. We believe in democratizing access to cybersecurity information."
-    },
-    {
-      question: "How often is the threat feed updated?",
-      answer: "Our threat feed is updated in real-time. As soon as our sources publish new information, it is automatically aggregated and displayed on your dashboard, ensuring you never miss critical security updates."
-    },
-    {
-      question: "Can I customize my news sources?",
-      answer: "Absolutely. WhatCyber allows you to follow specific RSS feeds and customize your dashboard to focus on the sources and topics that matter most to you and your organization."
-    }
-  ];
+  const faqs = LANDING_FAQ;
 
   const toggleFAQ = (index: number) => {
     setOpenIndex(openIndex === index ? null : index);
@@ -1033,6 +1009,8 @@ const FooterSection = () => {
 // Main LandingPage Component
 export default function LandingPage() {
   const structuredData = landingJsonLd();
+  // The landing page needs no data, so the server copy (WHA-96) is handed over as soon as it mounts.
+  useSsrHandoff(true);
 
 
   return (

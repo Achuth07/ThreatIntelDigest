@@ -17,9 +17,9 @@ import {
 import { NOT_FOUND_META, STATIC_PAGE_META } from '../../client/src/lib/page-meta.js';
 import { actorSeo, cveSeo } from '../../client/src/lib/seo-text.js';
 import { UUID_PATTERN, actorUrl, cveUrl } from '../../client/src/lib/urls.js';
-import { actorJsonLd, blogPostJsonLd, cveJsonLd, hubJsonLd } from '../../client/src/lib/jsonld.js';
+import { actorJsonLd, blogPostJsonLd, cveJsonLd, hubJsonLd, landingJsonLd } from '../../client/src/lib/jsonld.js';
 import type { HeadTags } from './head-inject.js';
-import { renderActorBody, renderCveBody, type CveBodyData } from './page-body.js';
+import { renderActorBody, renderCveBody, renderLandingBody, type CveBodyData } from './page-body.js';
 
 export interface PageHead extends HeadTags {
   status: 200 | 301 | 404;
@@ -85,6 +85,16 @@ export async function resolvePageHead(rawPathname: string, data: PageData): Prom
 
   // Fixed pages with their own title and description.
   const fixed = STATIC_PAGE_META[pathname];
+  if (pathname === '/' && fixed) {
+    return {
+      status: 200,
+      title: fixed.title,
+      description: fixed.description,
+      canonical: canonicalFor('/'),
+      jsonLd: landingJsonLd(),
+      body: renderLandingBody(),
+    };
+  }
   if (fixed && segments.length <= 1) {
     const hubName = HUB_NAMES[pathname];
     return {
