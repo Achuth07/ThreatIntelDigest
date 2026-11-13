@@ -207,8 +207,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const head = await resolvePageHead(pathname, createDataSource(), search);
     if (head.status === 301 && head.redirect) {
       // Keep the visitor's own query string, but not the parameters Vercel adds when it rewrites
-      // /cve/:id to this function (section and id).
+      // /cve/:id to this function (route, section and id).
       const query = new URL(req.url!, 'https://placeholder.invalid').searchParams;
+      query.delete('route');
       query.delete('section');
       query.delete('id');
       const search = query.toString();
