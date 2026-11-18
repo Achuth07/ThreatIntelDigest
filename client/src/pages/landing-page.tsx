@@ -1,1036 +1,599 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'wouter';
-import { motion } from 'framer-motion';
-import { Shield, Menu, X, Database, Eye, Settings, Zap, Target, Github, Linkedin, Mail, Globe, Heart, Twitter, ChevronDownIcon, HelpCircle, Plus, Minus, FileText, ShieldAlert, Users, Activity } from 'lucide-react';
-import { Helmet } from "react-helmet-async";
+import { useEffect, useRef, useState } from 'react';
+import { Link } from 'wouter';
+import { Helmet } from 'react-helmet-async';
 import { SEO } from '@/components/seo';
 import { STATIC_PAGE_META } from '@/lib/page-meta';
 import { LANDING_FAQ, landingJsonLd } from '@/lib/jsonld';
 import { useSsrHandoff } from '@/lib/ssr-handoff';
 import { getAuthenticatedUser } from '@/lib/auth';
+import { ACTORS_HUB, CVE_HUB, KEV_HUB, cveUrl } from '@/lib/urls';
+import './landing-page.css';
 
-// The 3D sphere (three.js) loads separately so it does not weigh down every page.
-const CyberSphere = React.lazy(() => import('@/components/cyber-sphere'));
+/*
+ * Landing page, concept D (Nov 2026 redesign).
+ *
+ * Built with the sumi design plugin from four Awwwards Sites of the Day, plus concept A's motion:
+ * a cursor-reactive "+" field behind the hero, a CVE marquee, a pinned sideways platform rail with
+ * a live list of the newest CISA KEV entries, scroll reveals and a crosshair cursor. Styles live in
+ * landing-page.css under .wcl. Everything readable is in the HTML at rest; motion only adds to it,
+ * and it is switched off for visitors who prefer reduced motion.
+ *
+ * Keep the headline, sections and FAQ in step with the server copy in
+ * server/services/page-body.ts (renderLandingBody), which crawlers read.
+ */
 
-// Header Component
-const Header = () => {
-  const [, setLocation] = useLocation();
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+const FONTS_URL =
+  'https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@800&family=Geist:wght@400;500&display=swap';
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
+const THREAT_FEED = '/threatfeed';
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+type KevRow = { cveID: string; vendorProject: string; product: string; dateAdded: string; cvssV3Score?: number | null };
 
-  const handleGetStarted = () => {
-    // Check if user is already logged in
-    const user = getAuthenticatedUser();
+/** Shown until the live list loads, or if it cannot load. Real KEV entries with their CISA dates. */
+const FALLBACK_KEVS: KevRow[] = [
+  { cveID: 'CVE-2024-23897', vendorProject: 'Jenkins', product: 'Jenkins Command Line Interface', dateAdded: '2024-08-19' },
+  { cveID: 'CVE-2024-3400', vendorProject: 'Palo Alto Networks', product: 'PAN-OS', dateAdded: '2024-04-12' },
+  { cveID: 'CVE-2024-1709', vendorProject: 'ConnectWise', product: 'ScreenConnect', dateAdded: '2024-02-22' },
+  { cveID: 'CVE-2024-21762', vendorProject: 'Fortinet', product: 'FortiOS', dateAdded: '2024-02-09' },
+  { cveID: 'CVE-2023-46805', vendorProject: 'Ivanti', product: 'Connect Secure and Policy Secure', dateAdded: '2024-01-10' },
+  { cveID: 'CVE-2023-4966', vendorProject: 'Citrix', product: 'NetScaler ADC and Gateway', dateAdded: '2023-10-18' },
+  { cveID: 'CVE-2023-20198', vendorProject: 'Cisco', product: 'IOS XE Web UI', dateAdded: '2023-10-16' },
+  { cveID: 'CVE-2023-34362', vendorProject: 'Progress', product: 'MOVEit Transfer', dateAdded: '2023-06-02' },
+];
 
-    if (user && user.token) {
-      // User is logged in, redirect to threat feed
-      setLocation('/threatfeed');
-    } else {
-      // User is not logged in, redirect to login page
-      setLocation('/login');
-    }
-  };
+const MARQUEE = [
+  ['CVE-2021-44228', 'Log4Shell'],
+  ['CVE-2023-4966', 'Citrix Bleed'],
+  ['CVE-2024-3400', 'PAN-OS'],
+  ['CVE-2023-34362', 'MOVEit'],
+  ['CVE-2024-21762', 'FortiOS'],
+];
 
-  const navItems = [
-    { name: 'Features', href: '/#features' },
-    { name: 'Blog', href: '/blog' },
-    { name: 'About', href: '/about' },
-    { name: 'Contact', href: '/contact' },
-  ];
+const INDEX_ROWS = [
+  { href: THREAT_FEED, count: '(20,000+)', title: 'News', text: 'Cybersecurity news from trusted sources such as Bleeping Computer, Unit 42 and Dark Reading, aggregated in real time.' },
+  { href: CVE_HUB, count: '(215,000+)', title: 'CVEs', text: 'Every CVE from the National Vulnerability Database with CVSS and EPSS scores, affected products and references.' },
+  { href: KEV_HUB, count: '(1,750+)', title: 'Exploited', text: 'The CISA Known Exploited Vulnerabilities catalog, so you patch what attackers already use.' },
+  { href: ACTORS_HUB, count: '(175+)', title: 'Threat actors', text: 'Profiles built on MITRE ATT&CK, with aliases, targeted sectors, techniques and related news.' },
+  { href: '/blog', count: '(Guides)', title: 'Blog', text: 'Analysis and guides on vulnerabilities, threat intelligence and security operations.' },
+];
 
-  const handleNavigation = (href: string) => {
-    setIsMobileMenuOpen(false);
+const STEPS = [
+  { title: 'Discover', text: 'Real-time security news and newly exploited vulnerabilities, gathered in one feed.' },
+  { title: 'Analyze', text: 'Look into the actors behind an attack and their techniques, mapped to MITRE ATT&CK.' },
+  { title: 'Act', text: 'Patch what is being exploited before it reaches you.' },
+];
 
-    // For anchor links on the homepage
-    if (href.startsWith('/#')) {
-      // If we're on the homepage, scroll to the section
-      const element = document.getElementById(href.substring(2)); // Remove the '/#' prefix
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
-    // For internal pages, we'll let the Link component handle navigation
-    // For external links
-    else if (!href.startsWith('/')) {
-      window.open(href, '_blank');
-    }
-  };
+const prefersReducedMotion = () =>
+  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const handleLogoClick = () => {
-    // If we're on the homepage, scroll to top
-    if (window.location.pathname === '/') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-    // If we're on another page, navigate to homepage
-    else {
-      setLocation('/');
-    }
-  };
+const shortDate = (iso: string) => {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+};
 
+function Action({ size, label = 'Open the threat feed', className = '' }: { size?: 'lg'; label?: string; className?: string }) {
+  return (
+    <Link href={THREAT_FEED} className={`wcl-act ${size === 'lg' ? 'lg' : ''} ${className}`}>
+      <b>{label}</b>
+      <i aria-hidden="true">→</i>
+    </Link>
+  );
+}
+
+function Corners() {
   return (
     <>
-      <motion.header
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, delay: 0.2 }}
-        className={`fixed inset-x-0 mx-auto w-fit z-50 transition-all duration-300 ${isScrolled ? 'top-4' : 'top-6'
-          }`}
-      >
-        <nav className={`relative backdrop-blur-md bg-black/20 border border-white/10 rounded-full px-6 py-3 shadow-2xl transition-all duration-300 ${isScrolled ? 'bg-black/30' : ''
-          }`}>
-
-          <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[rgba(0,212,255,0.1)] via-transparent to-[rgba(0,255,136,0.1)] opacity-50" />
-
-          <div className="flex items-center justify-between gap-8 relative z-10">
-
-            {/* Logo */}
-            <motion.div
-              className="flex items-center gap-2 cursor-pointer group"
-              whileHover={{ scale: 1.05 }}
-              onClick={handleLogoClick}
-            >
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center relative overflow-hidden group-hover:shadow-lg group-hover:shadow-[#00d4ff]/25 transition-all duration-300">
-                <img
-                  src="/android-chrome-192x192.png"
-                  alt="WhatCyber Logo"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-              <span className="text-white font-bold text-lg group-hover:text-[#00d4ff] transition-colors duration-300">
-                WhatCyber
-              </span>
-            </motion.div>
-
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-6">
-              {navItems.map((item, index) => (
-                <motion.div
-                  key={item.name}
-                  className="text-[#ccc] hover:text-white transition-colors duration-300 relative group px-3 py-2 rounded-full"
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 + index * 0.1 }}
-                >
-                  {item.name === 'Features' ? (
-                    <button
-                      onClick={() => handleNavigation(item.href)}
-                      className="block w-full text-left"
-                    >
-                      <span className="px-3 py-2 rounded-full hover:bg-white/5 transition-colors duration-300">
-                        {item.name}
-                      </span>
-                      <motion.div
-                        className="absolute inset-0 bg-white/5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                      />
-                      <motion.div
-                        className="absolute bottom-1 left-1/2 w-0 h-0.5 bg-gradient-to-r from-[#00d4ff] to-[#00ff88] group-hover:w-4 group-hover:left-1/2 group-hover:-translate-x-1/2 transition-all duration-300"
-                      />
-                    </button>
-                  ) : (
-                    <Link href={item.href} className="block">
-                      <span className="px-3 py-2 rounded-full hover:bg-white/5 transition-colors duration-300">
-                        {item.name}
-                      </span>
-                      <motion.div
-                        className="absolute inset-0 bg-white/5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                      />
-                      <motion.div
-                        className="absolute bottom-1 left-1/2 w-0 h-0.5 bg-gradient-to-r from-[#00d4ff] to-[#00ff88] group-hover:w-4 group-hover:left-1/2 group-hover:-translate-x-1/2 transition-all duration-300"
-                      />
-                    </Link>
-                  )}
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Get Started Button */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.6 }}
-              className="hidden md:block"
-            >
-              <button
-                onClick={handleGetStarted}
-                className="group relative overflow-hidden bg-gradient-to-r from-[#00d4ff] to-[#00ff88] hover:from-[#0099cc] hover:to-[#00cc66] text-black font-semibold px-6 py-2 text-sm transition-all duration-300 shadow-lg shadow-[#00d4ff]/20 hover:shadow-xl hover:shadow-[#00d4ff]/30 border-0 rounded-full"
-              >
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
-                  animate={{ x: ['-100%', '100%'] }}
-                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-                />
-                <span className="relative z-10">Get Started</span>
-              </button>
-            </motion.div>
-
-            {/* Mobile Menu Button */}
-            <motion.button
-              className="md:hidden text-white p-2 rounded-full hover:bg-white/10 transition-colors duration-300"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              whileTap={{ scale: 0.9 }}
-            >
-              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </motion.button>
-          </div>
-        </nav>
-      </motion.header>
-
-      {/* Mobile Menu */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{
-          opacity: isMobileMenuOpen ? 1 : 0,
-          scale: isMobileMenuOpen ? 1 : 0.95,
-          pointerEvents: isMobileMenuOpen ? 'auto' : 'none'
-        }}
-        transition={{ duration: 0.2 }}
-        className="fixed top-24 left-1/2 transform -translate-x-1/2 z-40 md:hidden"
-      >
-        <div className="backdrop-blur-md bg-black/40 border border-white/20 rounded-2xl p-6 shadow-2xl min-w-[280px]">
-          <div className="flex flex-col gap-4">
-            {navItems.map((item, index) => (
-              <motion.div
-                key={item.name}
-                className="text-[#ccc] hover:text-white transition-colors duration-300 text-left py-2 px-4 rounded-lg hover:bg-white/5"
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: isMobileMenuOpen ? 1 : 0, x: isMobileMenuOpen ? 0 : -10 }}
-                transition={{ delay: index * 0.1 }}
-              >
-                {item.name === 'Features' ? (
-                  <button
-                    onClick={() => handleNavigation(item.href)}
-                    className="block w-full text-left"
-                  >
-                    {item.name}
-                  </button>
-                ) : (
-                  <Link href={item.href} className="block w-full">
-                    {item.name}
-                  </Link>
-                )}
-              </motion.div>
-            ))}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: isMobileMenuOpen ? 1 : 0, y: isMobileMenuOpen ? 0 : 10 }}
-              transition={{ delay: 0.3 }}
-              className="pt-4 border-t border-white/10"
-            >
-              <button
-                onClick={handleGetStarted}
-                className="w-full bg-gradient-to-r from-[#00d4ff] to-[#00ff88] text-black font-semibold py-2 px-4 rounded-lg transition-all duration-300 hover:shadow-lg border-0"
-              >
-                Get Started
-              </button>
-            </motion.div>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Backdrop for mobile menu */}
-      {isMobileMenuOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-30 md:hidden"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
+      <span className="c tl" aria-hidden="true">+</span>
+      <span className="c tr" aria-hidden="true">+</span>
+      <span className="c bl" aria-hidden="true">+</span>
+      <span className="c br" aria-hidden="true">+</span>
     </>
   );
-};
+}
 
-// HeroSection Component
-const HeroSection = () => {
-  const [, setLocation] = useLocation();
-  const [scrollY, setScrollY] = useState(0);
+/** Smooth-scrolls to an id on this page instead of changing the route. */
+function scrollToId(e: React.MouseEvent, id: string) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  e.preventDefault();
+  el.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
+}
 
+function Header() {
+  const [open, setOpen] = useState(false);
+  const [signedIn, setSignedIn] = useState(false);
+  useEffect(() => setSignedIn(Boolean(getAuthenticatedUser()?.token)), []);
+
+  const links = [
+    { id: 'platform', count: '(1,750+)', label: 'KEV' },
+    { id: 'library', count: '(215,000+)', label: 'CVEs' },
+    { id: 'library', count: '(175+)', label: 'Actors' },
+    { id: 'how', count: '(3)', label: 'Steps' },
+  ];
+
+  return (
+    <header className="wcl-header">
+      <div className="wcl-g wcl-grid wcl-hd">
+        <a className="wcl-wm" href="/" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' }); }}>
+          <img src="/android-chrome-192x192.png" alt="" width={22} height={22} />
+          <span>WhatCyber</span>
+        </a>
+        <nav className="wcl-ix" aria-label="Page sections">
+          {links.map((l) => (
+            <a key={l.label} href={`#${l.id}`} onClick={(e) => scrollToId(e, l.id)}>
+              <span>{l.count}</span>{l.label}
+            </a>
+          ))}
+        </nav>
+        <div className="wcl-hd-right">
+          {!signedIn && <Link className="wcl-signin" href="/login">Sign in</Link>}
+          <button className="wcl-menu-btn" aria-expanded={open} aria-controls="wcl-menu" onClick={() => setOpen((v) => !v)}>
+            {open ? 'Close' : 'Menu'}
+          </button>
+          <Action label="Open the feed" />
+        </div>
+      </div>
+      {open && (
+        <nav id="wcl-menu" className="wcl-g wcl-menu" aria-label="Menu">
+          <Link href={KEV_HUB}><span>(KEV)</span>CISA KEV catalog</Link>
+          <Link href={CVE_HUB}><span>(CVE)</span>Latest CVEs</Link>
+          <Link href={ACTORS_HUB}><span>(Actors)</span>Threat actors</Link>
+          <Link href="/blog"><span>(Blog)</span>Blog</Link>
+          <Link href="/about"><span>(About)</span>About</Link>
+          {!signedIn && <Link href="/login"><span>(Account)</span>Sign in</Link>}
+        </nav>
+      )}
+    </header>
+  );
+}
+
+/** "+" registration marks behind the hero that lean toward the cursor, with a slow green scan line. */
+function useHeroField(canvasRef: React.RefObject<HTMLCanvasElement>) {
   useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY);
-    window.addEventListener('scroll', handleScroll);
+    const c = canvasRef.current;
+    const host = c?.parentElement;
+    const ctx = c?.getContext('2d');
+    if (!c || !host || !ctx) return;
+    const reduce = prefersReducedMotion();
+    let w = 0, h = 0, mx = -999, my = -999, t = 0, raf = 0;
+    const color = (name: string) => getComputedStyle(c).getPropertyValue(name).trim();
 
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
+    const size = () => {
+      const d = Math.min(window.devicePixelRatio || 1, 2);
+      w = c.clientWidth; h = c.clientHeight;
+      c.width = w * d; c.height = h * d;
+      ctx.setTransform(d, 0, 0, d, 0, 0);
     };
-  }, []);
+    const draw = () => {
+      ctx.clearRect(0, 0, w, h);
+      const ink = color('--ink'), acc = color('--accent'), gap = 40, scan = ((t * 0.1) % (w + 240)) - 120;
+      for (let x = gap / 2; x < w; x += gap) {
+        for (let y = gap / 2; y < h; y += gap) {
+          const dx = x - mx, dy = y - my;
+          const near = Math.max(0, 1 - Math.hypot(dx, dy) / 200);
+          const k = Math.max(near, Math.max(0, 1 - Math.abs(x - scan) / 80) * 0.7);
+          const s = 2.5 + k * 4, ox = x - dx * near * 0.1, oy = y - dy * near * 0.1;
+          ctx.globalAlpha = 0.1 + k * 0.75;
+          ctx.strokeStyle = k > 0.06 ? acc : ink;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(ox - s, oy); ctx.lineTo(ox + s, oy);
+          ctx.moveTo(ox, oy - s); ctx.lineTo(ox, oy + s);
+          ctx.stroke();
+        }
+      }
+      ctx.globalAlpha = 1;
+    };
+    const loop = () => { t += 16; draw(); raf = requestAnimationFrame(loop); };
+    const onMove = (e: PointerEvent) => { const r = c.getBoundingClientRect(); mx = e.clientX - r.left; my = e.clientY - r.top; };
+    const onLeave = () => { mx = my = -999; };
+    const onResize = () => { size(); if (reduce) draw(); };
 
-  const scrollToFeatures = () => {
-    document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
-  };
+    size();
+    window.addEventListener('resize', onResize);
+    host.addEventListener('pointermove', onMove);
+    host.addEventListener('pointerleave', onLeave);
+    if (reduce) draw(); else loop();
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', onResize);
+      host.removeEventListener('pointermove', onMove);
+      host.removeEventListener('pointerleave', onLeave);
+    };
+  }, [canvasRef]);
+}
 
-  const handleGetStarted = () => {
-    // Check if user is already logged in
-    const user = getAuthenticatedUser();
-
-    if (user && user.token) {
-      // User is logged in, redirect to threat feed
-      setLocation('/threatfeed');
-    } else {
-      // User is not logged in, redirect to login page
-      setLocation('/login');
-    }
-  };
+function Hero() {
+  const canvas = useRef<HTMLCanvasElement>(null);
+  useHeroField(canvas);
+  const now = new Date();
+  const today = [now.getFullYear(), now.getMonth() + 1, now.getDate()].map((n) => String(n).padStart(2, '0')).join('.');
 
   return (
-    <section
-      id="home"
-      className="min-h-screen relative overflow-hidden flex items-center pt-20"
-      style={{
-        background: `
-          radial-gradient(ellipse 120% 100% at 30% 50%, rgba(0, 212, 255, 0.08), transparent),
-          radial-gradient(ellipse 80% 120% at 70% 20%, rgba(0, 255, 136, 0.06), transparent),
-          linear-gradient(135deg, #0a0a0a 0%, #111111 50%, #0a0a0a 100%)
-        `
-      }}
-    >
-      {/* Background Elements */}
-      <div className="absolute inset-0 -z-10">
-        {/* Parallax background elements with blur */}
-        <motion.div
-          className="absolute top-20 right-20 w-32 h-32 border border-[#00ff88]/10 rotate-12 backdrop-blur-xs"
-          style={{ y: scrollY * -0.2 }}
-        />
-        <motion.div
-          className="absolute bottom-32 left-20 w-24 h-24 border border-[#00d4ff]/15 rounded-full backdrop-blur-xs"
-          style={{ y: scrollY * -0.3 }}
-        />
-        <motion.div
-          className="absolute top-1/3 right-1/3 w-16 h-16 border border-[#00ff88]/8 rotate-45 backdrop-blur-xs"
-          style={{ y: scrollY * -0.4 }}
-        />
-
-        <motion.div
-          className="absolute top-1/4 left-1/4 w-72 h-72 bg-[rgba(0,255,136,0.05)] rounded-full blur-3xl"
-          animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.3, 0.5, 0.3],
-          }}
-          transition={{
-            duration: 4,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-        />
-        <motion.div
-          className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[rgba(0,212,255,0.05)] rounded-full blur-3xl"
-          animate={{
-            scale: [1.2, 1, 1.2],
-            opacity: [0.2, 0.4, 0.2],
-          }}
-          transition={{
-            duration: 5,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-        />
-      </div>
-
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Left Content */}
-          <motion.div
-            className="text-center lg:text-left"
-            initial={{ opacity: 0, x: -50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            {/* Badge */}
-            <motion.div
-              className="inline-flex items-center space-x-2 bg-gradient-to-r from-[rgba(0,212,255,0.1)] to-[rgba(0,255,136,0.1)] backdrop-blur-sm border border-white/10 rounded-full px-4 py-2 mb-6"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              whileHover={{ scale: 1.05 }}
-            >
-              <Shield className="h-4 w-4 text-[#00d4ff]" />
-              <span className="text-[#00d4ff] text-sm font-medium">Cybersecurity News Aggregator</span>
-            </motion.div>
-
-            {/* Main Headline */}
-            <motion.h1
-              className="text-4xl sm:text-5xl lg:text-7xl font-bold text-white mb-6 leading-tight"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.3 }}
-            >
-              {/* Static text: a rotating headline means crawlers only ever see one random variant */}
-              <span className="text-[#666]">Threat intelligence for</span>{' '}
-              <span className="relative">
-                <motion.span
-                  className="bg-gradient-to-r from-[#00d4ff] via-[#00ff88] to-[#00d4ff] bg-clip-text text-transparent"
-                  style={{ backgroundSize: '200% 100%' }}
-                  animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-                  transition={{ backgroundPosition: { duration: 5, repeat: Infinity } }}
-                >
-                  security teams
-                </motion.span>
-              </span>
-            </motion.h1>
-
-            {/* Subtitle */}
-            <motion.p
-              className="text-lg text-[#888] mb-8 max-w-2xl mx-auto lg:mx-0 leading-relaxed"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-            >
-              Track exploited vulnerabilities from the CISA KEV catalog, 215,000+ CVEs and threat actor profiles, with cybersecurity news from trusted sources, in one dashboard.
-            </motion.p>
-
-            {/* CTA Button */}
-            <motion.div
-              className="flex justify-center lg:justify-start"
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.6 }}
-            >
-              <motion.button
-                onClick={handleGetStarted}
-                className="group relative overflow-hidden bg-gradient-to-r from-[#00d4ff] to-[#00ff88] hover:from-[#0099cc] hover:to-[#00cc66] text-black font-semibold px-8 py-4 text-lg transition-all duration-300 shadow-lg shadow-[#00d4ff]/20 hover:shadow-xl hover:shadow-[#00d4ff]/30 border-0 rounded-full"
-                whileHover={{
-                  scale: 1.05,
-                  boxShadow: "0 0 30px rgba(0, 212, 255, 0.4)"
-                }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
-                  animate={{ x: ['-100%', '100%'] }}
-                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-                />
-                <span className="relative z-10">Get Started</span>
-              </motion.button>
-            </motion.div>
-          </motion.div>
-
-          {/* Right Content - 3D Sphere */}
-          <motion.div
-            className="relative h-96 lg:h-[600px] z-10"
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-          >
-            <div className="w-full h-full relative z-10">
-              <React.Suspense fallback={null}>
-                <CyberSphere />
-              </React.Suspense>
-            </div>
-          </motion.div>
+    <section className="wcl-hero wcl-g">
+      <canvas ref={canvas} className="wcl-field" aria-hidden="true" />
+      <div className="wcl-grid">
+        <div className="wcl-reg">
+          <h1>Threat intelligence for security teams</h1>
+          <span className="wcl-mu">WC /Edition {today}</span>
+          <span className="wcl-mu">(CISA · NVD · ATT&amp;CK · EPSS)</span>
         </div>
-
-        {/* Scroll indicator */}
-
-      </div>
-    </section>
-  );
-};
-
-// StatsSection Component
-const StatsSection = () => {
-  const stats = [
-    { icon: FileText, value: "20,000+", label: "News Articles Indexed" },
-    { icon: ShieldAlert, value: "1,750+", label: "Known Exploited Vulnerabilities" },
-    { icon: Users, value: "175+", label: "Threat Actor Profiles" },
-    { icon: Activity, value: "Real-Time", label: "Updates" }
-  ];
-
-  return (
-    <section className="relative z-20 -mt-28 px-4 sm:px-6">
-      {/* Transitional background bloom */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[200%] bg-gradient-to-b from-[#00ff88]/10 via-[#00ff88]/5 to-transparent blur-3xl pointer-events-none -z-10" />
-
-      <div className="max-w-6xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8 }}
-          className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl py-6 px-8 shadow-2xl relative overflow-hidden"
-        >
-          {/* Animated glow background */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#00ff88]/10 via-transparent to-[#00d4ff]/10 animate-gradient-x" />
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
-            {stats.map((stat, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="flex items-center gap-4 group"
-              >
-                <div className="w-12 h-12 shrink-0 rounded-xl bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 border border-white/5 group-hover:border-[#00ff88]/30">
-                  <stat.icon className="w-6 h-6 text-[#00ff88] group-hover:text-[#00d4ff] transition-colors duration-300" />
-                </div>
-                <div className="flex flex-col">
-                  <h3 className="text-2xl font-bold text-white bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
-                    {stat.value}
-                  </h3>
-                  <p className="text-xs text-[#888] font-medium uppercase tracking-wider leading-tight">
-                    {stat.label}
-                  </p>
-                </div>
-              </motion.div>
-            ))}
+        <p className="wcl-slogan wcl-disp">
+          <span className="l"><span>Read the news.</span></span>
+          <span className="l"><span>Track the exploit.</span></span>
+          <span className="l"><span>Patch first.</span></span>
+        </p>
+        <div className="wcl-hero-low">
+          <p className="wcl-lede">
+            Track exploited vulnerabilities from the CISA KEV catalog, 215,000+ CVEs and threat actor profiles, with
+            cybersecurity news from trusted sources, in one place. Free to read.
+          </p>
+          <div className="wcl-hero-act">
+            <Action size="lg" />
+            <small className="wcl-mu">No account needed · <Link href="/register">Create a free account</Link></small>
           </div>
-        </motion.div>
+        </div>
       </div>
     </section>
   );
-};
+}
 
-// FeaturesSection Component
-const FeaturesSection = () => {
-  const [scrollY, setScrollY] = useState(0);
+function Marquee() {
+  const items = [...MARQUEE, ...MARQUEE];
+  return (
+    <div className="wcl-mq" aria-hidden="true">
+      <div className="wcl-track">
+        {items.map(([id, name], i) => (
+          <span key={i}>{id} <em>{name}</em></span>
+        ))}
+      </div>
+    </div>
+  );
+}
 
+/** The newest KEV entries, cycling oldest to newest so each new one drops in at the top. */
+function useKevFeed() {
+  const [rows, setRows] = useState<KevRow[]>(FALLBACK_KEVS);
+  const [total, setTotal] = useState<number | null>(null);
   useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    let cancelled = false;
+    fetch('/api/kev?limit=12')
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((json: { data?: KevRow[]; total?: number }) => {
+        if (cancelled) return;
+        if (Array.isArray(json.data) && json.data.length >= 5) setRows(json.data);
+        if (typeof json.total === 'number' && json.total > 0) setTotal(json.total);
+      })
+      .catch(() => { /* keep the fallback list */ });
+    return () => { cancelled = true; };
   }, []);
+  return { rows, total };
+}
 
-  const features = [
-    {
-      title: "Vulnerability Intelligence",
-      description: "Advanced sorting and filtering capabilities for CVEs. Quickly identify critical vulnerabilities affecting your infrastructure using our comprehensive dashboard.",
-      video: "/latest-cves-demo.mp4",
-      webm: "/latest-cves-demo.webm",
-      align: "right",
-      href: "/cve",
-      cta: "Browse the latest CVEs"
-    },
-    {
-      title: "Exploited Vulnerabilities",
-      description: "Stay updated with CISA's Known Exploited Vulnerabilities (KEV) catalog and related news. Prioritize patching based on real-world exploitation data.",
-      video: "/exploited-vulnerabilities-demo.mp4",
-      webm: "/exploited-vulnerabilities-demo.webm",
-      align: "left",
-      href: "/cisa-kev",
-      cta: "Open the CISA KEV catalog"
-    },
-    {
-      title: "Threat Actor Directory",
-      description: "Comprehensive profiles of threat groups driven by MITRE ATT&CK data. Monitor live activity streams and related news for specific threat actors.",
-      video: "/threat-actors-demo.mp4",
-      webm: "/threat-actors-demo.webm",
-      align: "right",
-      href: "/threat-actors",
-      cta: "Explore threat actor profiles"
-    }
-  ];
+function KevTicker({ rows }: { rows: KevRow[] }) {
+  // rows arrive newest first. Show the newest five, then replay the set oldest to newest.
+  const [visible, setVisible] = useState<{ row: KevRow; key: string; isNew: boolean }[]>([]);
+  useEffect(() => {
+    setVisible(rows.slice(0, 5).map((row, i) => ({ row, key: `${row.cveID}-init-${i}`, isNew: false })));
+    if (prefersReducedMotion() || rows.length < 6) return;
+    const order = [...rows].reverse();
+    let i = 0, n = 0;
+    const timer = window.setInterval(() => {
+      const row = order[i++ % order.length];
+      n += 1;
+      setVisible((v) => [{ row, key: `${row.cveID}-${n}`, isNew: true }, ...v].slice(0, 7));
+    }, 2800);
+    return () => window.clearInterval(timer);
+  }, [rows]);
 
   return (
-    <section
-      id="features"
-      className="-mt-24 pt-32 pb-16 sm:pb-20 lg:pb-24 px-4 sm:px-6 relative overflow-hidden"
-      style={{
-        background: `
-          radial-gradient(ellipse 100% 80% at 20% 50%, rgba(0, 255, 136, 0.05), transparent),
-          radial-gradient(ellipse 80% 100% at 80% 20%, rgba(0, 212, 255, 0.08), transparent),
-          linear-gradient(180deg, #0a0a0a 0%, #111111 50%, #0a0a0a 100%)
-        `
-      }}
-    >
-      {/* Background Elements */}
-      <motion.div
-        className="absolute top-10 right-10 w-32 h-32 border border-[#00ff88]/10 rotate-12 backdrop-blur-xs"
-        style={{ y: scrollY * -0.1 }}
-      />
+    <ol className="wcl-tick" aria-label="Recently added known exploited vulnerabilities">
+      {visible.map(({ row, key, isNew }) => (
+        <li key={key} className={isNew ? 'new' : undefined}>
+          <Link className="wcl-m" href={cveUrl(row.cveID)}>{row.cveID}</Link>
+          <span>{row.vendorProject} {row.product}</span>
+          <em>{typeof row.cvssV3Score === 'number' ? row.cvssV3Score.toFixed(1) : shortDate(row.dateAdded)}</em>
+        </li>
+      ))}
+    </ol>
+  );
+}
 
-      <div className="max-w-7xl mx-auto relative z-10">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8 }}
-          className="text-center mb-20"
-        >
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-6">
-            <span className="text-[#666]">Platform</span>{' '}
-            <motion.span
-              className="bg-gradient-to-r from-[#00d4ff] via-[#00ff88] to-[#00d4ff] bg-clip-text text-transparent"
-              style={{ backgroundSize: '200% 100%' }}
-              animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-              transition={{ duration: 5, repeat: Infinity }}
-            >
-              Features
-            </motion.span>
-          </h2>
-          <p className="text-lg sm:text-xl text-[#888] max-w-3xl mx-auto leading-relaxed">
-            Essential capabilities designed for modern threat intelligence
-          </p>
-        </motion.div>
+/** Pins the platform section and slides its rail sideways while the visitor scrolls. */
+function useSidewaysRail(pinRef: React.RefObject<HTMLElement>, railRef: React.RefObject<HTMLDivElement>, count: number) {
+  const [step, setStep] = useState(1);
+  const [progress, setProgress] = useState(0);
+  useEffect(() => {
+    const pin = pinRef.current, rail = railRef.current;
+    if (!pin || !rail) return;
+    const narrow = window.matchMedia('(max-width: 820px)');
+    const off = () => narrow.matches || prefersReducedMotion();
+    const extra = () => Math.max(0, rail.scrollWidth - window.innerWidth + parseFloat(getComputedStyle(rail).paddingLeft));
+    const setup = () => {
+      if (off()) { pin.style.height = ''; rail.style.transform = ''; return; }
+      pin.style.height = `${window.innerHeight + extra()}px`;
+    };
+    const onScroll = () => {
+      if (off()) return;
+      const total = pin.offsetHeight - window.innerHeight;
+      const p = Math.min(1, Math.max(0, -pin.getBoundingClientRect().top / Math.max(1, total)));
+      rail.style.transform = `translate3d(${-p * extra()}px,0,0)`;
+      setProgress(p);
+      setStep(Math.min(count, 1 + Math.round(p * (count - 1))));
+    };
+    const onResize = () => { setup(); onScroll(); };
+    setup(); onScroll();
+    window.addEventListener('resize', onResize);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    narrow.addEventListener('change', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('scroll', onScroll);
+      narrow.removeEventListener('change', onResize);
+      pin.style.height = '';
+    };
+  }, [pinRef, railRef, count]);
+  return { step, progress };
+}
 
-        <div className="space-y-24">
-          {features.map((feature, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 50 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8 }}
-              className={`flex flex-col lg:flex-row items-center gap-12 lg:gap-20 ${feature.align === 'left' ? 'lg:flex-row-reverse' : ''
-                }`}
-            >
-              {/* Text Content */}
-              <div className="w-full lg:w-[40%] text-center lg:text-left">
-                <h3 className="text-3xl sm:text-4xl font-bold text-white mb-6 tracking-tight">
-                  {feature.title}
-                </h3>
-                <p className="text-lg text-[#aaa] leading-relaxed mb-4">
-                  {feature.description}
-                </p>
-                <Link
-                  href={feature.href}
-                  className="inline-block mb-8 text-[#00d4ff] hover:underline underline-offset-4"
-                >
-                  {feature.cta} &rarr;
-                </Link>
+const PANEL_COUNT = 5;
 
-                {/* Visual decorative line */}
-                <div className={`h-1 w-24 bg-gradient-to-r from-[#00d4ff] to-[#00ff88] rounded-full mx-auto lg:mx-0`} />
-              </div>
+function Platform() {
+  const pin = useRef<HTMLElement>(null);
+  const rail = useRef<HTMLDivElement>(null);
+  const { step, progress } = useSidewaysRail(pin, rail, PANEL_COUNT);
+  const { rows, total } = useKevFeed();
 
-              {/* Video Content */}
-              <div className="w-full lg:w-[60%] relative group">
-                {/* Glow Effect */}
-                <div className="absolute -inset-4 bg-gradient-to-r from-[#00d4ff]/20 to-[#00ff88]/20 rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+  return (
+    <section ref={pin} className="wcl-pin" id="platform" aria-labelledby="wcl-platform-h">
+      <div className="wcl-pin-sticky">
+        <div className="wcl-g wcl-pin-head">
+          <h2 id="wcl-platform-h" className="wcl-disp">The platform</h2>
+          <div className="wcl-prog wcl-mu" aria-hidden="true">
+            <span>({step}/{PANEL_COUNT})</span>
+            <div className="wcl-bar"><i style={{ transform: `scaleX(${progress})` }} /></div>
+          </div>
+        </div>
+        <div ref={rail} className="wcl-rail">
+          <article className="wcl-pn wcl-pa">
+            <Corners />
+            <span className="wcl-m">(KEV) /Exploited in the wild</span>
+            <div className="big wcl-disp">{total ? total.toLocaleString('en-US') : '1,750+'}</div>
+            <p>vulnerabilities attackers are already using, from CISA's catalog, with the news behind each one.</p>
+          </article>
 
-                {/* Video Container */}
-                <div className="relative rounded-xl overflow-hidden shadow-2xl border border-white/10 bg-black/50 backdrop-blur-sm group-hover:border-[#00d4ff]/30 transition-colors duration-500">
-                  <video
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    className="w-full h-auto object-cover rounded-xl"
-                  >
-                    <source src={feature.webm} type="video/webm" />
-                    <source src={feature.video} type="video/mp4" />
-                    Your browser does not support the video tag.
-                  </video>
+          <article className="wcl-pn wcl-pb">
+            <Corners />
+            <span className="wcl-m wcl-live">(Latest from CISA) /Newest KEV entries</span>
+            <KevTicker rows={rows} />
+            <Link className="wcl-lnk" href={KEV_HUB}>Open the CISA KEV catalog →</Link>
+          </article>
 
-                  {/* Glass overly reflection */}
-                  <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent pointer-events-none" />
-                </div>
-              </div>
-            </motion.div>
+          <article className="wcl-pn wcl-pc">
+            <Corners />
+            <span className="wcl-m">(CVE) /Vulnerability intelligence</span>
+            <h3 className="wcl-disp">Sort every CVE by what matters.</h3>
+            <p>Search 215,000+ CVEs by vendor, product, CVSS score, EPSS probability and weakness.</p>
+            <div className="wcl-chips">
+              <span className="wcl-chip on">CVSS</span>
+              <span className="wcl-chip">EPSS</span>
+              <span className="wcl-chip">Vendor</span>
+              <span className="wcl-chip">Product</span>
+              <span className="wcl-chip">CWE</span>
+              <span className="wcl-chip">In KEV</span>
+            </div>
+            <Link className="wcl-lnk" href={CVE_HUB}>Browse the latest CVEs →</Link>
+          </article>
+
+          <article className="wcl-pn wcl-pc">
+            <Corners />
+            <span className="wcl-m">(175+) /Threat actor directory</span>
+            <h3 className="wcl-disp">Follow the groups, not only the bugs.</h3>
+            <p>Profiles built from MITRE ATT&amp;CK, with aliases, targeted sectors, techniques and related news.</p>
+            <div className="wcl-chips">
+              <span className="wcl-chip on">APT29</span>
+              <span className="wcl-chip">Lazarus Group</span>
+              <span className="wcl-chip">FIN7</span>
+              <span className="wcl-chip">Sandworm Team</span>
+              <span className="wcl-chip">T1190</span>
+              <span className="wcl-chip">T1566</span>
+            </div>
+            <Link className="wcl-lnk" href={ACTORS_HUB}>Explore threat actor profiles →</Link>
+          </article>
+
+          <article className="wcl-pn wcl-pa">
+            <Corners />
+            <span className="wcl-m">(Free) /No account needed</span>
+            <h3 className="wcl-disp">Free to read. Built for defenders.</h3>
+            <Action size="lg" className="inv" />
+          </article>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function IndexSection() {
+  return (
+    <section className="wcl-lib wcl-g" id="library" aria-labelledby="wcl-index-h">
+      <div className="wcl-grid">
+        <div className="wcl-sec-h wcl-rv">
+          <h2 id="wcl-index-h" className="wcl-disp">The index</h2>
+          <span className="wcl-mu">({INDEX_ROWS.length}) Collections /Updated daily</span>
+        </div>
+        {INDEX_ROWS.map((row) => (
+          <Link key={row.title} className="wcl-row wcl-rv" href={row.href}>
+            <span className="cnt">{row.count}</span>
+            <h3 className="wcl-disp">{row.title}</h3>
+            <p>{row.text}</p>
+            <span className="go" aria-hidden="true">→</span>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function Steps() {
+  return (
+    <section className="wcl-how wcl-g" id="how" aria-labelledby="wcl-how-h">
+      <div className="wcl-grid">
+        <div className="wcl-sec-h wcl-rv">
+          <h2 id="wcl-how-h" className="wcl-disp">How it works</h2>
+          <span className="wcl-mu">({STEPS.length}) Steps</span>
+        </div>
+        <div className="wcl-steps">
+          {STEPS.map((s, i) => (
+            <div key={s.title} className="wcl-st wcl-rv">
+              <span className="wcl-mu">({i + 1})</span>
+              <h3 className="wcl-disp">{s.title}</h3>
+              <p>{s.text}</p>
+            </div>
           ))}
         </div>
       </div>
     </section>
   );
-};
+}
 
-// FAQSection Component
-const FAQSection = () => {
-  const [openIndex, setOpenIndex] = useState<number | null>(null);
-
-  const faqs = LANDING_FAQ;
-
-  const toggleFAQ = (index: number) => {
-    setOpenIndex(openIndex === index ? null : index);
-  };
-
+/** Same questions and answers as the FAQPage structured data (landingJsonLd). */
+function Faq() {
   return (
-    <section className="py-16 sm:py-20 lg:py-24 px-4 sm:px-6 relative overflow-hidden bg-[#0a0a0a]">
-      <div className="max-w-4xl mx-auto relative z-10">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8 }}
-          className="text-center mb-12"
-        >
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-            <span className="text-[#666]">Frequently Asked</span>{' '}
-            <span className="bg-gradient-to-r from-[#00d4ff] to-[#00ff88] bg-clip-text text-transparent">
-              Questions
-            </span>
-          </h2>
-        </motion.div>
-
-        <div className="space-y-4">
-          {faqs.map((faq, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              className="border border-white/10 rounded-xl overflow-hidden bg-white/5 backdrop-blur-sm hover:border-[#00d4ff]/50 transition-colors duration-300"
-            >
-              <button
-                onClick={() => toggleFAQ(index)}
-                className="w-full px-6 py-4 flex items-center justify-between text-left focus:outline-none"
-              >
-                <span className="text-lg font-medium text-white">{faq.question}</span>
-                {openIndex === index ? (
-                  <Minus className="w-5 h-5 text-[#00d4ff]" />
-                ) : (
-                  <Plus className="w-5 h-5 text-[#00ff88]" />
-                )}
-              </button>
-              <motion.div
-                initial={false}
-                animate={{ height: openIndex === index ? 'auto' : 0, opacity: openIndex === index ? 1 : 0 }}
-                transition={{ duration: 0.3 }}
-                className="overflow-hidden"
-              >
-                <div className="px-6 pb-4 text-[#aaa] leading-relaxed">
-                  {faq.answer}
-                </div>
-              </motion.div>
-            </motion.div>
+    <section className="wcl-faq wcl-g" id="faq" aria-labelledby="wcl-faq-h">
+      <div className="wcl-grid">
+        <h2 id="wcl-faq-h" className="wcl-disp wcl-rv">Questions</h2>
+        <div className="qs wcl-rv">
+          {LANDING_FAQ.map(({ question, answer }, i) => (
+            <details key={question} open={i === 0}>
+              <summary>{question}</summary>
+              <p>{answer}</p>
+            </details>
           ))}
         </div>
       </div>
     </section>
   );
-};
+}
 
-// TimelineSection Component
-const TimelineSection = () => {
-  const steps = [
-    {
-      icon: Eye,
-      title: "Discover KEVs",
-      description: "Aggregate real-time cybersecurity news and known exploited vulnerabilities to stay ahead of critical threats.",
-      number: "01"
-    },
-    {
-      icon: Target,
-      title: "Analyze Actors",
-      description: "Deep dive into threat actor profiles, tracking their tactics, techniques, and procedures with MITRE integration.",
-      number: "02"
-    },
-    {
-      icon: Zap,
-      title: "Act Fast",
-      description: "Leverage actionable intelligence to patch vulnerabilities and fortify your defenses against active exploits.",
-      number: "03"
-    }
-  ];
-
+function Footer() {
+  const year = new Date().getFullYear();
   return (
-    <section
-      id="timeline"
-      className="py-16 sm:py-20 lg:py-24 px-4 sm:px-6 relative overflow-hidden"
-      style={{
-        background: `
-          radial-gradient(ellipse 120% 100% at 50% 0%, rgba(0, 212, 255, 0.08), transparent),
-          radial-gradient(ellipse 80% 120% at 100% 50%, rgba(0, 255, 136, 0.06), transparent),
-          linear-gradient(135deg, #111111 0%, #0a0a0a 50%, #111111 100%)
-        `
-      }}
-    >
-      <div className="max-w-6xl mx-auto relative">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8 }}
-          className="text-center mb-12 sm:mb-16"
-        >
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 sm:mb-6">
-            <span className="text-[#666]">How It</span>{' '}
-            <motion.span
-              className="bg-gradient-to-r from-[#00d4ff] via-[#00ff88] to-[#00d4ff] bg-clip-text text-transparent"
-              style={{ backgroundSize: '200% 100%' }}
-              animate={{ backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'] }}
-              transition={{ duration: 4, repeat: Infinity }}
-            >
-              Works
-            </motion.span>
-          </h2>
-          <p className="text-lg sm:text-xl text-[#888] max-w-3xl mx-auto px-4">
-            Your streamlined approach to cybersecurity intelligence gathering
-          </p>
-        </motion.div>
-
-        <div className="relative">
-          {/* Enhanced connection line with gradient flow and blur */}
-          <div className="absolute left-1/2 top-0 bottom-0 w-px transform -translate-x-1/2 hidden lg:block overflow-visible">
-            <div className="w-full h-full bg-gradient-to-b from-[#00d4ff] via-[#00ff88] to-[#00d4ff] opacity-30" />
-            <motion.div
-              className="absolute inset-0 w-full bg-gradient-to-b from-transparent via-white/50 to-transparent"
-              animate={{ y: ['-100%', '100%'] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-              style={{ filter: 'blur(4px)' }}
-            />
-          </div>
-
-          <div className="space-y-12 sm:space-y-16 lg:space-y-24">
-            {steps.map((step, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, x: index % 2 === 0 ? -50 : 50 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.8, delay: index * 0.2 }}
-                className={`flex flex-col lg:flex-row items-center gap-6 sm:gap-8 ${index % 2 === 1 ? 'lg:flex-row-reverse' : ''
-                  }`}
-              >
-                {/* Content with glassmorphism */}
-                <motion.div
-                  className="flex-1 text-center lg:text-left w-full"
-                >
-                  <div className="bg-white/5 backdrop-blur-lg p-6 sm:p-8 rounded-2xl border border-white/10 shadow-2xl shadow-black/20 relative overflow-hidden group hover:border-[#00d4ff] transition-all duration-500">
-                    <motion.div
-                      className="absolute -inset-2 bg-gradient-to-br from-transparent via-[rgba(0,212,255,0.1)] to-transparent opacity-0 group-hover:opacity-100"
-                      animate={{ x: ['-100%', '100%'] }}
-                      transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
-                    />
-
-                    <div className="relative z-10">
-                      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3 sm:gap-4 mb-3 sm:mb-4">
-                        <motion.span
-                          className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-[#00d4ff] to-[#00ff88] bg-clip-text text-transparent opacity-30 group-hover:opacity-50 transition-opacity duration-300"
-                          animate={{
-                            textShadow: [
-                              '0 0 10px rgba(0,212,255,0.3)',
-                              '0 0 20px rgba(0,255,136,0.3)',
-                              '0 0 10px rgba(0,212,255,0.3)'
-                            ]
-                          }}
-                          transition={{ duration: 3, repeat: Infinity }}
-                        >
-                          {step.number}
-                        </motion.span>
-                        <h3 className="text-xl sm:text-2xl font-bold text-white text-center sm:text-left group-hover:text-[#00d4ff] transition-colors duration-300">
-                          {step.title}
-                        </h3>
-                      </div>
-                      <p className="text-[#ccc] text-base sm:text-lg leading-relaxed mb-4">
-                        {step.description}
-                      </p>
-                      <motion.div
-                        className="h-1 bg-gradient-to-r from-[#00d4ff] to-[#00ff88] rounded-full"
-                        initial={{ scaleX: 0 }}
-                        whileInView={{ scaleX: 1 }}
-                        transition={{ duration: 1, delay: index * 0.3 }}
-                        style={{ transformOrigin: 'left' }}
-                      />
-                    </div>
-                  </div>
-                </motion.div>
-
-                {/* Enhanced icon circle */}
-                <motion.div
-                  whileHover={{ scale: 1.1 }}
-                  className="relative z-10 order-first lg:order-none"
-                >
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-[#00d4ff] to-[#00ff88] rounded-full flex items-center justify-center shadow-[0_12px_30px_rgba(0,212,255,0.4)] border-4 border-[#111] relative overflow-hidden group">
-                    <motion.div
-                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                      animate={{ rotate: [0, 360] }}
-                      transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-                    />
-                    <step.icon className="w-8 h-8 sm:w-10 sm:h-10 text-black relative z-10" />
-                  </div>
-                  <motion.div
-                    className="absolute inset-0 rounded-full border-2 border-[#00d4ff] animate-ping opacity-20"
-                    style={{
-                      background: 'conic-gradient(from 0deg, transparent, rgba(0,212,255,0.1), transparent)',
-                      filter: 'blur(2px)'
-                    }}
-                  />
-                  <motion.div
-                    className="absolute inset-0 rounded-full border-2 border-[#00ff88] animate-ping opacity-20"
-                    style={{
-                      animationDelay: '0.5s',
-                      background: 'conic-gradient(from 180deg, transparent, rgba(0,255,136,0.1), transparent)',
-                      filter: 'blur(2px)'
-                    }}
-                  />
-                </motion.div>
-                <div className="flex-1 hidden lg:block" />
-              </motion.div>
-            ))}
-          </div>
+    <footer className="wcl-footer">
+      <div className="wcl-g wcl-grid">
+        <p className="wcl-f-big wcl-disp wcl-rv" aria-hidden="true">Patch<br /><span>first.</span></p>
+        <div className="wcl-f-row">
+          <Action size="lg" />
+          <span className="wcl-mu">Free to read. Create an account to bookmark articles and keep a watchlist.</span>
         </div>
-      </div>
-    </section>
-  );
-};
-
-// FooterSection Component
-const FooterSection = () => {
-  const currentYear = new Date().getFullYear();
-
-  const socialLinks = [
-    { icon: Linkedin, href: "https://www.linkedin.com/company/whatcyber/", label: "LinkedIn" },
-    { icon: Twitter, href: "https://x.com/WhatCyber_", label: "X (Twitter)" },
-    { icon: Mail, href: "mailto:contact@whatcyber.com", label: "Email" }
-  ];
-
-  return (
-    <footer
-      className="border-t border-white/10 relative overflow-hidden"
-      style={{
-        background: `
-          radial-gradient(ellipse 100% 80% at 50% 100%, rgba(0, 255, 136, 0.05), transparent),
-          radial-gradient(ellipse 80% 100% at 20% 80%, rgba(0, 212, 255, 0.08), transparent),
-          linear-gradient(180deg, #111111 0%, #0a0a0a 50%, #111111 100%)
-        `
-      }}
-    >
-      {/* Parallax background elements */}
-      <motion.div
-        className="absolute top-10 left-10 w-24 h-24 border border-[#00ff88]/8 rotate-45 backdrop-blur-xs"
-      />
-      <motion.div
-        className="absolute bottom-10 right-10 w-16 h-16 border border-[#00d4ff]/10 rounded-full backdrop-blur-xs"
-      />
-
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative">
-        <div className="py-12 grid grid-cols-1 md:grid-cols-2 gap-8">
-          {/* Brand Section */}
+        <div className="wcl-f-cols">
           <div>
-            <motion.div
-              className="flex items-center space-x-2 mb-6"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              viewport={{ once: true }}
-            >
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center relative overflow-hidden group-hover:shadow-lg group-hover:shadow-[#00d4ff]/25 transition-all duration-300">
-                <img
-                  src="/android-chrome-192x192.png"
-                  alt="WhatCyber Logo"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-              <div className="text-2xl font-bold">
-                <span className="text-white">WhatCyber</span>
-              </div>
-            </motion.div>
-
-            <motion.p
-              className="text-[#888] mb-6 leading-relaxed"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              viewport={{ once: true }}
-            >
-              Your centralized hub for real-time cybersecurity news, vulnerability tracking,
-              and threat actor intelligence. Stay ahead of emerging threats with WhatCyber.
-            </motion.p>
-
-            <motion.div
-              className="flex space-x-4"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              viewport={{ once: true }}
-            >
-              {socialLinks.map((link, index) => (
-                <motion.a
-                  key={link.label}
-                  href={link.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-10 h-10 bg-white/5 backdrop-blur-lg rounded-lg flex items-center justify-center text-[#666] hover:text-[#00d4ff] hover:bg-white/10 border border-white/10 hover:border-[#00d4ff] transition-all duration-300 shadow-lg"
-                  whileHover={{ scale: 1.1, y: -2 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <link.icon className="h-5 w-5" />
-                </motion.a>
-              ))}
-            </motion.div>
+            <span className="wcl-mu">(Platform)</span>
+            <ul>
+              <li><Link href={THREAT_FEED}>Security news feed</Link></li>
+              <li><Link href={CVE_HUB}>Latest CVEs</Link></li>
+              <li><Link href={KEV_HUB}>CISA KEV catalog</Link></li>
+              <li><Link href={ACTORS_HUB}>Threat actors</Link></li>
+            </ul>
           </div>
-
-          {/* Quick Links */}
-          <motion.div
-            className="grid grid-cols-2 sm:grid-cols-3 gap-8"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            viewport={{ once: true }}
-          >
-            <div>
-              <h3 className="text-white font-semibold mb-4">Platform</h3>
-              <ul className="space-y-2 text-[#888]">
-                <li><Link href="/threatfeed" className="hover:text-[#00d4ff] transition-colors">Security News Feed</Link></li>
-                <li><Link href="/cve" className="hover:text-[#00d4ff] transition-colors">Latest CVEs</Link></li>
-                <li><Link href="/cisa-kev" className="hover:text-[#00d4ff] transition-colors">CISA KEV Catalog</Link></li>
-                <li><Link href="/threat-actors" className="hover:text-[#00d4ff] transition-colors">Threat Actors</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="text-white font-semibold mb-4">Company</h3>
-              <ul className="space-y-2 text-[#888]">
-                <li><Link href="/about" className="hover:text-[#00d4ff] transition-colors">About Us</Link></li>
-                <li><Link href="/contact" className="hover:text-[#00d4ff] transition-colors">Contact</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="text-white font-semibold mb-4">Legal</h3>
-              <ul className="space-y-2 text-[#888]">
-                <li><Link href="/privacy" className="hover:text-[#00d4ff] transition-colors">Privacy Policy</Link></li>
-                <li><Link href="/terms" className="hover:text-[#00d4ff] transition-colors">Terms of Service</Link></li>
-              </ul>
-            </div>
-          </motion.div>
+          <div>
+            <span className="wcl-mu">(Company)</span>
+            <ul>
+              <li><Link href="/about">About</Link></li>
+              <li><Link href="/blog">Blog</Link></li>
+              <li><Link href="/contact">Contact</Link></li>
+              <li><Link href="/report-bugs">Report a bug</Link></li>
+            </ul>
+          </div>
+          <div>
+            <span className="wcl-mu">(Follow)</span>
+            <ul>
+              <li><a href="https://www.linkedin.com/company/whatcyber/" target="_blank" rel="noopener noreferrer">LinkedIn</a></li>
+              <li><a href="https://x.com/WhatCyber_" target="_blank" rel="noopener noreferrer">X (Twitter)</a></li>
+              <li><a href="mailto:contact@whatcyber.com">contact@whatcyber.com</a></li>
+            </ul>
+          </div>
+          <div>
+            <span className="wcl-mu">(Legal)</span>
+            <ul>
+              <li><Link href="/privacy">Privacy policy</Link></li>
+              <li><Link href="/terms">Terms of service</Link></li>
+            </ul>
+          </div>
         </div>
-
-        {/* Bottom Section */}
-        <motion.div
-          className="py-6 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.5 }}
-          viewport={{ once: true }}
-        >
-          <div className="flex items-center space-x-2 text-[#666] text-sm">
-            <span>© {currentYear} WhatCyber. All rights reserved.</span>
-          </div>
-        </motion.div>
+        <div className="wcl-f-bot wcl-mu">
+          <span>© {year} WhatCyber</span>
+          <span>Data from CISA, NVD, MITRE ATT&amp;CK and FIRST</span>
+        </div>
       </div>
     </footer>
   );
-};
+}
 
+/** Scroll reveals (the resting state is visible; JS only adds a small lift) and the crosshair cursor. */
+function usePageMotion(rootRef: React.RefObject<HTMLDivElement>, cursorRef: React.RefObject<HTMLDivElement>) {
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    root.classList.add('js');
+    const io = new IntersectionObserver(
+      (entries) => entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }),
+      { threshold: 0.12 },
+    );
+    root.querySelectorAll('.wcl-rv').forEach((el) => {
+      if (el.getBoundingClientRect().top < window.innerHeight) el.classList.add('in');
+      else io.observe(el);
+    });
 
+    const cur = cursorRef.current;
+    let raf = 0;
+    const cleanups: (() => void)[] = [];
+    if (cur && !prefersReducedMotion() && window.matchMedia('(pointer: fine)').matches) {
+      let x = -100, y = -100, cx = -100, cy = -100;
+      const onMove = (e: PointerEvent) => { x = e.clientX; y = e.clientY; };
+      const onOver = (e: PointerEvent) => {
+        const hit = (e.target as Element | null)?.closest?.('a, button, summary, .wcl-pn');
+        cur.classList.toggle('big', Boolean(hit));
+      };
+      window.addEventListener('pointermove', onMove);
+      root.addEventListener('pointerover', onOver);
+      const tick = () => {
+        cx += (x - cx) * 0.2; cy += (y - cy) * 0.2;
+        cur.style.transform = `translate(${cx}px,${cy}px) translate(-50%,-50%)`;
+        raf = requestAnimationFrame(tick);
+      };
+      tick();
+      cleanups.push(() => { window.removeEventListener('pointermove', onMove); root.removeEventListener('pointerover', onOver); });
+    }
+    return () => { io.disconnect(); cancelAnimationFrame(raf); cleanups.forEach((f) => f()); };
+  }, [rootRef, cursorRef]);
+}
 
-// Main LandingPage Component
 export default function LandingPage() {
   const structuredData = landingJsonLd();
   // The landing page needs no data, so the server copy (WHA-96) is handed over as soon as it mounts.
   useSsrHandoff(true);
-
+  const root = useRef<HTMLDivElement>(null);
+  const cursor = useRef<HTMLDivElement>(null);
+  usePageMotion(root, cursor);
 
   return (
-    <div className="bg-black min-h-screen text-white selection:bg-[#00d4ff] selection:text-black font-sans overflow-x-hidden">
-      <SEO
-        {...STATIC_PAGE_META['/']}
-        structuredData={structuredData}
-      />
-
+    <div ref={root} className="wcl">
+      <SEO {...STATIC_PAGE_META['/']} structuredData={structuredData} />
+      <Helmet>
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="stylesheet" href={FONTS_URL} />
+      </Helmet>
+      <div ref={cursor} className="wcl-cur" aria-hidden="true" />
       <Header />
-
       <main>
-        <HeroSection />
-        <StatsSection />
-        <FeaturesSection />
-        <TimelineSection />
-        <FAQSection />
+        <Hero />
+        <Marquee />
+        <Platform />
+        <IndexSection />
+        <Steps />
+        <Faq />
       </main>
-
-      <FooterSection />
+      <Footer />
     </div>
   );
 }
