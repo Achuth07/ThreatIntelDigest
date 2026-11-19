@@ -40,6 +40,10 @@ const ThreatActorDetailPage = lazy(() => import("@/pages/threat-actor-detail"));
 const ExploitedVulnerabilitiesPage = lazy(() => import("@/pages/exploited-vulnerabilities"));
 const CVEDetailPage = lazy(() => import("@/pages/cve-detail"));
 const VulnerabilitiesPage = lazy(() => import("@/pages/vulnerabilities"));
+const VendorsPage = lazy(() => import("@/pages/vendors"));
+const VendorDetailPage = lazy(() => import("@/pages/vendor-detail"));
+const CweIndexPage = lazy(() => import("@/pages/cwe"));
+const CweDetailPage = lazy(() => import("@/pages/cwe-detail"));
 const Blog = lazy(() => import("@/pages/blog"));
 const BlogPost = lazy(() => import("@/pages/blog-post"));
 const WatchlistPage = lazy(() => import("@/pages/watchlist"));
@@ -122,6 +126,10 @@ function Router() {
         <Route path="/cisa-kev" component={ExploitedVulnerabilitiesPage} />
         <Route path="/cve" component={VulnerabilitiesPage} />
         <Route path="/cve/:id" component={CVEDetailPage} />
+        <Route path="/vendors" component={VendorsPage} />
+        <Route path="/vendors/:slug" component={VendorDetailPage} />
+        <Route path="/cwe" component={CweIndexPage} />
+        <Route path="/cwe/:id" component={CweDetailPage} />
         {/* Old addresses. The server answers these with a permanent redirect; this covers in-app links and local dev. */}
         <Route path="/exploited-vulnerabilities">{() => <Redirect to="/cisa-kev" replace />}</Route>
         <Route path="/exploited-vulnerabilities/:id">{(params) => <Redirect to={`/cve/${params.id}`} replace />}</Route>

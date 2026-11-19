@@ -1,6 +1,6 @@
 import { createClient } from '@sanity/client';
 import { sql } from 'drizzle-orm';
-import { actorUrl, cveUrl } from '../../client/src/lib/urls.js';
+import { actorUrl, cveUrl, cweUrl, vendorUrl } from '../../client/src/lib/urls.js';
 
 export const SITE_URL = 'https://www.whatcyber.com';
 
@@ -15,7 +15,7 @@ const sanity = createClient({
  * Child sitemaps, split by page type so indexing can be monitored per template.
  * CVE tiers (WHA-23) will be added here as separate files.
  */
-export const SITEMAP_NAMES = ['core', 'blog', 'kev', 'actors'] as const;
+export const SITEMAP_NAMES = ['core', 'blog', 'kev', 'actors', 'hubs'] as const;
 export type SitemapName = (typeof SITEMAP_NAMES)[number];
 
 type Entry = { path: string; lastmod?: Date | string | null };
@@ -29,6 +29,8 @@ const CORE_PATHS = [
   '/cve',
   '/cisa-kev',
   '/threat-actors',
+  '/vendors',
+  '/cwe',
   '/blog',
   '/about',
   '/sources',
@@ -114,6 +116,17 @@ export async function renderSitemap(
           .filter((row) => CVE_ID.test(row.cve_id))
           .map((row) => ({ path: cveUrl(row.cve_id), lastmod: row.lastmod }))
       );
+    }
+
+    case 'hubs': {
+      // The vendor and weakness pages (WHA-24): only those in the stats tables exist as pages.
+      const db = await getDb();
+      const vendors = rowsOf(await db.execute(sql`SELECT slug, updated_at AS lastmod FROM vendor_stats ORDER BY rank`));
+      const cwes = rowsOf(await db.execute(sql`SELECT id, updated_at AS lastmod FROM cwe_stats ORDER BY rank`));
+      return urlset([
+        ...vendors.map((row) => ({ path: vendorUrl(row.slug), lastmod: row.lastmod })),
+        ...cwes.map((row) => ({ path: cweUrl(row.id), lastmod: row.lastmod })),
+      ]);
     }
 
     case 'actors': {

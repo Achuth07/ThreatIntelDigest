@@ -38,6 +38,18 @@ export const STATIC_PAGE_META: Record<string, PageMeta> = {
       'Browse newly published CVEs, filter by severity and vendor, and see CVSS scores. Data from the National Vulnerability Database.',
     keywords: 'CVE, vulnerabilities, security flaws, exploit, cvss, nvd',
   },
+  '/vendors': {
+    title: 'Vulnerabilities by Vendor: Microsoft, Linux, Google and More | WhatCyber',
+    description:
+      'Browse CVEs by vendor. The 100 vendors with the most vulnerabilities, with CVE counts and the number of entries in the CISA Known Exploited Vulnerabilities catalog.',
+    keywords: 'vulnerabilities by vendor, vendor CVEs, security advisories, exploited vulnerabilities by vendor',
+  },
+  '/cwe': {
+    title: 'Common Weakness Enumeration (CWE): Top Software Weaknesses | WhatCyber',
+    description:
+      'The 50 most common software weaknesses (CWE) behind CVEs, with how many vulnerabilities each one causes and how many are known to be exploited.',
+    keywords: 'CWE, common weakness enumeration, software weaknesses, vulnerability types, cross-site scripting, SQL injection',
+  },
   '/threat-actors': {
     title: 'Threat Actors Directory: APT Groups and Intrusion Sets | WhatCyber',
     description:

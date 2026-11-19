@@ -7,6 +7,7 @@ import { createImageUrlBuilder } from '@sanity/image-url';
 import { DEFAULT_DESCRIPTION, DEFAULT_TITLE, canonicalFor, isNoindexPath } from '../client/src/lib/seo-core.js';
 import { UUID_PATTERN } from '../client/src/lib/urls.js';
 import { injectHead } from '../server/services/head-inject.js';
+import { getCweHub, getCweIndex, getHubCweIds, getHubVendorSlugs, getVendorHub, getVendorIndex } from '../server/services/hub-data.js';
 import { injectBody, stripBody } from '../server/services/page-body.js';
 import { resolvePageHead, type PageData } from '../server/services/page-head.js';
 
@@ -94,8 +95,18 @@ function createDataSource(): PageData {
       const num = (value: unknown) => (value === null || value === undefined || value === '' ? null : Number(value));
       const list = (value: unknown) => (Array.isArray(value) ? value : []);
 
+      // Links to the vendor and weakness hubs that exist for this CVE (WHA-24). Best effort.
+      const vendorList = list(v?.vendors) as string[];
+      const weaknessList = (list(v?.weaknesses).length ? list(v?.weaknesses) : list(stored?.weaknesses)) as string[];
+      const [vendorHubs, cweHubIds] = await Promise.all([
+        getHubVendorSlugs(query, vendorList.slice(0, 5)).catch(() => []),
+        getHubCweIds(query, weaknessList).catch(() => []),
+      ]);
+
       return {
         id: cveId,
+        vendorHubs,
+        cweHubIds,
         actors: (actorRows as any[]).map((a) => ({ id: a.id, slug: a.slug ?? null, name: a.name })),
         kev: k
           ? {
@@ -205,6 +216,19 @@ function createDataSource(): PageData {
           vendors: Array.isArray(r.vendors) ? r.vendors : [],
         })),
       };
+    },
+
+    async getVendorIndex() {
+      return getVendorIndex(sql());
+    },
+    async getCweIndex() {
+      return getCweIndex(sql());
+    },
+    async getVendorHub(slug) {
+      return getVendorHub(sql(), slug);
+    },
+    async getCweHub(id) {
+      return getCweHub(sql(), id);
     },
 
     async getPost(slug) {

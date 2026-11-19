@@ -15,12 +15,14 @@ import {
   isNoindexPath,
 } from '../../client/src/lib/seo-core.js';
 import { NOT_FOUND_META, STATIC_PAGE_META } from '../../client/src/lib/page-meta.js';
-import { actorSeo, cveSeo } from '../../client/src/lib/seo-text.js';
-import { UUID_PATTERN, actorUrl, cveUrl } from '../../client/src/lib/urls.js';
+import { actorSeo, cveSeo, cweSeo, vendorSeo } from '../../client/src/lib/seo-text.js';
+import { CWE_HUB, CWE_ID_PATTERN, UUID_PATTERN, VENDORS_HUB, actorUrl, cveUrl, cweUrl, vendorUrl } from '../../client/src/lib/urls.js';
+import type { CweHub, CweIndexRow, VendorHub, VendorIndexRow } from './hub-data.js';
+import { MIN_CVES_FOR_INDEX } from './hub-data.js';
 import { KEV_FAQ } from '../../client/src/lib/kev-content.js';
 import { actorJsonLd, blogPostJsonLd, cveJsonLd, hubJsonLd, landingJsonLd } from '../../client/src/lib/jsonld.js';
 import type { HeadTags } from './head-inject.js';
-import { renderActorBody, renderActorsHubBody, renderCveBody, renderCveHubBody, renderKevHubBody, renderLandingBody, type ActorsHubData, type CveBodyData, type CveHubData, type KevHubData } from './page-body.js';
+import { renderActorBody, renderActorsHubBody, renderCveBody, renderCveHubBody, renderCweHubBody, renderCweIndexBody, renderKevHubBody, renderLandingBody, renderVendorHubBody, renderVendorsIndexBody, type ActorsHubData, type CveBodyData, type CveHubData, type KevHubData } from './page-body.js';
 
 export interface PageHead extends HeadTags {
   status: 200 | 301 | 404;
@@ -47,6 +49,11 @@ export interface PageData {
   } | null>;
   /** One page of the KEV catalog, newest first. Throws only when the data source itself fails. */
   getKevPage(page: number, pageSize: number): Promise<KevHubData>;
+  /** The top vendors and CWEs (vendor_stats, cwe_stats) and the hub behind each (WHA-24). */
+  getVendorIndex(): Promise<VendorIndexRow[]>;
+  getCweIndex(): Promise<CweIndexRow[]>;
+  getVendorHub(slug: string): Promise<VendorHub | null>;
+  getCweHub(id: string): Promise<CweHub | null>;
   /** One page of the threat actor directory, most recently updated first. */
   getActorsPage(page: number, pageSize: number): Promise<ActorsHubData>;
   /** The newest CVEs and the total count. */
@@ -75,6 +82,8 @@ const HUB_NAMES: Record<string, string> = {
   '/cve': 'Latest CVEs',
   '/cisa-kev': 'CISA KEV catalog',
   '/threat-actors': 'Threat actors',
+  '/vendors': 'Vendors',
+  '/cwe': 'Weaknesses (CWE)',
 };
 
 const redirectTo = (path: string): PageHead => ({
@@ -122,6 +131,10 @@ export async function resolvePageHead(rawPathname: string, data: PageData, searc
       body = renderActorsHubBody(await data.getActorsPage(Number.isFinite(requested) && requested > 1 ? requested : 1, ACTORS_PAGE_SIZE));
     } else if (pathname === '/cve') {
       body = renderCveHubBody(await data.getLatestCves(CVE_HUB_SIZE));
+    } else if (pathname === '/vendors') {
+      body = renderVendorsIndexBody(await data.getVendorIndex());
+    } else if (pathname === '/cwe') {
+      body = renderCweIndexBody(await data.getCweIndex());
     }
     return {
       status: 200,
@@ -160,6 +173,53 @@ export async function resolvePageHead(rawPathname: string, data: PageData, searc
       title: DEFAULT_TITLE,
       description: DEFAULT_DESCRIPTION,
       noindex: true,
+    };
+  }
+
+  // Vendor hubs: /vendors/<slug>. Only the top vendors have a page; anything else is a 404.
+  if (segments.length === 2 && section === 'vendors') {
+    if (id !== id.toLowerCase()) return redirectTo(vendorUrl(id.toLowerCase()));
+    const hub = await data.getVendorHub(id);
+    if (!hub) return notFound('Vendor Not Found | WhatCyber', 'This vendor page could not be found.');
+    const seo = vendorSeo(hub);
+    return {
+      status: 200,
+      title: seo.title,
+      description: seo.description,
+      canonical: canonicalFor(pathname),
+      noindex: hub.cveCount < MIN_CVES_FOR_INDEX,
+      jsonLd: hubJsonLd({
+        path: vendorUrl(hub.slug),
+        name: hub.name,
+        title: seo.title,
+        description: seo.description,
+        parent: { name: 'Vendors', path: VENDORS_HUB },
+      }),
+      body: renderVendorHubBody(hub),
+    };
+  }
+
+  // CWE hubs: /cwe/CWE-79. Only the top weaknesses have a page.
+  if (segments.length === 2 && section === 'cwe') {
+    if (!CWE_ID_PATTERN.test(id)) return notFound('Weakness Not Found | WhatCyber', 'This weakness page could not be found.');
+    if (id !== id.toUpperCase()) return redirectTo(cweUrl(id));
+    const hub = await data.getCweHub(id);
+    if (!hub) return notFound('Weakness Not Found | WhatCyber', 'This weakness page could not be found.');
+    const seo = cweSeo(hub);
+    return {
+      status: 200,
+      title: seo.title,
+      description: seo.description,
+      canonical: canonicalFor(pathname),
+      noindex: hub.cveCount < MIN_CVES_FOR_INDEX,
+      jsonLd: hubJsonLd({
+        path: cweUrl(hub.id),
+        name: hub.id,
+        title: seo.title,
+        description: seo.description,
+        parent: { name: 'Weaknesses', path: CWE_HUB },
+      }),
+      body: renderCweHubBody(hub),
     };
   }
 

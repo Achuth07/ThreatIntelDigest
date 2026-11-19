@@ -1,5 +1,5 @@
 import { useLocation } from 'wouter';
-import { ShieldAlert, Flame, Bug } from 'lucide-react';
+import { ShieldAlert, Flame, Bug, Building2, Layers } from 'lucide-react';
 import { SidebarSection, SidebarItem, SidebarBadge } from '@/components/layout/sidebar-primitives';
 
 export function VulnsSidebar() {
@@ -22,6 +22,20 @@ export function VulnsSidebar() {
           active={location.startsWith('/cisa-kev')}
           badge={<SidebarBadge tone="accent">LIVE</SidebarBadge>}
           testId="button-kev-catalog"
+        />
+        <SidebarItem
+          icon={Building2}
+          label="By vendor"
+          href="/vendors"
+          active={location.startsWith('/vendors')}
+          testId="button-vendors"
+        />
+        <SidebarItem
+          icon={Layers}
+          label="By weakness (CWE)"
+          href="/cwe"
+          active={location.startsWith('/cwe')}
+          testId="button-cwe"
         />
       </SidebarSection>
     </>

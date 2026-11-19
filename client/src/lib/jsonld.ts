@@ -138,6 +138,8 @@ export function hubJsonLd(input: {
   description: string;
   /** Questions shown on the page, written out as FAQPage data. */
   faq?: { question: string; answer: string }[];
+  /** The hub this page sits under, shown as the middle breadcrumb (e.g. Vendors > Fortinet). */
+  parent?: { name: string; path: string };
 }): Json {
   const pageUrl = `${SITE_URL}${input.path}`;
   return {
@@ -147,6 +149,7 @@ export function hubJsonLd(input: {
       webPageNode(pageUrl, { '@type': 'CollectionPage', name: input.title, description: input.description }),
       breadcrumbNode(pageUrl, [
         { name: 'Home', path: '/' },
+        ...(input.parent ? [input.parent] : []),
         { name: input.name, path: input.path },
       ]),
       ...(input.faq?.length

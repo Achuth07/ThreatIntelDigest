@@ -103,3 +103,34 @@ export function cveSeo(cve: {
 export function isPlaceholderDescription(text: string | null | undefined): boolean {
   return !text || /^click to view full details/i.test(text.trim());
 }
+
+const count = (n: number) => n.toLocaleString('en-US');
+
+/** Title and meta description for a vendor hub page. */
+export function vendorSeo(vendor: { name: string; cveCount: number; kevCount: number }) {
+  const title = fitTitle([
+    `${vendor.name} Vulnerabilities: Latest CVEs and Exploited Flaws`,
+    `${vendor.name} Vulnerabilities and Exploited CVEs`,
+    `${vendor.name} Vulnerabilities`,
+  ]);
+  const description = `${count(vendor.cveCount)} ${vendor.name} CVEs with CVSS scores${
+    vendor.kevCount > 0 ? `, ${count(vendor.kevCount)} of them in CISA's Known Exploited Vulnerabilities catalog` : ''
+  }. See the newest ${vendor.name} vulnerabilities and the weaknesses behind them.`;
+  return { title, description };
+}
+
+/** Title and meta description for a CWE hub page. */
+export function cweSeo(cwe: { id: string; name: string | null; cveCount: number; kevCount: number }) {
+  // MITRE's official names are long; the common name sits in brackets: "... ('Cross-site Scripting')".
+  const common = cwe.name?.match(/\('([^']+)'\)/)?.[1];
+  const title = fitTitle([
+    ...(cwe.name ? [`${cwe.id}: ${cwe.name}`] : []),
+    ...(common ? [`${cwe.id}: ${common} Vulnerabilities`, `${cwe.id}: ${common}`] : []),
+    ...(cwe.name ? [`${cwe.id}: ${cwe.name.replace(/\s*\(.*\)$/, '')}`] : []),
+    `${cwe.id} Vulnerabilities`,
+  ]);
+  const description = `${cwe.id}${cwe.name ? `, ${cwe.name}` : ''}: ${count(cwe.cveCount)} CVEs${
+    cwe.kevCount > 0 ? `, ${count(cwe.kevCount)} of them known to be exploited` : ''
+  }. See the newest vulnerabilities with this weakness.`;
+  return { title, description: plainSummary(description, 160) };
+}
