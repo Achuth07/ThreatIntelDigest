@@ -17,6 +17,7 @@ import {
 import { NOT_FOUND_META, STATIC_PAGE_META } from '../../client/src/lib/page-meta.js';
 import { actorSeo, cveSeo } from '../../client/src/lib/seo-text.js';
 import { UUID_PATTERN, actorUrl, cveUrl } from '../../client/src/lib/urls.js';
+import { KEV_FAQ } from '../../client/src/lib/kev-content.js';
 import { actorJsonLd, blogPostJsonLd, cveJsonLd, hubJsonLd, landingJsonLd } from '../../client/src/lib/jsonld.js';
 import type { HeadTags } from './head-inject.js';
 import { renderActorBody, renderActorsHubBody, renderCveBody, renderCveHubBody, renderKevHubBody, renderLandingBody, type ActorsHubData, type CveBodyData, type CveHubData, type KevHubData } from './page-body.js';
@@ -110,9 +111,11 @@ export async function resolvePageHead(rawPathname: string, data: PageData, searc
   if (fixed && segments.length <= 1) {
     const hubName = HUB_NAMES[pathname];
     let body: string | undefined;
+    let kevPage = 1;
     if (pathname === '/cisa-kev') {
       const requested = parseInt(new URLSearchParams(search).get('page') ?? '1', 10);
-      const kev = await data.getKevPage(Number.isFinite(requested) && requested > 1 ? requested : 1, KEV_PAGE_SIZE);
+      kevPage = Number.isFinite(requested) && requested > 1 ? requested : 1;
+      const kev = await data.getKevPage(kevPage, KEV_PAGE_SIZE);
       body = renderKevHubBody(kev);
     } else if (pathname === '/threat-actors') {
       const requested = parseInt(new URLSearchParams(search).get('page') ?? '1', 10);
@@ -128,7 +131,14 @@ export async function resolvePageHead(rawPathname: string, data: PageData, searc
       noindex: isNoindexPath(pathname),
       body,
       jsonLd: hubName
-        ? hubJsonLd({ path: pathname, name: hubName, title: fixed.title, description: fixed.description })
+        ? hubJsonLd({
+            path: pathname,
+            name: hubName,
+            title: fixed.title,
+            description: fixed.description,
+            // The FAQ is on the first page of the KEV catalog only.
+            faq: pathname === '/cisa-kev' && kevPage === 1 ? KEV_FAQ : undefined,
+          })
         : undefined,
     };
   }

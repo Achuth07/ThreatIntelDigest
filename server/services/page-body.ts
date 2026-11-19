@@ -11,6 +11,8 @@
 
 import { ACTORS_HUB, CVE_HUB, KEV_HUB, actorUrl, cveUrl } from '../../client/src/lib/urls.js';
 import { LANDING_FAQ } from '../../client/src/lib/jsonld.js';
+import { cveSummary, cveTimeline } from '../../client/src/lib/cve-summary.js';
+import { KEV_ANSWER, KEV_FAQ } from '../../client/src/lib/kev-content.js';
 import { pageList } from '../../client/src/lib/page-list.js';
 
 const esc = (value: unknown) =>
@@ -105,6 +107,7 @@ export interface CveBodyData {
     cvssV2Score: number | null;
     cvssV2Severity: string | null;
     cvssVector: string | null;
+    epssScore: number | null;
     weaknesses: string[];
     vendors: string[];
     description: string;
@@ -139,15 +142,31 @@ export function renderCveBody(data: CveBodyData): string {
   const moreProducts = allProducts.length - products.length;
   const references = (nvd?.references ?? []).filter((r) => safeUrl(r?.url)).slice(0, 15);
 
+  const summaryFacts = {
+    id,
+    vendor,
+    product,
+    name: kev?.vulnerabilityName,
+    publishedDate: nvd?.publishedDate,
+    kev,
+    cvssScore: nvd?.cvssV3Score ?? nvd?.cvssV2Score ?? null,
+    severity: nvd?.cvssV3Severity ?? nvd?.cvssV2Severity ?? null,
+    epssScore: nvd?.epssScore ?? null,
+  };
+  const summary = cveSummary(summaryFacts);
+  const timeline = cveTimeline(summaryFacts);
+
   const inner = `
 <p class="crumbs"><a href="/">WhatCyber</a> / <a href="${esc(kev ? KEV_HUB : CVE_HUB)}">${kev ? 'CISA KEV catalog' : 'Vulnerabilities'}</a> / ${esc(id)}</p>
 <h1>${esc(id)}${vendor || product ? `: ${esc([vendor, product].filter(Boolean).join(' '))}` : ''}</h1>
 ${kev?.vulnerabilityName ? `<p>${esc(kev.vulnerabilityName)}</p>` : ''}
 <p>${tags.join(' ')}</p>
+<p>${esc(summary)}</p>
 ${description ? `<h2>Description</h2><p>${esc(description)}</p>` : ''}
 ${facts.length ? `<h2>Key facts</h2><dl>${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>` : ''}
 ${kev?.requiredAction ? `<h2>Required action</h2><p>${esc(plain(kev.requiredAction))}</p>` : ''}
 ${kev?.notes ? `<p>${esc(plain(kev.notes))}</p>` : ''}
+${timeline.length ? `<h2>Timeline</h2><ul>${timeline.map((e) => `<li>${esc(e.date)}: ${esc(e.label)}${e.note ? ` (${esc(e.note)})` : ''}</li>`).join('')}</ul>` : ''}
 ${nvd?.weaknesses?.length ? `<h2>Weaknesses (CWE)</h2><ul>${nvd.weaknesses.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : ''}
 ${products.length ? `<h2>Affected products</h2><ul>${products.map((p) => { const versions = (p.versions ?? []).filter((v) => v && v !== '-' && v !== '*').slice(0, 12); return `<li>${esc([p.vendor, p.product].filter(Boolean).join(' '))}${versions.length ? ` (versions: ${esc(versions.join(', '))})` : ''}</li>`; }).join('')}${moreProducts > 0 ? `<li>and ${moreProducts} more</li>` : ''}</ul>` : nvd?.vendors?.length ? `<h2>Affected vendors</h2><p>${esc(nvd.vendors.join(', '))}</p>` : ''}
 ${references.length ? `<h2>References</h2><ul>${references.map((r) => `<li><a href="${esc(safeUrl(r.url))}" rel="nofollow noopener">${esc(r.url)}</a></li>`).join('')}</ul>` : ''}
@@ -224,7 +243,8 @@ export function renderKevHubBody(data: KevHubData): string {
   const inner = `
 <p class="crumbs"><a href="/">WhatCyber</a> / CISA KEV catalog</p>
 <h1>CISA Known Exploited Vulnerabilities (KEV) Catalog</h1>
-<p>Vulnerabilities that CISA has confirmed are being exploited in the wild${total ? `: ${total} in the catalog` : ''}. Newest additions first${totalPages > 1 ? `, page ${page} of ${totalPages}` : ''}.</p>
+${page === 1 ? `<p>${esc(KEV_ANSWER)}</p>` : ''}
+<p>${total ? `${total.toLocaleString('en-US')} vulnerabilities in the catalog. ` : ''}Newest additions first${totalPages > 1 ? `, page ${page} of ${totalPages}` : ''}.</p>
 <ul>${entries
     .map((e) => {
       const ransomware = e.knownRansomwareCampaignUse === 'Known' ? ' <span class="tag warn">Ransomware linked</span>' : '';
@@ -233,6 +253,7 @@ export function renderKevHubBody(data: KevHubData): string {
     })
     .join('')}</ul>
 ${pager(KEV_HUB, page, totalPages, 'KEV catalog pages')}
+${page === 1 ? `<h2>Frequently asked questions</h2>\n${KEV_FAQ.map(({ question, answer }) => `<h3>${esc(question)}</h3><p>${esc(answer)}</p>`).join('\n')}` : ''}
 <h2>More on WhatCyber</h2>
 <ul><li><a href="${esc(CVE_HUB)}">Latest CVEs</a></li><li><a href="${esc(ACTORS_HUB)}">Threat actor profiles</a></li><li><a href="/threatfeed">Threat feed</a></li></ul>`;
 

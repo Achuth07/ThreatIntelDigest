@@ -61,7 +61,7 @@ function createDataSource(): PageData {
                      known_ransomware_campaign_use, notes
               FROM known_exploited_vulnerabilities WHERE cve_id = ${cveId}`,
         query`SELECT published_date, last_modified_date, vuln_status, cvss_v3_score, cvss_v3_severity, cvss_v2_score,
-                     cvss_v2_severity, cvss_vector, weaknesses, vendors, has_r2_backing
+                     cvss_v2_severity, cvss_vector, epss_score, weaknesses, vendors, has_r2_backing
               FROM vulnerabilities WHERE id = ${cveId}`,
       ]);
       const k = kevRows[0] as any;
@@ -110,6 +110,7 @@ function createDataSource(): PageData {
               cvssV2Score: num(stored?.cvssV2Score ?? v.cvss_v2_score),
               cvssV2Severity: stored?.cvssV2Severity ?? v.cvss_v2_severity ?? null,
               cvssVector: stored?.cvssVector ?? stored?.cvss_vector ?? v.cvss_vector ?? null,
+              epssScore: num(v.epss_score),
               weaknesses: list(v.weaknesses).length ? list(v.weaknesses) : list(stored?.weaknesses),
               vendors: list(v.vendors),
               description: typeof stored?.description === 'string' ? stored.description : '',
