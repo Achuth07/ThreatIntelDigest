@@ -4119,12 +4119,16 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
     const pool = new Pool({ connectionString: process.env.DATABASE_URL });
     const db = drizzle(pool);
 
-    // Clean up old articles (older than 30 days)
+    // Articles are kept for this long. The cleanup below and the ingest filter further down
+    // must use the same window, or old feed items are deleted and re-inserted on every run.
+    const ARTICLE_RETENTION_DAYS = 30;
+    const retentionCutoff = new Date(Date.now() - ARTICLE_RETENTION_DAYS * 24 * 60 * 60 * 1000);
+
     console.log('Cleaning up old articles...');
     try {
       await db.execute(sql`
-        DELETE FROM articles 
-        WHERE published_at < NOW() - INTERVAL '30 days'
+        DELETE FROM articles
+        WHERE published_at < ${retentionCutoff}
       `);
       console.log('Cleaned up old articles');
     } catch (cleanupErr) {
@@ -4149,6 +4153,7 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
     console.log(`Found ${activeSources.length} active RSS sources`);
 
     let totalFetched = 0;
+    let totalSkippedOld = 0;
     let cveLinksCreated = 0;
     const feedResults: any[] = [];
     const CONCURRENCY = 10;
@@ -4159,6 +4164,7 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
         url: source.url,
         itemsFound: 0,
         itemsProcessed: 0,
+        itemsSkippedOld: 0,
         errors: [] as string[]
       };
 
@@ -4207,13 +4213,6 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
           if (!item.title || !item.link) continue;
 
           if (!existingUrls.has(item.link)) {
-            existingUrls.add(item.link);
-
-            const threatLevel = determineThreatLevel(item.title || "", item.contentSnippet || "");
-            const targetedIndustries = extractTargetedIndustries(item.title || "", item.contentSnippet || "");
-            const readTime = estimateReadTime(item.contentSnippet || item.content || "");
-            const summary = (item.contentSnippet || item.content?.substring(0, 300) || "") + ((item.content && item.content.length > 300) ? "..." : "");
-
             let publishedAt: Date;
             try {
               publishedAt = item.pubDate ? new Date(item.pubDate) : new Date();
@@ -4221,6 +4220,20 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
             } catch {
               publishedAt = new Date();
             }
+
+            // The cleanup above would delete it on the next run, and the run after would add it back.
+            if (publishedAt < retentionCutoff) {
+              sourceResult.itemsSkippedOld++;
+              totalSkippedOld++;
+              continue;
+            }
+
+            existingUrls.add(item.link);
+
+            const threatLevel = determineThreatLevel(item.title || "", item.contentSnippet || "");
+            const targetedIndustries = extractTargetedIndustries(item.title || "", item.contentSnippet || "");
+            const readTime = estimateReadTime(item.contentSnippet || item.content || "");
+            const summary = (item.contentSnippet || item.content?.substring(0, 300) || "") + ((item.content && item.content.length > 300) ? "..." : "");
 
             let articleId: string | null = null;
             try {
@@ -4270,10 +4283,11 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
       await Promise.allSettled(batch.map((s: any) => fetchSourceFeed(s)));
     }
 
-    console.log(`Feed fetch complete. Fetched ${totalFetched} new articles, ${cveLinksCreated} CVE links.`);
+    console.log(`Feed fetch complete. Fetched ${totalFetched} new articles, skipped ${totalSkippedOld} older than ${ARTICLE_RETENTION_DAYS} days, ${cveLinksCreated} new CVE links.`);
     res.json({
       message: `Successfully fetched ${totalFetched} new articles`,
       totalFetched,
+      totalSkippedOld,
       cveLinksCreated,
       sourceResults: feedResults,
       timestamp: new Date().toISOString()

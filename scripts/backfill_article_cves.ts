@@ -22,12 +22,12 @@ async function main() {
     if (mentions.size === 0) continue;
     articlesLinked++;
     mentions.forEach((_, id) => ids.add(id));
-    links += dryRun
+    links += dryRun  // in a dry run, counts every mention rather than only new links
       ? mentions.size
       : await linkArticleCves(db, { id: row.id, url: row.url, title: row.title, source: row.source, publishedAt: row.published_at }, mentions);
   }
 
-  console.log(`${dryRun ? '[dry run] ' : ''}Scanned ${rows.length} articles naming "CVE": ${articlesLinked} linked, ${links} links, ${ids.size} distinct CVEs`);
+  console.log(`${dryRun ? '[dry run] ' : ''}Scanned ${rows.length} articles naming "CVE": ${articlesLinked} linked, ${links} new links, ${ids.size} distinct CVEs`);
   process.exit(0);
 }
 

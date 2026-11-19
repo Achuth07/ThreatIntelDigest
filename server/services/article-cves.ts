@@ -52,6 +52,7 @@ export function extractCveMentions(parts: { title?: string | null; summary?: str
 }
 
 // Upserts links for one article. Safe to repeat; a re-run fills in article_id if it was missing.
+// Returns how many links were new; rows that already existed are updated but not counted.
 export async function linkArticleCves(db: Executor, article: LinkableArticle, mentions: Map<string, FoundIn>): Promise<number> {
   if (mentions.size === 0) return 0;
   // Pass a Date, as the articles INSERT does, so both columns get the same wall-clock value.
@@ -66,8 +67,10 @@ export async function linkArticleCves(db: Executor, article: LinkableArticle, me
     VALUES ${values}
     ON CONFLICT (cve_id, article_url) DO UPDATE
       SET article_id = COALESCE(EXCLUDED.article_id, article_cves.article_id)
+    RETURNING (xmax = 0) AS inserted
   `);
-  return (result as any).rowCount ?? mentions.size;
+  // xmax is 0 only on a row this statement inserted, not on one ON CONFLICT updated.
+  return result.rows.filter(row => row.inserted === true).length;
 }
 
 export async function getArticleCveIds(db: Executor, articleId: string): Promise<string[]> {
