@@ -29,11 +29,33 @@ const NAME_OVERRIDES: Record<string, string> = {
   github: 'GitHub',
   wordpress: 'WordPress',
   mozilla: 'Mozilla',
+  arubanetworks: 'Aruba Networks',
+  linuxfoundation: 'Linux Foundation',
+  hcltech: 'HCL Technologies',
+  zohocorp: 'Zoho',
+  deltaww: 'Delta Electronics',
+  rockwellautomation: 'Rockwell Automation',
+  mediawiki: 'MediaWiki',
+  ffmpeg: 'FFmpeg',
+  freerdp: 'FreeRDP',
+  concretecms: 'Concrete CMS',
+  zephyrproject: 'Zephyr Project',
+  netapp: 'NetApp',
+  totolink: 'TOTOLINK',
+  openclaw: 'OpenClaw',
+  irfanview: 'IrfanView',
+  'open-emr': 'OpenEMR',
+  'pdf-xchange': 'PDF-XChange',
+  wwbn: 'WWBN',
+  openatom: 'OpenAtom',
+  gpac: 'GPAC',
+  wavlink: 'WAVLINK',
 };
 
 /** "palo_alto_networks" -> "Palo Alto Networks"; short names are acronyms: "ibm" -> "IBM". */
 export function prettifyVendor(vendor: string): string {
-  if (NAME_OVERRIDES[vendor]) return NAME_OVERRIDES[vendor];
+  const key = vendor.toLowerCase().replace(/_/g, '-');
+  if (NAME_OVERRIDES[key]) return NAME_OVERRIDES[key];
   return vendor
     .split(/[_\s-]+/)
     .filter(Boolean)
@@ -41,13 +63,27 @@ export function prettifyVendor(vendor: string): string {
     .join(' ');
 }
 
-/** The form a KEV vendor name takes to be compared with the NVD vendor value. */
-export const normalizeVendor = (value: string) =>
-  value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
+/**
+ * The form a vendor name takes to be compared across sources: letters and digits only. NVD writes
+ * "paloaltonetworks" and CISA writes "Palo Alto Networks"; both become "paloaltonetworks".
+ */
+export const normalizeVendor = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '');
+
+// Vendors that are individuals or tutorial-code publishers (the SourceCodester family). They have
+// many CVEs but make poor landing pages, so they are skipped when choosing the top vendors.
+export const EXCLUDED_VENDORS = new Set([
+  'oretnom23',
+  'campcodes',
+  'phpgurukul',
+  'projectworlds',
+  'angeljudesuarez',
+  'mayurik',
+  'code-projects',
+  'fabian',
+  'itsourcecode',
+  'janobe',
+  'wegia',
+]);
 
 // ---------------------------------------------------------------------------------------------
 // Shapes
@@ -174,7 +210,7 @@ export async function getVendorHub(sql: Sql, slug: string): Promise<VendorHub | 
         WHERE vendors @> ${filter}::jsonb GROUP BY 1`,
     sql`SELECT cve_id, vendor_project, product, vulnerability_name, date_added, known_ransomware_campaign_use
         FROM known_exploited_vulnerabilities
-        WHERE trim(both '_' from lower(regexp_replace(trim(vendor_project), '[^a-zA-Z0-9]+', '_', 'g'))) = ${stat.vendor}
+        WHERE lower(regexp_replace(vendor_project, '[^a-zA-Z0-9]+', '', 'g')) = ${normalizeVendor(stat.vendor)}
         ORDER BY date_added DESC LIMIT ${HUB_LIST_SIZE}`,
     sql`SELECT w AS id, count(*)::int AS n FROM vulnerabilities, unnest(weaknesses) AS w
         WHERE vendors @> ${filter}::jsonb AND w LIKE 'CWE-%' GROUP BY w ORDER BY n DESC LIMIT 5`,
@@ -251,10 +287,10 @@ export async function getHubCweIds(sql: Sql, ids: string[]): Promise<string[]> {
  */
 export async function refreshHubStats(client: any): Promise<{ vendors: number; cwes: number }> {
   const vendors = await client`SELECT v AS vendor, count(*)::int AS n FROM vulnerabilities, jsonb_array_elements_text(vendors) AS v
-                               GROUP BY v ORDER BY n DESC LIMIT ${TOP_VENDORS * 3}`;
+                               GROUP BY v ORDER BY n DESC LIMIT ${TOP_VENDORS * 3}`;  // spare rows: excluded and duplicate vendors are skipped
   const cwes = await client`SELECT w AS id, count(*)::int AS n FROM vulnerabilities, unnest(weaknesses) AS w
                             WHERE w LIKE 'CWE-%' GROUP BY w ORDER BY n DESC LIMIT ${TOP_CWES}`;
-  const kevByVendor = await client`SELECT trim(both '_' from lower(regexp_replace(trim(vendor_project), '[^a-zA-Z0-9]+', '_', 'g'))) AS vendor,
+  const kevByVendor = await client`SELECT lower(regexp_replace(vendor_project, '[^a-zA-Z0-9]+', '', 'g')) AS vendor,
                                           min(vendor_project) AS display, count(*)::int AS n
                                    FROM known_exploited_vulnerabilities GROUP BY 1`;
   const kevByCwe = await client`SELECT w AS id, count(*)::int AS n
@@ -271,7 +307,7 @@ export async function refreshHubStats(client: any): Promise<{ vendors: number; c
   const vendorRows: { slug: string; vendor: string; name: string; n: number; kev: number }[] = [];
   for (const r of vendors as any[]) {
     const slug = vendorSlug(r.vendor);
-    if (!slug || seen.has(slug)) continue;
+    if (!slug || seen.has(slug) || EXCLUDED_VENDORS.has(slug)) continue;
     seen.add(slug);
     const kev = kevVendor.get(normalizeVendor(r.vendor));
     vendorRows.push({ slug, vendor: r.vendor, name: kev?.display ?? prettifyVendor(r.vendor), n: Number(r.n), kev: kev?.n ?? 0 });
