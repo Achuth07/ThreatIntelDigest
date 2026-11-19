@@ -87,6 +87,8 @@ function shell(title: string, inner: string): string {
 
 export interface CveBodyData {
   id: string;
+  /** Threat actors named in news about this CVE. */
+  actors?: { id: string; slug: string | null; name: string }[];
   kev: {
     vendorProject: string;
     product: string;
@@ -169,6 +171,7 @@ ${kev?.notes ? `<p>${esc(plain(kev.notes))}</p>` : ''}
 ${timeline.length ? `<h2>Timeline</h2><ul>${timeline.map((e) => `<li>${esc(e.date)}: ${esc(e.label)}${e.note ? ` (${esc(e.note)})` : ''}</li>`).join('')}</ul>` : ''}
 ${nvd?.weaknesses?.length ? `<h2>Weaknesses (CWE)</h2><ul>${nvd.weaknesses.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : ''}
 ${products.length ? `<h2>Affected products</h2><ul>${products.map((p) => { const versions = (p.versions ?? []).filter((v) => v && v !== '-' && v !== '*').slice(0, 12); return `<li>${esc([p.vendor, p.product].filter(Boolean).join(' '))}${versions.length ? ` (versions: ${esc(versions.join(', '))})` : ''}</li>`; }).join('')}${moreProducts > 0 ? `<li>and ${moreProducts} more</li>` : ''}</ul>` : nvd?.vendors?.length ? `<h2>Affected vendors</h2><p>${esc(nvd.vendors.join(', '))}</p>` : ''}
+${data.actors?.length ? `<h2>Threat actors named in news about this CVE</h2><p>Groups mentioned in news articles that also name ${esc(id)}. This is not a confirmed attribution.</p><ul>${data.actors.map((a) => `<li><a href="${esc(actorUrl(a))}">${esc(a.name)}</a></li>`).join('')}</ul>` : ''}
 ${references.length ? `<h2>References</h2><ul>${references.map((r) => `<li><a href="${esc(safeUrl(r.url))}" rel="nofollow noopener">${esc(r.url)}</a></li>`).join('')}</ul>` : ''}
 <h2>More on WhatCyber</h2>
 <ul><li><a href="${esc(CVE_HUB)}">Latest CVEs</a></li><li><a href="${esc(KEV_HUB)}">CISA Known Exploited Vulnerabilities catalog</a></li><li><a href="${esc(ACTORS_HUB)}">Threat actor profiles</a></li></ul>`;
@@ -209,6 +212,8 @@ export interface KevHubData {
   page: number;
   totalPages: number;
   total: number;
+  /** The vendors with the most KEV entries. */
+  topVendors?: { vendor: string; count: number }[];
   entries: {
     cveId: string;
     vendorProject: string;
@@ -253,6 +258,7 @@ ${page === 1 ? `<p>${esc(KEV_ANSWER)}</p>` : ''}
     })
     .join('')}</ul>
 ${pager(KEV_HUB, page, totalPages, 'KEV catalog pages')}
+${page === 1 && data.topVendors?.length ? `<h2>Most affected vendors</h2><ul>${data.topVendors.map((v) => `<li>${esc(v.vendor)}: ${v.count} ${v.count === 1 ? 'entry' : 'entries'}</li>`).join('')}</ul>` : ''}
 ${page === 1 ? `<h2>Frequently asked questions</h2>\n${KEV_FAQ.map(({ question, answer }) => `<h3>${esc(question)}</h3><p>${esc(answer)}</p>`).join('\n')}` : ''}
 <h2>More on WhatCyber</h2>
 <ul><li><a href="${esc(CVE_HUB)}">Latest CVEs</a></li><li><a href="${esc(ACTORS_HUB)}">Threat actor profiles</a></li><li><a href="/threatfeed">Threat feed</a></li></ul>`;
