@@ -105,10 +105,10 @@ function Header() {
   useEffect(() => setSignedIn(Boolean(getAuthenticatedUser()?.token)), []);
 
   const links = [
-    { id: 'platform', count: '(1,750+)', label: 'KEV' },
-    { id: 'library', count: '(215,000+)', label: 'CVEs' },
-    { id: 'library', count: '(175+)', label: 'Actors' },
-    { id: 'how', count: '(3)', label: 'Steps' },
+    { id: 'platform', label: 'KEV' },
+    { id: 'library', label: 'CVEs' },
+    { id: 'library', label: 'Actors' },
+    { id: 'how', label: 'Steps' },
   ];
 
   return (
@@ -121,7 +121,7 @@ function Header() {
         <nav className="wcl-ix" aria-label="Page sections">
           {links.map((l) => (
             <a key={l.label} href={`#${l.id}`} onClick={(e) => scrollToId(e, l.id)}>
-              <span>{l.count}</span>{l.label}
+              {l.label}
             </a>
           ))}
         </nav>
