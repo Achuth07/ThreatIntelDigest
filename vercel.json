@@ -80,7 +80,7 @@
       "destination": "/robots.txt"
     },
     {
-      "source": "/:page(dashboard|threatfeed|watchlist|login|register|onboarding|forgot-password|reset-password|set-password|settings|admin|about|sources|contact|privacy|terms|report-bugs|blog|threat-actors|cve|cisa-kev)",
+      "source": "/:route(dashboard|threatfeed|watchlist|login|register|onboarding|forgot-password|reset-password|set-password|settings|admin|about|sources|contact|privacy|terms|report-bugs|blog|threat-actors|cve|cisa-kev)",
       "destination": "/api/page"
     },
     {
