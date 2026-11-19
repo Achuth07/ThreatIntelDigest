@@ -56,13 +56,22 @@ function createDataSource(): PageData {
   return {
     async getCve(cveId) {
       const query = sql();
-      const [kevRows, vulnRows] = await Promise.all([
+      const [kevRows, vulnRows, actorRows] = await Promise.all([
         query`SELECT vendor_project, product, vulnerability_name, date_added, short_description, required_action, due_date,
                      known_ransomware_campaign_use, notes
               FROM known_exploited_vulnerabilities WHERE cve_id = ${cveId}`,
         query`SELECT published_date, last_modified_date, vuln_status, cvss_v3_score, cvss_v3_severity, cvss_v2_score,
                      cvss_v2_severity, cvss_vector, epss_score, weaknesses, vendors, has_r2_backing
               FROM vulnerabilities WHERE id = ${cveId}`,
+        // Threat actors named in the news articles that name this CVE (an inference, labelled as such).
+        query`SELECT tg.id, tg.slug, tg.name, count(DISTINCT ac.article_url)::int AS mentions
+              FROM article_cves ac
+              JOIN article_threat_groups atg ON atg.article_id = ac.article_id
+              JOIN threat_groups tg ON tg.id = atg.threat_group_id
+              WHERE ac.cve_id = ${cveId}
+              GROUP BY tg.id, tg.slug, tg.name
+              ORDER BY mentions DESC, tg.name
+              LIMIT 8`.catch(() => []),
       ]);
       const k = kevRows[0] as any;
       const v = vulnRows[0] as any;
@@ -87,6 +96,7 @@ function createDataSource(): PageData {
 
       return {
         id: cveId,
+        actors: (actorRows as any[]).map((a) => ({ id: a.id, slug: a.slug ?? null, name: a.name })),
         kev: k
           ? {
               vendorProject: k.vendor_project,
@@ -138,8 +148,10 @@ function createDataSource(): PageData {
 
     async getKevPage(page, pageSize) {
       const query = sql();
-      const [countRows, rows] = await Promise.all([
+      const [countRows, vendorRows, rows] = await Promise.all([
         query`SELECT count(*)::int AS total FROM known_exploited_vulnerabilities`,
+        query`SELECT vendor_project, count(*)::int AS count FROM known_exploited_vulnerabilities
+              GROUP BY vendor_project ORDER BY count DESC, vendor_project LIMIT 10`,
         query`SELECT cve_id, vendor_project, product, vulnerability_name, date_added, short_description,
                      known_ransomware_campaign_use
               FROM known_exploited_vulnerabilities
@@ -151,6 +163,7 @@ function createDataSource(): PageData {
         page,
         total,
         totalPages: Math.max(1, Math.ceil(total / pageSize)),
+        topVendors: (vendorRows as any[]).map((v) => ({ vendor: v.vendor_project, count: Number(v.count) })),
         entries: (rows as any[]).map((r) => ({
           cveId: r.cve_id,
           vendorProject: r.vendor_project,

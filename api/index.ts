@@ -5417,6 +5417,41 @@ async function handleKevEndpoints(req: VercelRequest, res: VercelResponse, actio
     }
   }
 
+  // GET /api/kev/:cveId/actors
+  // Threat actors named in the news articles that name this CVE. It is an inference from shared
+  // articles, not a confirmed attribution, and the page says so.
+  const cveActorsMatch = pathname.match(/^\/api\/kev\/([\w-]+(?:-[\w-]+)*)\/actors\/?$/);
+  if (cveActorsMatch && cveActorsMatch[1] && method === 'GET') {
+    try {
+      const cveId = cveActorsMatch[1].toUpperCase();
+      const db = await getDb();
+      const { threatGroups, articleThreatGroups, articleCves } = await import('../shared/schema.js');
+      const { eq, desc, sql } = await import('drizzle-orm');
+
+      const mentions = sql<number>`count(distinct ${articleCves.articleUrl})::int`;
+      const rows = await db
+        .select({
+          id: threatGroups.id,
+          slug: threatGroups.slug,
+          name: threatGroups.name,
+          mentions,
+        })
+        .from(articleCves)
+        .innerJoin(articleThreatGroups, eq(articleThreatGroups.articleId, articleCves.articleId))
+        .innerJoin(threatGroups, eq(threatGroups.id, articleThreatGroups.threatGroupId))
+        .where(eq(articleCves.cveId, cveId))
+        .groupBy(threatGroups.id, threatGroups.slug, threatGroups.name)
+        .orderBy(desc(mentions), threatGroups.name)
+        .limit(8);
+
+      res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=3600');
+      return res.json(rows);
+    } catch (error) {
+      console.error('Error fetching actors for CVE:', error);
+      return res.status(500).json({ error: 'Failed to fetch actors' });
+    }
+  }
+
   return res.status(404).json({ error: 'Endpoint not found' });
 }
 
