@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from 'drizzle-orm';
 import { storage, initializeStorage } from '../server/storage.js';
 import { fetchCveFromR2, getCveHistory } from '../server/services/r2.js';
+import { extractCveMentions, getArticleCveIds, getArticlesMentioningCve, linkArticleCves, mergeRelatedNews } from '../server/services/article-cves.js';
 
 // Module-level guard: only initialize storage once per warm function invocation
 let storageInitialized = false;
@@ -1904,7 +1905,8 @@ async function handleArticlesEndpoints(req: VercelRequest, res: VercelResponse, 
           threatLevel: row.threat_level,
           tags: row.tags,
           readTime: row.read_time,
-          createdAt: row.created_at
+          createdAt: row.created_at,
+          cveIds: await getArticleCveIds(db, row.id).catch(() => [] as string[])
         };
 
         return res.json(article);
@@ -2085,6 +2087,11 @@ async function handleArticlesEndpoints(req: VercelRequest, res: VercelResponse, 
 
       const article = result.rows[0];
       console.log('Successfully created article:', article.id);
+      try {
+        await linkArticleCves(db, { id: article.id as string, url, title, source, publishedAt }, extractCveMentions({ title, summary }));
+      } catch (linkError) {
+        console.error('CVE linking failed for new article:', linkError);
+      }
       res.status(201).json({
         id: article.id,
         title: article.title,
@@ -4142,6 +4149,7 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
     console.log(`Found ${activeSources.length} active RSS sources`);
 
     let totalFetched = 0;
+    let cveLinksCreated = 0;
     const feedResults: any[] = [];
     const CONCURRENCY = 10;
 
@@ -4214,16 +4222,29 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
               publishedAt = new Date();
             }
 
+            let articleId: string | null = null;
             try {
-              await db.execute(sql`
+              const inserted = await db.execute(sql`
                 INSERT INTO articles (title, summary, url, source, threat_level, read_time, published_at, targeted_industries)
                 VALUES (${item.title}, ${summary}, ${item.link}, ${source.name}, ${threatLevel}, ${readTime}, ${publishedAt}, ${JSON.stringify(targetedIndustries)})
+                RETURNING id
               `);
+              articleId = (inserted.rows[0] as any)?.id ?? null;
               totalFetched++;
               processedCount++;
               sourceResult.itemsProcessed++;
             } catch (insertError: any) {
               sourceResult.errors.push(`Insert failed: ${insertError?.message || 'Unknown error'}`);
+            }
+
+            // Link the CVEs the item names. A failure here must not lose the article.
+            if (articleId) {
+              try {
+                const mentions = extractCveMentions({ title: item.title, summary, content: item.content || item.contentSnippet });
+                cveLinksCreated += await linkArticleCves(db, { id: articleId, url: item.link, title: item.title, source: source.name, publishedAt }, mentions);
+              } catch (linkError: any) {
+                sourceResult.errors.push(`CVE linking failed: ${linkError?.message || 'Unknown error'}`);
+              }
             }
           }
         }
@@ -4249,10 +4270,11 @@ async function handleFetchFeedsEndpoints(req: VercelRequest, res: VercelResponse
       await Promise.allSettled(batch.map((s: any) => fetchSourceFeed(s)));
     }
 
-    console.log(`Feed fetch complete. Fetched ${totalFetched} new articles.`);
+    console.log(`Feed fetch complete. Fetched ${totalFetched} new articles, ${cveLinksCreated} CVE links.`);
     res.json({
       message: `Successfully fetched ${totalFetched} new articles`,
       totalFetched,
+      cveLinksCreated,
       sourceResults: feedResults,
       timestamp: new Date().toISOString()
     });
@@ -5352,26 +5374,29 @@ async function handleKevEndpoints(req: VercelRequest, res: VercelResponse, actio
   const relatedArticlesMatch = pathname.match(/^\/api\/kev\/([\w-]+(?:-[\w-]+)*)\/related-articles\/?$/);
   if (relatedArticlesMatch && relatedArticlesMatch[1] && method === 'GET') {
     try {
-      const cveId = relatedArticlesMatch[1];
+      const cveId = relatedArticlesMatch[1].toUpperCase();
       const limit = parseListLimit(req.query.limit, 10);
 
-      // First, get the KEV entry to extract product/vendor info
-      const kev = await storage.getKnownExploitedVulnerability(cveId);
+      // Articles that name the CVE come first, for any CVE, KEV or not.
+      const mentioned = await getArticlesMentioningCve(cveId, limit);
 
-      if (!kev) {
-        return res.status(404).json({ error: 'KEV entry not found' });
+      // KEV entries also get keyword matches on product and vendor to fill the list.
+      let related: any[] = [];
+      if (mentioned.length < limit) {
+        const kev = await storage.getKnownExploitedVulnerability(cveId);
+        if (kev) {
+          related = await storage.getRelatedArticlesForKev({
+            cveID: kev.cveID,
+            product: kev.product,
+            vendor: kev.vendorProject,
+            vulnerabilityName: kev.vulnerabilityName,
+            limit
+          });
+        }
       }
 
-      // Use smart matching with multiple criteria
-      const relatedArticles = await storage.getRelatedArticlesForKev({
-        cveID: kev.cveID,
-        product: kev.product,
-        vendor: kev.vendorProject,
-        vulnerabilityName: kev.vulnerabilityName,
-        limit
-      });
-
-      return res.json(relatedArticles);
+      res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=3600');
+      return res.json(mergeRelatedNews(mentioned, related, limit));
     } catch (error) {
       console.error('Error fetching related articles for KEV:', error);
       return res.status(500).json({ error: 'Failed to fetch related articles' });

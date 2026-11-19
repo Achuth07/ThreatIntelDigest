@@ -498,26 +498,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get related articles for a specific KEV entry (smart matching)
   app.get('/api/kev/:cveId/related-articles', async (req, res) => {
     try {
-      const { cveId } = req.params;
-      const limit = parseInt(req.query.limit as string) || 10;
+      const cveId = req.params.cveId.toUpperCase();
+      const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 10, 1), 100);
+      const { getArticlesMentioningCve, mergeRelatedNews } = await import('./services/article-cves.js');
 
-      // First, get the KEV entry to extract product/vendor info
-      const kev = await storage.getKnownExploitedVulnerability(cveId);
-
-      if (!kev) {
-        return res.status(404).json({ error: 'KEV entry not found' });
+      // Same order as api/index.ts: articles naming the CVE, then KEV keyword matches.
+      const mentioned = await getArticlesMentioningCve(cveId, limit);
+      let related: any[] = [];
+      if (mentioned.length < limit) {
+        const kev = await storage.getKnownExploitedVulnerability(cveId);
+        if (kev) {
+          related = await storage.getRelatedArticlesForKev({
+            cveID: kev.cveID,
+            product: kev.product,
+            vendor: kev.vendorProject,
+            vulnerabilityName: kev.vulnerabilityName,
+            limit
+          });
+        }
       }
 
-      // Use smart matching with multiple criteria
-      const relatedArticles = await storage.getRelatedArticlesForKev({
-        cveID: kev.cveID,
-        product: kev.product,
-        vendor: kev.vendorProject,
-        vulnerabilityName: kev.vulnerabilityName,
-        limit
-      });
-
-      res.json(relatedArticles);
+      res.json(mergeRelatedNews(mentioned, related, limit));
     } catch (error) {
       console.error('Error fetching related articles for KEV:', error);
       res.status(500).json({ error: 'Failed to fetch related articles' });

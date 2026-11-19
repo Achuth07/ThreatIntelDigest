@@ -10,7 +10,9 @@ import {
   decimal,
   jsonb,
   uuid,
-  unique
+  unique,
+  primaryKey,
+  index
 } from 'drizzle-orm/pg-core';
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -29,6 +31,24 @@ export const articles = pgTable("articles", {
   readTime: integer("read_time").default(5),
   createdAt: timestamp("created_at").default(sql`now()`),
 });
+
+// CVE IDs named in news articles (WHA-54). Keeps a copy of the article fields so links
+// survive the 30-day article cleanup; see migrations/007_article_cves.sql.
+export const articleCves = pgTable("article_cves", {
+  cveId: varchar("cve_id", { length: 32 }).notNull(),
+  articleUrl: text("article_url").notNull(),
+  articleId: uuid("article_id").references(() => articles.id, { onDelete: 'set null' }),
+  title: text("title").notNull(),
+  source: text("source").notNull(),
+  publishedAt: timestamp("published_at").notNull(),
+  foundIn: text("found_in").notNull(),
+  createdAt: timestamp("created_at").notNull().default(sql`now()`),
+}, (table) => [
+  primaryKey({ columns: [table.cveId, table.articleUrl] }),
+  index("idx_article_cves_cve_published").on(table.cveId, table.publishedAt.desc()),
+  index("idx_article_cves_article_id").on(table.articleId),
+  index("idx_article_cves_article_url").on(table.articleUrl),
+]);
 
 export const bookmarks = pgTable("bookmarks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

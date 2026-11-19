@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, ExternalLink, Clock, Calendar, ShieldAlert } from "lucide-react";
+import { ArrowLeft, ExternalLink, Clock, Calendar, ShieldAlert, Bug } from "lucide-react";
+import { cveUrl } from '@/lib/urls';
 import { format } from "date-fns";
 import { useLocation } from "wouter";
 import logoImage from '@/assets/logo/android-chrome-512x512.png';
@@ -21,7 +22,11 @@ interface Article {
     threatLevel: string;
     tags: string[];
     readTime: number;
+    cveIds?: string[];
 }
+
+// Past this many, list the first few and link the rest as a count, so bulletins stay readable.
+const VISIBLE_CVES = 12;
 
 interface ArticleContent {
     title: string;
@@ -39,6 +44,7 @@ export default function ArticlePage() {
     const [, params] = useRoute("/article/:id");
     const id = params?.id;
     const [, setLocation] = useLocation();
+    const [showAllCves, setShowAllCves] = useState(false);
 
     // Fetch article metadata
     const { data: article, isLoading: isArticleLoading, error: articleError } = useQuery<Article>({
@@ -191,6 +197,33 @@ export default function ArticlePage() {
                             Read Original <ExternalLink className="ml-1 h-3 w-3" />
                         </a>
                     </div>
+
+                    {article.cveIds && article.cveIds.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-2 border-b border-border py-4">
+                            <span className="mr-1 flex items-center text-sm font-medium text-muted-foreground">
+                                <Bug className="mr-2 h-4 w-4" />
+                                CVEs mentioned
+                            </span>
+                            {(showAllCves ? article.cveIds : article.cveIds.slice(0, VISIBLE_CVES)).map(cveId => (
+                                <a
+                                    key={cveId}
+                                    href={cveUrl(cveId)}
+                                    className="rounded border border-whatcyber-teal/30 bg-whatcyber-teal/10 px-2 py-0.5 font-mono text-xs text-whatcyber-teal transition-colors hover:bg-whatcyber-teal/20"
+                                >
+                                    {cveId}
+                                </a>
+                            ))}
+                            {!showAllCves && article.cveIds.length > VISIBLE_CVES && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAllCves(true)}
+                                    className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                                >
+                                    +{article.cveIds.length - VISIBLE_CVES} more
+                                </button>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Article Content */}
