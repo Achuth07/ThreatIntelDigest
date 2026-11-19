@@ -131,7 +131,14 @@ export function actorJsonLd(input: {
 }
 
 /** A listing page: /cve, /cisa-kev, /threat-actors. */
-export function hubJsonLd(input: { path: string; name: string; title: string; description: string }): Json {
+export function hubJsonLd(input: {
+  path: string;
+  name: string;
+  title: string;
+  description: string;
+  /** Questions shown on the page, written out as FAQPage data. */
+  faq?: { question: string; answer: string }[];
+}): Json {
   const pageUrl = `${SITE_URL}${input.path}`;
   return {
     '@context': CONTEXT,
@@ -142,6 +149,18 @@ export function hubJsonLd(input: { path: string; name: string; title: string; de
         { name: 'Home', path: '/' },
         { name: input.name, path: input.path },
       ]),
+      ...(input.faq?.length
+        ? [
+            {
+              '@type': 'FAQPage',
+              mainEntity: input.faq.map(({ question, answer }) => ({
+                '@type': 'Question',
+                name: question,
+                acceptedAnswer: { '@type': 'Answer', text: answer },
+              })),
+            },
+          ]
+        : []),
     ],
   };
 }

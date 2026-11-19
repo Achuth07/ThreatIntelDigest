@@ -11,6 +11,7 @@
 
 import { ACTORS_HUB, CVE_HUB, KEV_HUB, actorUrl, cveUrl } from '../../client/src/lib/urls.js';
 import { LANDING_FAQ } from '../../client/src/lib/jsonld.js';
+import { KEV_ANSWER, KEV_FAQ } from '../../client/src/lib/kev-content.js';
 import { pageList } from '../../client/src/lib/page-list.js';
 
 const esc = (value: unknown) =>
@@ -224,7 +225,8 @@ export function renderKevHubBody(data: KevHubData): string {
   const inner = `
 <p class="crumbs"><a href="/">WhatCyber</a> / CISA KEV catalog</p>
 <h1>CISA Known Exploited Vulnerabilities (KEV) Catalog</h1>
-<p>Vulnerabilities that CISA has confirmed are being exploited in the wild${total ? `: ${total} in the catalog` : ''}. Newest additions first${totalPages > 1 ? `, page ${page} of ${totalPages}` : ''}.</p>
+${page === 1 ? `<p>${esc(KEV_ANSWER)}</p>` : ''}
+<p>${total ? `${total} vulnerabilities in the catalog. ` : ''}Newest additions first${totalPages > 1 ? `, page ${page} of ${totalPages}` : ''}.</p>
 <ul>${entries
     .map((e) => {
       const ransomware = e.knownRansomwareCampaignUse === 'Known' ? ' <span class="tag warn">Ransomware linked</span>' : '';
@@ -233,6 +235,7 @@ export function renderKevHubBody(data: KevHubData): string {
     })
     .join('')}</ul>
 ${pager(KEV_HUB, page, totalPages, 'KEV catalog pages')}
+${page === 1 ? `<h2>Frequently asked questions</h2>\n${KEV_FAQ.map(({ question, answer }) => `<h3>${esc(question)}</h3><p>${esc(answer)}</p>`).join('\n')}` : ''}
 <h2>More on WhatCyber</h2>
 <ul><li><a href="${esc(CVE_HUB)}">Latest CVEs</a></li><li><a href="${esc(ACTORS_HUB)}">Threat actor profiles</a></li><li><a href="/threatfeed">Threat feed</a></li></ul>`;
 
