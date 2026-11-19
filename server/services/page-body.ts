@@ -9,7 +9,7 @@
  * Keep this in step with what the pages show: same facts, simpler layout.
  */
 
-import { ACTORS_HUB, CVE_HUB, KEV_HUB, cveUrl } from '../../client/src/lib/urls.js';
+import { ACTORS_HUB, CVE_HUB, KEV_HUB, actorUrl, cveUrl } from '../../client/src/lib/urls.js';
 import { LANDING_FAQ } from '../../client/src/lib/jsonld.js';
 import { pageList } from '../../client/src/lib/page-list.js';
 
@@ -237,6 +237,73 @@ ${pager(KEV_HUB, page, totalPages, 'KEV catalog pages')}
 <ul><li><a href="${esc(CVE_HUB)}">Latest CVEs</a></li><li><a href="${esc(ACTORS_HUB)}">Threat actor profiles</a></li><li><a href="/threatfeed">Threat feed</a></li></ul>`;
 
   return shell('CISA KEV catalog', inner);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Threat actor directory (WHA-17 hubs)
+
+export interface ActorsHubData {
+  page: number;
+  totalPages: number;
+  total: number;
+  entries: { id: string; slug: string | null; name: string; aliases: string[] | null; description: string | null }[];
+}
+
+export function renderActorsHubBody(data: ActorsHubData): string {
+  const { page, totalPages, total, entries } = data;
+  const inner = `
+<p class="crumbs"><a href="/">WhatCyber</a> / Threat actors</p>
+<h1>Threat Actor Directory</h1>
+<p>Known threat groups, intrusion sets and APTs, sourced from MITRE ATT&amp;CK${total ? `: ${total} profiles` : ''}${totalPages > 1 ? `, page ${page} of ${totalPages}` : ''}.</p>
+<ul>${entries
+    .map((a) => {
+      const aliases = (a.aliases ?? []).filter(Boolean).slice(0, 4);
+      const description = plain(a.description ?? '');
+      return `<li><a href="${esc(actorUrl(a))}">${esc(a.name)}</a>${aliases.length ? ` (also known as ${esc(aliases.join(', '))})` : ''}${description ? `<br>${esc(description.length > 220 ? description.slice(0, 217) + '...' : description)}` : ''}</li>`;
+    })
+    .join('')}</ul>
+${pager(ACTORS_HUB, page, totalPages, 'Threat actor pages')}
+<h2>More on WhatCyber</h2>
+<ul><li><a href="${esc(KEV_HUB)}">CISA Known Exploited Vulnerabilities catalog</a></li><li><a href="${esc(CVE_HUB)}">Latest CVEs</a></li><li><a href="/threatfeed">Threat feed</a></li></ul>`;
+
+  return shell('Threat actors', inner);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Latest CVEs hub (WHA-17 hubs)
+
+export interface CveHubData {
+  total: number;
+  entries: {
+    id: string;
+    publishedDate: unknown;
+    severity: string | null;
+    score: number | null;
+    vendors: string[] | null;
+  }[];
+}
+
+export function renderCveHubBody(data: CveHubData): string {
+  const { total, entries } = data;
+  const inner = `
+<p class="crumbs"><a href="/">WhatCyber</a> / Vulnerabilities</p>
+<h1>Latest CVEs</h1>
+<p>Newly published vulnerabilities from the National Vulnerability Database with CVSS scores and affected vendors${total ? `, ${total.toLocaleString('en-US')} CVEs tracked` : ''}. Newest first.</p>
+<ul>${entries
+    .map((c) => {
+      const vendors = (c.vendors ?? []).filter(Boolean).slice(0, 3);
+      const bits = [
+        c.severity ? `${c.severity}${c.score != null ? ` ${c.score}` : ''}` : '',
+        vendors.join(', '),
+        c.publishedDate ? `published ${formatDate(c.publishedDate)}` : '',
+      ].filter(Boolean);
+      return `<li><a href="${esc(cveUrl(c.id))}">${esc(c.id)}</a>${bits.length ? ` &ndash; ${esc(bits.join(' · '))}` : ''}</li>`;
+    })
+    .join('')}</ul>
+<h2>More on WhatCyber</h2>
+<ul><li><a href="${esc(KEV_HUB)}">CISA Known Exploited Vulnerabilities catalog</a></li><li><a href="${esc(ACTORS_HUB)}">Threat actor profiles</a></li><li><a href="/threatfeed">Threat feed</a></li></ul>`;
+
+  return shell('Latest CVEs', inner);
 }
 
 // ---------------------------------------------------------------------------------------------

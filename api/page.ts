@@ -162,6 +162,37 @@ function createDataSource(): PageData {
       };
     },
 
+    async getActorsPage(page, pageSize) {
+      const query = sql();
+      const [countRows, rows] = await Promise.all([
+        query`SELECT count(*)::int AS total FROM threat_groups`,
+        query`SELECT id, slug, name, aliases, description FROM threat_groups
+              ORDER BY last_updated DESC NULLS LAST, name
+              LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`,
+      ]);
+      const total = Number((countRows[0] as any)?.total ?? 0);
+      return { page, total, totalPages: Math.max(1, Math.ceil(total / pageSize)), entries: rows as any[] };
+    },
+
+    async getLatestCves(limit) {
+      const query = sql();
+      const [countRows, rows] = await Promise.all([
+        query`SELECT count(*)::int AS total FROM vulnerabilities`,
+        query`SELECT id, published_date, cvss_v3_severity, cvss_v3_score, vendors
+              FROM vulnerabilities ORDER BY published_date DESC, id DESC LIMIT ${limit}`,
+      ]);
+      return {
+        total: Number((countRows[0] as any)?.total ?? 0),
+        entries: (rows as any[]).map((r) => ({
+          id: r.id,
+          publishedDate: r.published_date,
+          severity: r.cvss_v3_severity,
+          score: r.cvss_v3_score === null || r.cvss_v3_score === undefined ? null : Number(r.cvss_v3_score),
+          vendors: Array.isArray(r.vendors) ? r.vendors : [],
+        })),
+      };
+    },
+
     async getPost(slug) {
       const post = await sanity.fetch(
         `*[_type == "post" && slug.current == $slug][0] { title, seoTitle, seoDescription, excerpt, mainImage, publishedAt, _updatedAt, "authorName": author->name }`,

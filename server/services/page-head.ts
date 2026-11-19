@@ -19,7 +19,7 @@ import { actorSeo, cveSeo } from '../../client/src/lib/seo-text.js';
 import { UUID_PATTERN, actorUrl, cveUrl } from '../../client/src/lib/urls.js';
 import { actorJsonLd, blogPostJsonLd, cveJsonLd, hubJsonLd, landingJsonLd } from '../../client/src/lib/jsonld.js';
 import type { HeadTags } from './head-inject.js';
-import { renderActorBody, renderCveBody, renderKevHubBody, renderLandingBody, type CveBodyData, type KevHubData } from './page-body.js';
+import { renderActorBody, renderActorsHubBody, renderCveBody, renderCveHubBody, renderKevHubBody, renderLandingBody, type ActorsHubData, type CveBodyData, type CveHubData, type KevHubData } from './page-body.js';
 
 export interface PageHead extends HeadTags {
   status: 200 | 301 | 404;
@@ -46,6 +46,10 @@ export interface PageData {
   } | null>;
   /** One page of the KEV catalog, newest first. Throws only when the data source itself fails. */
   getKevPage(page: number, pageSize: number): Promise<KevHubData>;
+  /** One page of the threat actor directory, most recently updated first. */
+  getActorsPage(page: number, pageSize: number): Promise<ActorsHubData>;
+  /** The newest CVEs and the total count. */
+  getLatestCves(limit: number): Promise<CveHubData>;
   getPost(slug: string): Promise<{
     title: string;
     seoTitle?: string | null;
@@ -60,6 +64,10 @@ export interface PageData {
 
 /** Same page size as the app's KEV hub (client/src/pages/exploited-vulnerabilities.tsx). */
 const KEV_PAGE_SIZE = 50;
+/** Same page size as the app's directory (client/src/pages/threat-actors.tsx). */
+const ACTORS_PAGE_SIZE = 20;
+/** The newest CVEs written into /cve. The app pages through the rest client-side. */
+const CVE_HUB_SIZE = 50;
 const CVE_ID = /^CVE-\d{4}-\d{4,}$/;
 // Listing pages that get a CollectionPage and breadcrumb.
 const HUB_NAMES: Record<string, string> = {
@@ -106,6 +114,11 @@ export async function resolvePageHead(rawPathname: string, data: PageData, searc
       const requested = parseInt(new URLSearchParams(search).get('page') ?? '1', 10);
       const kev = await data.getKevPage(Number.isFinite(requested) && requested > 1 ? requested : 1, KEV_PAGE_SIZE);
       body = renderKevHubBody(kev);
+    } else if (pathname === '/threat-actors') {
+      const requested = parseInt(new URLSearchParams(search).get('page') ?? '1', 10);
+      body = renderActorsHubBody(await data.getActorsPage(Number.isFinite(requested) && requested > 1 ? requested : 1, ACTORS_PAGE_SIZE));
+    } else if (pathname === '/cve') {
+      body = renderCveHubBody(await data.getLatestCves(CVE_HUB_SIZE));
     }
     return {
       status: 200,

@@ -13,6 +13,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { ActorsSidebar } from "@/components/layout/sidebars/actors-sidebar";
 import { SEO } from "@/components/seo";
 import { STATIC_PAGE_META } from "@/lib/page-meta";
+import { useSsrHandoff } from "@/lib/ssr-handoff";
 
 export default function ThreatActorsPage() {
     const [, setLocation] = useLocation();
@@ -33,6 +34,9 @@ export default function ThreatActorsPage() {
             return res.json();
         }
     });
+
+    // The server-written copy of the first page stays until the app has its own data.
+    useSsrHandoff(!isLoading);
 
     return (
         <AppShell activeTab="actors" sidebar={<ActorsSidebar />}>
