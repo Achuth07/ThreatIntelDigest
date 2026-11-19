@@ -327,6 +327,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return handleKevEndpoints(req, res, action);
     }
 
+    // Vendor and CWE hub data (WHA-24)
+    if (pathname.startsWith('/api/hubs/') || pathname === '/api/cron/refresh-hub-stats') {
+      return handleHubEndpoints(req, res);
+    }
+
     // Threat Groups endpoints
     if (pathname.startsWith('/api/threat-groups')) {
       return handleThreatGroupsEndpoints(req, res, action);
@@ -5396,6 +5401,50 @@ async function handleKevEndpoints(req: VercelRequest, res: VercelResponse, actio
   }
 
   return res.status(404).json({ error: 'Endpoint not found' });
+}
+
+// GET /api/hubs/vendors, /api/hubs/vendors/:slug, /api/hubs/cwe, /api/hubs/cwe/:id
+// The same data the server-rendered vendor and CWE pages are built from (server/services/hub-data.ts).
+async function handleHubEndpoints(req: VercelRequest, res: VercelResponse) {
+  const { pathname } = new URL(req.url!, `https://${req.headers.host}`);
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+
+  try {
+    if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not set');
+    const { neon } = await import('@neondatabase/serverless');
+    const hubs = await import('../server/services/hub-data.js');
+    const query: any = neon(process.env.DATABASE_URL);
+    // Daily cron: recompute the top vendors and CWEs (vercel.json "crons").
+    if (pathname === '/api/cron/refresh-hub-stats') {
+      // Vercel sends "Authorization: Bearer <CRON_SECRET>" when that variable is set on the project.
+      if (process.env.CRON_SECRET && req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+      // The refresh scans the whole table, so a repeat call within a few hours does nothing.
+      const last = (await query`SELECT max(updated_at) AS at FROM vendor_stats`)[0]?.at;
+      if (last && Date.now() - new Date(last).getTime() < 6 * 60 * 60 * 1000) {
+        return res.json({ skipped: true, reason: 'refreshed recently', last });
+      }
+      return res.json(await hubs.refreshHubStats(query));
+    }
+
+    const parts = pathname.replace(/^\/api\/hubs\//, '').replace(/\/+$/, '').split('/');
+    const [kind, id] = parts;
+
+    let result: unknown = null;
+    if (kind === 'vendors' && !id) result = await hubs.getVendorIndex(query);
+    else if (kind === 'vendors' && id) result = await hubs.getVendorHub(query, id.toLowerCase());
+    else if (kind === 'cwe' && !id) result = await hubs.getCweIndex(query);
+    else if (kind === 'cwe' && id && /^CWE-\d{1,5}$/i.test(id)) result = await hubs.getCweHub(query, id.toUpperCase());
+    else return res.status(404).json({ error: 'Endpoint not found' });
+
+    if (result === null) return res.status(404).json({ error: 'Not found' });
+    res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+    return res.json(result);
+  } catch (error) {
+    console.error('Error fetching hub data:', error);
+    return res.status(500).json({ error: 'Failed to fetch hub data' });
+  }
 }
 
 async function handleThreatGroupsEndpoints(req: VercelRequest, res: VercelResponse, action: string) {

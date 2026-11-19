@@ -9,8 +9,9 @@
  * Keep this in step with what the pages show: same facts, simpler layout.
  */
 
-import { ACTORS_HUB, CVE_HUB, KEV_HUB, actorUrl, cveUrl } from '../../client/src/lib/urls.js';
+import { ACTORS_HUB, CVE_HUB, CWE_HUB, KEV_HUB, VENDORS_HUB, actorUrl, cveUrl, cweUrl, vendorUrl } from '../../client/src/lib/urls.js';
 import { LANDING_FAQ } from '../../client/src/lib/jsonld.js';
+import type { CweHub, CweIndexRow, HubCve, HubKev, SeverityCounts, VendorHub, VendorIndexRow } from './hub-data.js';
 import { cveSummary, cveTimeline } from '../../client/src/lib/cve-summary.js';
 import { KEV_ANSWER, KEV_FAQ } from '../../client/src/lib/kev-content.js';
 import { pageList } from '../../client/src/lib/page-list.js';
@@ -47,6 +48,8 @@ const NAV = [
   { href: CVE_HUB, label: 'Latest CVEs' },
   { href: KEV_HUB, label: 'CISA KEV catalog' },
   { href: ACTORS_HUB, label: 'Threat actors' },
+  { href: VENDORS_HUB, label: 'By vendor' },
+  { href: CWE_HUB, label: 'By weakness' },
   { href: '/blog', label: 'Blog' },
 ];
 
@@ -89,6 +92,9 @@ export interface CveBodyData {
   id: string;
   /** Threat actors named in news about this CVE. */
   actors?: { id: string; slug: string | null; name: string }[];
+  /** Vendor hubs that exist for this CVE's vendors, and CWE ids that have a hub (WHA-24). */
+  vendorHubs?: { slug: string; name: string }[];
+  cweHubIds?: string[];
   kev: {
     vendorProject: string;
     product: string;
@@ -169,12 +175,12 @@ ${facts.length ? `<h2>Key facts</h2><dl>${facts.map(([k, v]) => `<dt>${esc(k)}</
 ${kev?.requiredAction ? `<h2>Required action</h2><p>${esc(plain(kev.requiredAction))}</p>` : ''}
 ${kev?.notes ? `<p>${esc(plain(kev.notes))}</p>` : ''}
 ${timeline.length ? `<h2>Timeline</h2><ul>${timeline.map((e) => `<li>${esc(e.date)}: ${esc(e.label)}${e.note ? ` (${esc(e.note)})` : ''}</li>`).join('')}</ul>` : ''}
-${nvd?.weaknesses?.length ? `<h2>Weaknesses (CWE)</h2><ul>${nvd.weaknesses.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : ''}
+${nvd?.weaknesses?.length ? `<h2>Weaknesses (CWE)</h2><ul>${nvd.weaknesses.map((w) => `<li>${data.cweHubIds?.includes(String(w).toUpperCase()) ? `<a href="${esc(cweUrl(String(w)))}">${esc(w)}</a>` : esc(w)}</li>`).join('')}</ul>` : ''}
 ${products.length ? `<h2>Affected products</h2><ul>${products.map((p) => { const versions = (p.versions ?? []).filter((v) => v && v !== '-' && v !== '*').slice(0, 12); return `<li>${esc([p.vendor, p.product].filter(Boolean).join(' '))}${versions.length ? ` (versions: ${esc(versions.join(', '))})` : ''}</li>`; }).join('')}${moreProducts > 0 ? `<li>and ${moreProducts} more</li>` : ''}</ul>` : nvd?.vendors?.length ? `<h2>Affected vendors</h2><p>${esc(nvd.vendors.join(', '))}</p>` : ''}
 ${data.actors?.length ? `<h2>Threat actors named in news about this CVE</h2><p>Groups mentioned in news articles that also name ${esc(id)}. This is not a confirmed attribution.</p><ul>${data.actors.map((a) => `<li><a href="${esc(actorUrl(a))}">${esc(a.name)}</a></li>`).join('')}</ul>` : ''}
 ${references.length ? `<h2>References</h2><ul>${references.map((r) => `<li><a href="${esc(safeUrl(r.url))}" rel="nofollow noopener">${esc(r.url)}</a></li>`).join('')}</ul>` : ''}
 <h2>More on WhatCyber</h2>
-<ul><li><a href="${esc(CVE_HUB)}">Latest CVEs</a></li><li><a href="${esc(KEV_HUB)}">CISA Known Exploited Vulnerabilities catalog</a></li><li><a href="${esc(ACTORS_HUB)}">Threat actor profiles</a></li></ul>`;
+<ul>${(data.vendorHubs ?? []).map((v) => `<li><a href="${esc(vendorUrl(v.slug))}">${esc(v.name)} vulnerabilities</a></li>`).join('')}<li><a href="${esc(CVE_HUB)}">Latest CVEs</a></li><li><a href="${esc(KEV_HUB)}">CISA Known Exploited Vulnerabilities catalog</a></li><li><a href="${esc(ACTORS_HUB)}">Threat actor profiles</a></li></ul>`;
 
   return shell(id, inner);
 }
@@ -331,6 +337,92 @@ export function renderCveHubBody(data: CveHubData): string {
 <ul><li><a href="${esc(KEV_HUB)}">CISA Known Exploited Vulnerabilities catalog</a></li><li><a href="${esc(ACTORS_HUB)}">Threat actor profiles</a></li><li><a href="/threatfeed">Threat feed</a></li></ul>`;
 
   return shell('Latest CVEs', inner);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Vendor and CWE hubs (WHA-24)
+
+const fmt = (n: number) => n.toLocaleString('en-US');
+
+function severityLine(sev: SeverityCounts): string {
+  const total = sev.CRITICAL + sev.HIGH + sev.MEDIUM + sev.LOW;
+  if (!total) return '';
+  return `Of the ${fmt(total)} with a CVSS v3 score, ${fmt(sev.CRITICAL)} are critical, ${fmt(sev.HIGH)} high, ${fmt(sev.MEDIUM)} medium and ${fmt(sev.LOW)} low.`;
+}
+
+function cveList(rows: HubCve[]): string {
+  return `<ul>${rows
+    .map((c) => {
+      const bits = [c.severity ? `${c.severity}${c.score != null ? ` ${c.score}` : ''}` : '', c.publishedDate ? `published ${formatDate(c.publishedDate)}` : ''].filter(Boolean);
+      return `<li><a href="${esc(cveUrl(c.id))}">${esc(c.id)}</a>${bits.length ? ` &ndash; ${esc(bits.join(' · '))}` : ''}</li>`;
+    })
+    .join('')}</ul>`;
+}
+
+function kevList(rows: HubKev[]): string {
+  return `<ul>${rows
+    .map((e) => {
+      const ransomware = e.knownRansomwareCampaignUse === 'Known' ? ' <span class="tag warn">Ransomware linked</span>' : '';
+      return `<li><a href="${esc(cveUrl(e.cveId))}">${esc(e.cveId)}</a>: ${esc([e.vendorProject, e.product].filter(Boolean).join(' '))} &ndash; ${esc(e.vulnerabilityName)} (added ${esc(formatDate(e.dateAdded))})${ransomware}</li>`;
+    })
+    .join('')}</ul>`;
+}
+
+const hubFooterLinks = `<h2>More on WhatCyber</h2>
+<ul><li><a href="${esc(VENDORS_HUB)}">Vulnerabilities by vendor</a></li><li><a href="${esc(CWE_HUB)}">Vulnerabilities by weakness (CWE)</a></li><li><a href="${esc(KEV_HUB)}">CISA Known Exploited Vulnerabilities catalog</a></li><li><a href="${esc(CVE_HUB)}">Latest CVEs</a></li></ul>`;
+
+export function renderVendorsIndexBody(rows: VendorIndexRow[]): string {
+  const inner = `
+<p class="crumbs"><a href="/">WhatCyber</a> / Vendors</p>
+<h1>Vulnerabilities by vendor</h1>
+<p>The ${rows.length} vendors with the most CVEs in the National Vulnerability Database, with how many of their vulnerabilities are in CISA's Known Exploited Vulnerabilities catalog.</p>
+<ul>${rows
+    .map((v) => `<li><a href="${esc(vendorUrl(v.slug))}">${esc(v.name)}</a>: ${fmt(v.cveCount)} CVEs${v.kevCount ? `, ${fmt(v.kevCount)} known exploited` : ''}</li>`)
+    .join('')}</ul>
+${hubFooterLinks}`;
+  return shell('Vulnerabilities by vendor', inner);
+}
+
+export function renderCweIndexBody(rows: CweIndexRow[]): string {
+  const inner = `
+<p class="crumbs"><a href="/">WhatCyber</a> / Weaknesses</p>
+<h1>Common software weaknesses (CWE)</h1>
+<p>The ${rows.length} weaknesses behind the most CVEs, with how many vulnerabilities each one causes and how many are known to be exploited. CWE is the Common Weakness Enumeration maintained by MITRE.</p>
+<ul>${rows
+    .map((c) => `<li><a href="${esc(cweUrl(c.id))}">${esc(c.id)}${c.name ? `: ${esc(c.name)}` : ''}</a> &ndash; ${fmt(c.cveCount)} CVEs${c.kevCount ? `, ${fmt(c.kevCount)} known exploited` : ''}</li>`)
+    .join('')}</ul>
+${hubFooterLinks}`;
+  return shell('Common software weaknesses', inner);
+}
+
+export function renderVendorHubBody(hub: VendorHub): string {
+  const sevLine = severityLine(hub.severity);
+  const inner = `
+<p class="crumbs"><a href="/">WhatCyber</a> / <a href="${esc(VENDORS_HUB)}">Vendors</a> / ${esc(hub.name)}</p>
+<h1>${esc(hub.name)} vulnerabilities</h1>
+<p>${esc(hub.name)} has ${fmt(hub.cveCount)} CVEs recorded in the National Vulnerability Database${hub.kevCount ? `, ${fmt(hub.kevCount)} of them in CISA's Known Exploited Vulnerabilities (KEV) catalog` : ''}. ${esc(sevLine)}</p>
+<h2>Latest ${esc(hub.name)} CVEs</h2>
+${cveList(hub.recent)}
+${hub.kev.length ? `<h2>Known exploited ${esc(hub.name)} vulnerabilities</h2>\n${kevList(hub.kev)}` : ''}
+${hub.topWeaknesses.length ? `<h2>Most common weaknesses</h2><ul>${hub.topWeaknesses.map((w) => `<li><a href="${esc(cweUrl(w.id))}">${esc(w.id)}${w.name ? `: ${esc(w.name)}` : ''}</a> (${fmt(w.count)} CVEs)</li>`).join('')}</ul>` : ''}
+${hubFooterLinks}`;
+  return shell(hub.name, inner);
+}
+
+export function renderCweHubBody(hub: CweHub): string {
+  const sevLine = severityLine(hub.severity);
+  const description = plain(hub.description ?? '');
+  const inner = `
+<p class="crumbs"><a href="/">WhatCyber</a> / <a href="${esc(CWE_HUB)}">Weaknesses</a> / ${esc(hub.id)}</p>
+<h1>${esc(hub.id)}${hub.name ? `: ${esc(hub.name)}` : ''}</h1>
+${hub.category ? `<p>Category: ${esc(hub.category)}</p>` : ''}
+${description ? `<p>${esc(description)}</p>` : ''}
+<p>${fmt(hub.cveCount)} CVEs have this weakness${hub.kevCount ? `, ${fmt(hub.kevCount)} of them in CISA's Known Exploited Vulnerabilities (KEV) catalog` : ''}. ${esc(sevLine)}</p>
+<h2>Latest CVEs with ${esc(hub.id)}</h2>
+${cveList(hub.recent)}
+${hub.kev.length ? `<h2>Known exploited vulnerabilities with ${esc(hub.id)}</h2>\n${kevList(hub.kev)}` : ''}
+${hubFooterLinks}`;
+  return shell(hub.id, inner);
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -9,6 +9,8 @@
 export const CVE_HUB = '/cve';
 export const KEV_HUB = '/cisa-kev';
 export const ACTORS_HUB = '/threat-actors';
+export const VENDORS_HUB = '/vendors';
+export const CWE_HUB = '/cwe';
 
 export const CVE_ID_PATTERN = /^CVE-\d{4}-\d{4,}$/i;
 export const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -18,6 +20,17 @@ export const cveUrl = (cveId: string) => `${CVE_HUB}/${cveId}`;
 /** Actor address: the slug when there is one, otherwise the id (which the server redirects to the slug). */
 export const actorUrl = (actor: { slug?: string | null; id: string }) =>
   `${ACTORS_HUB}/${actor.slug || actor.id}`;
+
+export const CWE_ID_PATTERN = /^CWE-\d{1,5}$/i;
+
+export const vendorUrl = (slug: string) => `${VENDORS_HUB}/${slug}`;
+export const cweUrl = (id: string) => `${CWE_HUB}/${id.toUpperCase()}`;
+
+/**
+ * The address of a vendor from the value stored in vulnerabilities.vendors:
+ * "palo_alto_networks" -> "palo-alto-networks".
+ */
+export const vendorSlug = (vendor: string) => vendor.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 
 /** "Salt Typhoon" -> "salt-typhoon". Lowercase letters and digits joined by single hyphens. */
 export function slugify(name: string): string {
