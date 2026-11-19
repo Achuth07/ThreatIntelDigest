@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import { storage, initializeStorage } from '../server/storage.js';
 import { fetchCveFromR2, getCveHistory } from '../server/services/r2.js';
 import { excerptFromSearchVector, SEARCH_VECTOR_HEAD } from '../server/services/cve-text.js';
+import { cleanAttackText } from '../server/services/attack-import.js';
 import { extractCveMentions, getArticleCveIds, getArticlesMentioningCve, linkArticleCves, mergeRelatedNews } from '../server/services/article-cves.js';
 
 // Module-level guard: only initialize storage once per warm function invocation
@@ -5497,9 +5498,66 @@ async function handleThreatGroupsEndpoints(req: VercelRequest, res: VercelRespon
         .orderBy(desc(articles.publishedAt))
         .limit(20);
 
+      // ATT&CK techniques, software and CVE links (WHA-55).
+      const [techniqueRows, softwareRows, cveRows] = await Promise.all([
+        db.execute(sql`
+          SELECT t.attack_id, t.name, t.tactics, t.is_subtechnique, at.description
+          FROM actor_techniques at JOIN attack_techniques t ON t.stix_id = at.technique_stix_id
+          WHERE at.threat_group_id = ${group.id}
+          ORDER BY t.attack_id
+        `),
+        db.execute(sql`
+          SELECT s.attack_id, s.name, s.software_type, s.aliases, asw.description
+          FROM actor_software asw JOIN attack_software s ON s.stix_id = asw.software_stix_id
+          WHERE asw.threat_group_id = ${group.id}
+          ORDER BY s.name
+        `),
+        // One row per CVE, keeping the strongest source. KEV and CVSS help readers judge the link.
+        db.execute(sql`
+          SELECT DISTINCT ON (c.cve_id) c.cve_id, c.source, c.confidence, c.evidence, c.evidence_url, c.evidence_count,
+                 (k.cve_id IS NOT NULL) AS in_kev, v.cvss_v3_score, v.cvss_v3_severity
+          FROM actor_cves c
+          LEFT JOIN known_exploited_vulnerabilities k ON k.cve_id = c.cve_id
+          LEFT JOIN vulnerabilities v ON v.id = c.cve_id
+          WHERE c.threat_group_id = ${group.id}
+          ORDER BY c.cve_id, CASE c.confidence WHEN 'high' THEN 0 ELSE 1 END
+        `),
+      ]);
+
+      const cves = cveRows.rows
+        .map((row: any) => ({
+          cveId: row.cve_id,
+          source: row.source,
+          confidence: row.confidence,
+          evidence: cleanAttackText(row.evidence),
+          evidenceUrl: row.evidence_url,
+          evidenceCount: row.evidence_count,
+          inKev: row.in_kev,
+          cvssV3Score: row.cvss_v3_score !== null ? Number(row.cvss_v3_score) : null,
+          cvssV3Severity: row.cvss_v3_severity,
+        }))
+        .sort((a: any, b: any) => (a.confidence === b.confidence ? b.cveId.localeCompare(a.cveId) : a.confidence === 'high' ? -1 : 1));
+
+      res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
       return res.json({
         ...group,
-        recentArticles: linkedArticles
+        attackUrl: group.attackId ? `https://attack.mitre.org/groups/${group.attackId}/` : null,
+        recentArticles: linkedArticles,
+        techniques: techniqueRows.rows.map((row: any) => ({
+          attackId: row.attack_id,
+          name: row.name,
+          tactics: row.tactics ?? [],
+          isSubtechnique: row.is_subtechnique,
+          procedure: cleanAttackText(row.description),
+        })),
+        software: softwareRows.rows.map((row: any) => ({
+          attackId: row.attack_id,
+          name: row.name,
+          type: row.software_type,
+          aliases: row.aliases ?? [],
+          procedure: cleanAttackText(row.description),
+        })),
+        cves,
       });
     }
 

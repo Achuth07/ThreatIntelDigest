@@ -296,7 +296,61 @@ export const threatGroups = pgTable("threat_groups", {
   aliases: jsonb("aliases").$type<string[]>().default([]),
   lastUpdated: timestamp("last_updated"),
   createdAt: timestamp("created_at").default(sql`now()`),
+  // MITRE ATT&CK ID such as G0016, and whether ATT&CK still lists the group (WHA-55).
+  attackId: text("attack_id").unique(),
+  attackStatus: text("attack_status").notNull().default('active'), // active, deprecated, revoked
+  revokedBy: text("revoked_by"), // ATT&CK ID of the replacing group
 });
+
+// ATT&CK reference data and actor links (WHA-55); see migrations/009_attack_enrichment.sql.
+export const attackTechniques = pgTable("attack_techniques", {
+  stixId: text("stix_id").primaryKey(),
+  attackId: text("attack_id").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description"),
+  tactics: jsonb("tactics").$type<string[]>().notNull().default([]),
+  platforms: jsonb("platforms").$type<string[]>().notNull().default([]),
+  isSubtechnique: pgBoolean("is_subtechnique").notNull().default(false),
+  parentAttackId: text("parent_attack_id"),
+  status: text("status").notNull().default('active'),
+  modified: timestamp("modified"),
+});
+
+export const attackSoftware = pgTable("attack_software", {
+  stixId: text("stix_id").primaryKey(),
+  attackId: text("attack_id").notNull().unique(),
+  name: text("name").notNull(),
+  softwareType: text("software_type").notNull(), // malware or tool
+  description: text("description"),
+  aliases: jsonb("aliases").$type<string[]>().notNull().default([]),
+  platforms: jsonb("platforms").$type<string[]>().notNull().default([]),
+  status: text("status").notNull().default('active'),
+  modified: timestamp("modified"),
+});
+
+export const actorTechniques = pgTable("actor_techniques", {
+  threatGroupId: uuid("threat_group_id").notNull().references(() => threatGroups.id, { onDelete: 'cascade' }),
+  techniqueStixId: text("technique_stix_id").notNull().references(() => attackTechniques.stixId, { onDelete: 'cascade' }),
+  description: text("description"),
+}, (table) => [primaryKey({ columns: [table.threatGroupId, table.techniqueStixId] })]);
+
+export const actorSoftware = pgTable("actor_software", {
+  threatGroupId: uuid("threat_group_id").notNull().references(() => threatGroups.id, { onDelete: 'cascade' }),
+  softwareStixId: text("software_stix_id").notNull().references(() => attackSoftware.stixId, { onDelete: 'cascade' }),
+  description: text("description"),
+}, (table) => [primaryKey({ columns: [table.threatGroupId, table.softwareStixId] })]);
+
+// source 'attack' (MITRE says so, confidence 'high') or 'news' (an article names both, 'low').
+export const actorCves = pgTable("actor_cves", {
+  threatGroupId: uuid("threat_group_id").notNull().references(() => threatGroups.id, { onDelete: 'cascade' }),
+  cveId: varchar("cve_id", { length: 32 }).notNull(),
+  source: text("source").notNull(),
+  confidence: text("confidence").notNull(),
+  evidence: text("evidence"),
+  evidenceUrl: text("evidence_url"),
+  evidenceCount: integer("evidence_count").notNull().default(1),
+  updatedAt: timestamp("updated_at").notNull().default(sql`now()`),
+}, (table) => [primaryKey({ columns: [table.threatGroupId, table.cveId, table.source] })]);
 
 export const articleThreatGroups = pgTable("article_threat_groups", {
   id: serial("id").primaryKey(),

@@ -13,6 +13,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { ActorsSidebar } from "@/components/layout/sidebars/actors-sidebar";
 import { SEO } from "@/components/seo";
 import { actorSeo } from "@/lib/seo-text";
+import { ActorCves, ActorSoftware, ActorTechniques } from "@/components/actor-attack";
 
 export default function ThreatActorDetailPage() {
     const [, params] = useRoute("/threat-actors/:id");
@@ -112,9 +113,19 @@ export default function ThreatActorDetailPage() {
                                     {group.name}
                                 </h1>
                                 <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
-                                    {group.stixId && (
-                                        <span className="flex items-center gap-1 bg-secondary px-2 py-1 rounded text-slate-300 font-mono">
-                                            {group.stixId}
+                                    {group.attackId && (
+                                        <a
+                                            href={group.attackUrl}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="flex items-center gap-1 bg-secondary px-2 py-1 rounded text-slate-300 font-mono hover:text-whatcyber-teal"
+                                        >
+                                            {group.attackId}
+                                        </a>
+                                    )}
+                                    {group.attackStatus && group.attackStatus !== "active" && (
+                                        <span className="rounded border border-yellow-500/30 bg-yellow-500/10 px-2 py-1 text-yellow-400">
+                                            {group.attackStatus === "revoked" ? `Merged into ${group.revokedBy ?? "another group"} by MITRE` : "Deprecated by MITRE"}
                                         </span>
                                     )}
                                     <span className="flex items-center gap-1">
@@ -140,6 +151,9 @@ export default function ThreatActorDetailPage() {
                                 <p className="whitespace-pre-wrap">{cleanDescription(group.description) || "No description available."}</p>
                             </div>
                         </section>
+
+                        <ActorCves cves={group.cves ?? []} actorName={group.name} />
+                        <ActorTechniques techniques={group.techniques ?? []} />
 
                         {/* Activity Stream */}
                         <section className="space-y-4">
@@ -189,13 +203,16 @@ export default function ThreatActorDetailPage() {
                             </CardContent>
                         </Card>
 
+                        <ActorSoftware software={group.software ?? []} />
+
                         <Card className="bg-card border-border">
                             <CardHeader>
                                 <CardTitle className="text-lg text-slate-200">Resources</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-3">
+                                {group.attackUrl && (
                                 <a
-                                    href={`https://attack.mitre.org/groups/${group.stixId}`}
+                                    href={group.attackUrl}
                                     target="_blank"
                                     rel="noreferrer"
                                     className="flex items-center gap-2 text-whatcyber-teal hover:underline text-sm"
@@ -203,6 +220,7 @@ export default function ThreatActorDetailPage() {
                                     <ExternalLink className="w-4 h-4" />
                                     View on MITRE ATT&CK
                                 </a>
+                                )}
                             </CardContent>
                         </Card>
                     </div>

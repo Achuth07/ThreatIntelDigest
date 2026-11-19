@@ -1,108 +1,46 @@
-
+// Imports MITRE ATT&CK Enterprise: groups with their ATT&CK IDs, techniques, software, and the
+// CVEs MITRE says each group used (WHA-55). Runs weekly from weekly_threat_actor_update.yml.
+// Usage: npx tsx scripts/ingest-threat-actors.ts [--file path/to/enterprise-attack.json]
 import "dotenv/config";
+import { readFileSync } from "fs";
 import { getDb } from "../server/db";
-import { threatGroups } from "../shared/schema";
-import { sql } from "drizzle-orm";
-import https from "https";
 import { assignMissingSlugs } from "../server/services/threat-group-slugs";
+import { ATTACK_BUNDLE_URL, importAttack, parseAttackBundle } from "../server/services/attack-import";
 
-const MITRE_URL = "https://raw.githubusercontent.com/mitre-attack/attack-stix-data/master/enterprise-attack/enterprise-attack.json";
+// A valid bundle has well over this many groups; fewer means a truncated or wrong download.
+const MIN_GROUPS = 100;
 
-interface StixObject {
-    type: string;
-    id: string;
-    name: string;
-    description?: string;
-    aliases?: string[];
-    x_mitre_aliases?: string[]; // Sometimes aliases are here
-    modified: string;
-    revoked?: boolean;
-    x_mitre_deprecated?: boolean;
-}
-
-interface StixBundle {
-    objects: StixObject[];
-}
-
-function fetchMitreData(): Promise<StixBundle> {
-    return new Promise((resolve, reject) => {
-        https.get(MITRE_URL, (res) => {
-            let data = "";
-            res.on("data", (chunk) => (data += chunk));
-            res.on("end", () => {
-                try {
-                    resolve(JSON.parse(data));
-                } catch (e) {
-                    reject(e);
-                }
-            });
-            res.on("error", reject);
-        });
-    });
+async function loadBundle(): Promise<{ objects: any[] }> {
+    const fileFlag = process.argv.indexOf("--file");
+    if (fileFlag !== -1) return JSON.parse(readFileSync(process.argv[fileFlag + 1], "utf8"));
+    const response = await fetch(ATTACK_BUNDLE_URL, { signal: AbortSignal.timeout(120_000) });
+    if (!response.ok) throw new Error(`ATT&CK download failed: HTTP ${response.status}`);
+    return response.json();
 }
 
 async function main() {
-    console.log("Starting Threat Actor Ingestion...");
-
     if (!process.env.DATABASE_URL) {
         console.error("DATABASE_URL is missing");
         process.exit(1);
     }
-
     const db = getDb();
 
-    try {
-        console.log("Fetching MITRE ATT&CK data...");
-        const bundle = await fetchMitreData();
+    console.log("Fetching MITRE ATT&CK data...");
+    const parsed = parseAttackBundle(await loadBundle());
+    const activeGroups = parsed.groups.filter(group => group.status === "active").length;
+    console.log(`ATT&CK ${parsed.version ?? "unknown version"}: ${activeGroups} active groups, ${parsed.techniques.length} techniques, ${parsed.software.length} software, ${parsed.groupCves.length} group-CVE mentions`);
+    if (activeGroups < MIN_GROUPS) throw new Error(`Only ${activeGroups} active groups in the bundle; refusing to import`);
 
-        const groups = bundle.objects.filter(
-            (obj) =>
-                obj.type === "intrusion-set" &&
-                !obj.revoked &&
-                !obj.x_mitre_deprecated
-        );
+    const summary = await importAttack(db as any, parsed);
+    console.log("Import complete:", summary);
 
-        console.log(`Found ${groups.length} active intrusion sets.`);
-
-        let count = 0;
-        for (const group of groups) {
-            const aliases = group.aliases || group.x_mitre_aliases || [];
-            // Clean up aliases (remove duplicate of name if present)
-            const uniqueAliases = [...new Set(aliases)].filter(a => a !== group.name);
-
-            await db
-                .insert(threatGroups)
-                .values({
-                    stixId: group.id,
-                    name: group.name,
-                    description: group.description || "",
-                    aliases: uniqueAliases, // JSONB handles array natively
-                    lastUpdated: new Date(group.modified),
-                })
-                .onConflictDoUpdate({
-                    target: threatGroups.stixId,
-                    set: {
-                        name: group.name,
-                        description: group.description || "",
-                        aliases: uniqueAliases,
-                        lastUpdated: new Date(group.modified),
-                    },
-                });
-
-            count++;
-            if (count % 10 === 0) process.stdout.write(".");
-        }
-
-        console.log(`\nSuccessfully processed ${count} threat groups.`);
-
-        // New groups get their public address; existing ones keep theirs.
-        const assigned = await assignMissingSlugs(db);
-        console.log(`Assigned ${assigned} new slugs.`);
-    } catch (error) {
-        console.error("Error ingestion failed:", error);
-        process.exit(1);
-    }
+    // New groups get their public address; existing ones keep theirs.
+    const assigned = await assignMissingSlugs(db);
+    console.log(`Assigned ${assigned} new slugs.`);
     process.exit(0);
 }
 
-main();
+main().catch(error => {
+    console.error("Threat actor import failed:", error);
+    process.exit(1);
+});
