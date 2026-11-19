@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { sql } from 'drizzle-orm';
 import { storage, initializeStorage } from '../server/storage.js';
 import { fetchCveFromR2, getCveHistory } from '../server/services/r2.js';
+import { excerptFromSearchVector, SEARCH_VECTOR_HEAD } from '../server/services/cve-text.js';
 import { extractCveMentions, getArticleCveIds, getArticlesMentioningCve, linkArticleCves, mergeRelatedNews } from '../server/services/article-cves.js';
 
 // Module-level guard: only initialize storage once per warm function invocation
@@ -3306,70 +3307,10 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
 
     console.log('DATABASE_URL is configured');
 
-    // Import modules dynamically
-    const { drizzle } = await import('drizzle-orm/neon-serverless');
-    const { Pool } = await import('@neondatabase/serverless');
     const { sql, desc } = await import('drizzle-orm');
-
-    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-    const db = drizzle(pool);
-
-    console.log('Database connection established');
-
-    // Test database connectivity and table existence
-    try {
-      const tableCheck = await db.execute(sql`
-        SELECT COUNT(*) as count 
-        FROM information_schema.tables 
-        WHERE table_schema = 'public' AND table_name = 'vulnerabilities'
-      `);
-
-      const tableExists = parseInt(tableCheck.rows[0]?.count as string || '0') > 0;
-
-      if (!tableExists) {
-        console.error('vulnerabilities table does not exist');
-        return res.status(500).json({
-          error: 'vulnerabilities table does not exist',
-          debug: 'Run database initialization first: POST /api/database?action=init',
-          tableExists: false
-        });
-      }
-
-      console.log('vulnerabilities table exists');
-
-      // Check if table has any data
-      const countCheck = await db.execute(sql`SELECT COUNT(*) as total FROM vulnerabilities`);
-      const totalRecords = parseInt(countCheck.rows[0]?.total as string || '0');
-      console.log(`Total vulnerabilities in database: ${totalRecords}`);
-
-      if (totalRecords === 0) {
-        console.warn('vulnerabilities table is empty');
-        return res.json({
-          vulnerabilities: [],
-          pagination: {
-            page: 1,
-            limit: 50,
-            total: 0,
-            totalPages: 0,
-            hasNext: false,
-            hasPrev: false,
-          },
-          meta: {
-            count: 0,
-            lastUpdated: new Date().toISOString(),
-            message: 'No vulnerabilities found. Run CVE fetch process to populate data.',
-            debug: 'CVE data is loaded by the scheduled daily_cve_update workflow'
-          },
-        });
-      }
-
-    } catch (dbError) {
-      console.error('Database connectivity or table check failed:', dbError);
-      return res.status(500).json({
-        error: 'Database connectivity failed',
-        debug: dbError instanceof Error ? dbError.message : 'Unknown database error'
-      });
-    }
+    // The shared connection. This route used to open a new pool, check the table exists and
+    // count every row before running its own query: five round trips in a row per page.
+    const db = await getDb();
 
     // Parse query parameters
     const {
@@ -3421,7 +3362,8 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
             created_at,
             has_r2_backing,
             epss_score,
-            epss_percentile
+            epss_percentile,
+            left(search_vector, ${SEARCH_VECTOR_HEAD}) AS sv_head
           FROM vulnerabilities
           WHERE (cvss_v3_severity = ${severityUpper} OR cvss_v2_severity = ${severityUpper})
           ${vendor ? sql`AND vendors @> ${JSON.stringify([vendor])}` : sql``}
@@ -3446,7 +3388,8 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
             created_at,
             has_r2_backing,
             epss_score,
-            epss_percentile
+            epss_percentile,
+            left(search_vector, ${SEARCH_VECTOR_HEAD}) AS sv_head
           FROM vulnerabilities
           ${vendor ? sql`WHERE vendors @> ${JSON.stringify([vendor])}` : sql``}
           ${sql.raw(orderByClause)}
@@ -3471,7 +3414,8 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
           created_at,
           has_r2_backing,
           epss_score,
-          epss_percentile
+          epss_percentile,
+          left(search_vector, ${SEARCH_VECTOR_HEAD}) AS sv_head
         FROM vulnerabilities
         ${vendor ? sql`WHERE vendors @> ${JSON.stringify([vendor])}` : sql``}
         ${sql.raw(orderByClause)}
@@ -3479,8 +3423,6 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
         OFFSET ${offset}
       `;
     }
-
-    const result = await db.execute(query);
 
     // Get total count for pagination
     let countQuery;
@@ -3507,14 +3449,15 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
       `;
     }
 
-    const countResult = await db.execute(countQuery);
+    // The page and its total are independent, so fetch them together.
+    const [result, countResult] = await Promise.all([db.execute(query), db.execute(countQuery)]);
     const totalCount = Number(countResult.rows[0]?.total || 0);
 
     // Format vulnerabilities data
     // Format vulnerabilities data
     const vulnerabilities = result.rows.map((row: any) => ({
       id: row.id,
-      description: row.has_r2_backing ? "Click to view full details" : "No description available",
+      description: excerptFromSearchVector(row.id, row.sv_head, row.vendors) || "No description available",
       publishedDate: row.published_date,
       lastModifiedDate: row.last_modified_date,
       vulnStatus: row.vuln_status,

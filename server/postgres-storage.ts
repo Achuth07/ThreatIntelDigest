@@ -1,7 +1,8 @@
-import { and, desc, asc, ilike, inArray, eq, or, sql } from 'drizzle-orm';
+import { and, desc, asc, ilike, inArray, eq, or, sql, type SQL } from 'drizzle-orm';
 import { getDb } from './db.js';
 import { articles, bookmarks, rssSources, vulnerabilities, users, userSourcePreferences, userPreferences, knownExploitedVulnerabilities, cweCategories, malwareDailyStats, threatGroups, watchlistItems } from '../shared/schema.js';
 import type { IStorage, CVE, InsertCVE } from './storage.js';
+import { buildPrefixTsQuery, CVE_ID_PATTERN, descriptionFromSearchVector } from './services/cve-text.js';
 import type { Article, InsertArticle, Bookmark, InsertBookmark, RssSource, InsertRssSource } from '../shared/schema.js';
 import type { User, InsertUser, UserSourcePreference, InsertUserSourcePreference, UserPreferences, InsertUserPreferences, KnownExploitedVulnerability, InsertKnownExploitedVulnerability, MalwareDailyStat, ThreatGroup, WatchlistItem, InsertWatchlistItem } from '../shared/schema.js';
 
@@ -503,7 +504,7 @@ export class PostgresStorage implements IStorage {
       const results = await queryBuilder;
       return results.map(result => ({
         id: result.id,
-        description: (result as any).searchVector || "", // Description column dropped, using searchVector as fallback
+        description: descriptionFromSearchVector(result.id, result.searchVector, result.vendors),
         publishedDate: result.publishedDate,
         lastModifiedDate: result.lastModifiedDate,
         vulnStatus: result.vulnStatus,
@@ -533,7 +534,7 @@ export class PostgresStorage implements IStorage {
       const vuln = result[0];
       return {
         id: vuln.id,
-        description: (vuln as any).searchVector || "", // Description column dropped
+        description: descriptionFromSearchVector(vuln.id, vuln.searchVector, vuln.vendors),
         publishedDate: vuln.publishedDate,
         lastModifiedDate: vuln.lastModifiedDate,
         vulnStatus: vuln.vulnStatus,
@@ -859,19 +860,13 @@ export class PostgresStorage implements IStorage {
   async getCVEsByKeywords(keywords: string[], limit = 50): Promise<CVE[]> {
     if (!keywords.length) return [];
     try {
-      const conditions = keywords.map(keyword => {
-        // Search ID and description (stored in searchVector since description col was dropped)
-        return sql`to_tsvector('english', ${vulnerabilities.id} || ' ' || COALESCE(${vulnerabilities.searchVector}, '')) @@ websearch_to_tsquery('english', ${keyword})`;
-      });
-
-      const results = await this.db.select().from(vulnerabilities)
-        .where(or(...conditions))
-        .orderBy(desc(vulnerabilities.publishedDate))
-        .limit(limit);
+      // search_vector starts with the ID. This expression matches idx_vulnerabilities_fts (migration 008).
+      const anyKeyword = sql.join(keywords.map(keyword => sql`websearch_to_tsquery('english', ${keyword})`), sql` || `);
+      const results = await this.newestMatchingCves(sql`to_tsvector('english', COALESCE(search_vector, '')) @@ (${anyKeyword})`, limit);
 
       return results.map(result => ({
         id: result.id,
-        description: (result as any).searchVector || "",
+        description: descriptionFromSearchVector(result.id, result.searchVector, result.vendors),
         publishedDate: result.publishedDate,
         lastModifiedDate: result.lastModifiedDate,
         vulnStatus: result.vulnStatus,
@@ -1304,6 +1299,38 @@ export class PostgresStorage implements IStorage {
       return [];
     }
   }
+  // Newest CVEs matching an indexed condition. A plain "WHERE ... ORDER BY published_date LIMIT n"
+  // lets Postgres walk the published-date index and test every row, which took 18 s for a word
+  // that matches nothing. Collecting matches first (MATERIALIZED), keeping the top n, then
+  // fetching only those rows keeps the slowest search measured at about 190 ms (WHA-50).
+  private async newestMatchingCves(condition: SQL, limit: number) {
+    const { rows } = await this.db.execute(sql`
+      WITH matches AS MATERIALIZED (
+        SELECT id, published_date FROM vulnerabilities WHERE ${condition}
+      )
+      SELECT id FROM matches ORDER BY published_date DESC LIMIT ${limit}
+    `);
+    const ids = rows.map((row: any) => row.id as string);
+    if (ids.length === 0) return [];
+    const found = await this.db.select().from(vulnerabilities).where(inArray(vulnerabilities.id, ids));
+    const order = new Map(ids.map((id, index) => [id, index]));
+    return found.sort((a, b) => order.get(a.id)! - order.get(b.id)!);
+  }
+
+  // Shared by global search. Every branch uses an index from migration 008.
+  private async searchCves(query: string, limit: number) {
+    const trimmed = query.trim();
+    if (CVE_ID_PATTERN.test(trimmed)) {
+      return this.db.select().from(vulnerabilities).where(eq(vulnerabilities.id, trimmed.toUpperCase())).limit(limit);
+    }
+    if (/^CVE-\d{4}(-\d{0,7})?$/i.test(trimmed)) {
+      return this.newestMatchingCves(sql`id LIKE ${trimmed.toUpperCase() + '%'}`, limit);
+    }
+    const tsQuery = buildPrefixTsQuery(trimmed);
+    if (!tsQuery) return [];
+    return this.newestMatchingCves(sql`to_tsvector('english', COALESCE(search_vector, '')) @@ to_tsquery('english', ${tsQuery})`, limit);
+  }
+
   async globalSearch(query: string): Promise<{
     articles: Article[];
     cves: CVE[];
@@ -1335,13 +1362,9 @@ export class PostgresStorage implements IStorage {
           )
         ).limit(5),
 
-        // CVEs
-        this.db.select().from(vulnerabilities).where(
-          or(
-            ilike(vulnerabilities.id, searchTerm),
-            ilike(vulnerabilities.searchVector, searchTerm)
-          )
-        ).limit(5),
+        // CVEs: an ID or ID prefix uses idx_vulnerabilities_id_pattern; words use the full-text
+        // index (idx_vulnerabilities_fts), with the last word matched as a prefix.
+        this.searchCves(query, 5),
 
         // KEVs
         this.db.select().from(knownExploitedVulnerabilities).where(
@@ -1366,7 +1389,7 @@ export class PostgresStorage implements IStorage {
       // Map CVEs to CVE interface format
       const mappedCves: CVE[] = cvesResult.map(vuln => ({
         id: vuln.id,
-        description: (vuln as any).searchVector || "",
+        description: descriptionFromSearchVector(vuln.id, vuln.searchVector, vuln.vendors),
         publishedDate: vuln.publishedDate,
         lastModifiedDate: vuln.lastModifiedDate,
         vulnStatus: vuln.vulnStatus,
