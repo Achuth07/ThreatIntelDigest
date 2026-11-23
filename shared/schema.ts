@@ -110,6 +110,55 @@ export const cveChangeEvents = pgTable("cve_change_events", {
   index("idx_cve_change_events_cve").on(table.cveId),
 ]);
 
+// Vendor and product catalog from CPE names (WHA-51); see migrations/011_vendor_product_catalog.sql.
+export const catalogVendors = pgTable("vendors", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(), // CPE vendor, e.g. "apache"
+  displayName: text("display_name").notNull(),
+});
+
+export const catalogProducts = pgTable("products", {
+  id: serial("id").primaryKey(),
+  vendorId: integer("vendor_id").notNull().references(() => catalogVendors.id),
+  slug: text("slug").notNull(), // CPE product, e.g. "http_server"
+  displayName: text("display_name").notNull(),
+}, (table) => [unique().on(table.vendorId, table.slug)]);
+
+// One row per CVE; product_ids has a GIN index for "CVEs affecting product X".
+export const cveProducts = pgTable("cve_products", {
+  cveId: varchar("cve_id", { length: 32 }).primaryKey(),
+  productIds: integer("product_ids").array().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(sql`now()`),
+});
+
+export const kevProductMap = pgTable("kev_product_map", {
+  vendorProject: text("vendor_project").notNull(),
+  product: text("product").notNull(),
+  productId: integer("product_id").references(() => catalogProducts.id),
+  method: text("method"), // cpe-name, cpe-frequency, name; NULL when unmatched
+  kevCount: integer("kev_count").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(sql`now()`),
+}, (table) => [primaryKey({ columns: [table.vendorProject, table.product] })]);
+
+// CNA CVSS 4.0/3.x and CISA SSVC from the CVE List (WHA-53); see migrations/012_cve_scores.sql.
+export const cveScores = pgTable("cve_scores", {
+  cveId: varchar("cve_id", { length: 32 }).primaryKey(),
+  cvss4Score: decimal("cvss4_score", { precision: 3, scale: 1 }),
+  cvss4Severity: text("cvss4_severity"),
+  cvss4Vector: text("cvss4_vector"),
+  cvss4Source: text("cvss4_source"), // cna or adp
+  cvss3Score: decimal("cvss3_score", { precision: 3, scale: 1 }),
+  cvss3Severity: text("cvss3_severity"),
+  cvss3Vector: text("cvss3_vector"),
+  cvss3Source: text("cvss3_source"),
+  ssvcExploitation: text("ssvc_exploitation"), // none, poc, active
+  ssvcAutomatable: text("ssvc_automatable"), // yes, no
+  ssvcTechnicalImpact: text("ssvc_technical_impact"), // partial, total
+  ssvcTimestamp: timestamp("ssvc_timestamp", { withTimezone: true }),
+  recordUpdated: timestamp("record_updated", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(sql`now()`),
+});
+
 export const knownExploitedVulnerabilities = pgTable("known_exploited_vulnerabilities", {
   cveID: varchar("cve_id").primaryKey(),
   vendorProject: text("vendor_project").notNull(),

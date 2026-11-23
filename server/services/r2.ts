@@ -124,6 +124,19 @@ export async function saveEpssSyncState(state: EpssSyncState): Promise<void> {
     await writeR2Json('sync/epss-state.json', state);
 }
 
+// CVE List sync (WHA-53): the delta-log fetch time the last run processed up to.
+export interface CvelistSyncState {
+    lastFetchTime: string;
+}
+
+export async function getCvelistSyncState(): Promise<CvelistSyncState | null> {
+    return readR2Json<CvelistSyncState>('sync/cvelist-state.json');
+}
+
+export async function saveCvelistSyncState(state: CvelistSyncState): Promise<void> {
+    await writeR2Json('sync/cvelist-state.json', state);
+}
+
 export async function checkCveInR2(cveId: string) {
     try {
         const r2 = getR2();

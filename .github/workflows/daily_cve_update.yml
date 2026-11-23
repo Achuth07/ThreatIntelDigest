@@ -61,3 +61,16 @@ jobs:
       env:
         DATABASE_URL: ${{ secrets.DATABASE_URL }}
       run: npx tsx scripts/submit-cve-indexnow.ts
+
+    # CNA CVSS 4.0/3.x and CISA SSVC from the CVE List (WHA-53). Runs even if the NVD step failed,
+    # since the two sources are independent.
+    - name: Run CVE List Update Script
+      if: ${{ !cancelled() }}
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+        R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+        R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+        R2_ENDPOINT_URL: ${{ secrets.R2_ENDPOINT_URL }}
+      run: npx tsx scripts/sync_cvelist.ts
