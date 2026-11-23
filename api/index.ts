@@ -5430,9 +5430,15 @@ async function handleHubEndpoints(req: VercelRequest, res: VercelResponse) {
     }
 
     const parts = pathname.replace(/^\/api\/hubs\//, '').replace(/\/+$/, '').split('/');
-    const [kind, id] = parts;
+    const [kind, id, third] = parts;
 
     let result: unknown = null;
+    if (kind === 'products' && id && third) {
+      result = await hubs.getProductHub(query, id.toLowerCase(), third.toLowerCase());
+      if (result === null) return res.status(404).json({ error: 'Not found' });
+      res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+      return res.json(result);
+    }
     if (kind === 'vendors' && !id) result = await hubs.getVendorIndex(query);
     else if (kind === 'vendors' && id) result = await hubs.getVendorHub(query, id.toLowerCase());
     else if (kind === 'cwe' && !id) result = await hubs.getCweIndex(query);

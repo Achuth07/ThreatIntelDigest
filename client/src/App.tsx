@@ -42,6 +42,7 @@ const CVEDetailPage = lazy(() => import("@/pages/cve-detail"));
 const VulnerabilitiesPage = lazy(() => import("@/pages/vulnerabilities"));
 const VendorsPage = lazy(() => import("@/pages/vendors"));
 const VendorDetailPage = lazy(() => import("@/pages/vendor-detail"));
+const ProductDetailPage = lazy(() => import("@/pages/product-detail"));
 const CweIndexPage = lazy(() => import("@/pages/cwe"));
 const CweDetailPage = lazy(() => import("@/pages/cwe-detail"));
 const Blog = lazy(() => import("@/pages/blog"));
@@ -128,6 +129,7 @@ function Router() {
         <Route path="/cve/:id" component={CVEDetailPage} />
         <Route path="/vendors" component={VendorsPage} />
         <Route path="/vendors/:slug" component={VendorDetailPage} />
+        <Route path="/vendors/:vendor/:product" component={ProductDetailPage} />
         <Route path="/cwe" component={CweIndexPage} />
         <Route path="/cwe/:id" component={CweDetailPage} />
         {/* Old addresses. The server answers these with a permanent redirect; this covers in-app links and local dev. */}

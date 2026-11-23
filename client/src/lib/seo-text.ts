@@ -134,3 +134,11 @@ export function cweSeo(cwe: { id: string; name: string | null; cveCount: number;
   }. See the newest vulnerabilities with this weakness.`;
   return { title, description: plainSummary(description, 160) };
 }
+
+/** Title and meta description for a product page (a product with known exploited vulnerabilities). */
+export function productSeo(product: { vendorName: string; productName: string; kevCount: number }) {
+  const name = `${product.vendorName} ${product.productName}`;
+  const title = fitTitle([`${name} Vulnerabilities: Exploited CVEs and Latest Flaws`, `${name} Vulnerabilities and Exploited CVEs`, `${name} Vulnerabilities`]);
+  const description = `${count(product.kevCount)} ${name} ${product.kevCount === 1 ? 'vulnerability is' : 'vulnerabilities are'} in CISA's Known Exploited Vulnerabilities catalog. See which ones attackers exploit and the newest CVEs.`;
+  return { title, description: plainSummary(description, 160) };
+}

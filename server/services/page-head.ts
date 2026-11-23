@@ -15,14 +15,14 @@ import {
   isNoindexPath,
 } from '../../client/src/lib/seo-core.js';
 import { NOT_FOUND_META, STATIC_PAGE_META } from '../../client/src/lib/page-meta.js';
-import { actorSeo, cveSeo, cweSeo, vendorSeo } from '../../client/src/lib/seo-text.js';
-import { CWE_HUB, CWE_ID_PATTERN, UUID_PATTERN, VENDORS_HUB, actorUrl, cveUrl, cweUrl, vendorUrl } from '../../client/src/lib/urls.js';
-import type { CweHub, CweIndexRow, VendorHub, VendorIndexRow } from './hub-data.js';
+import { actorSeo, cveSeo, cweSeo, productSeo, vendorSeo } from '../../client/src/lib/seo-text.js';
+import { CWE_HUB, CWE_ID_PATTERN, UUID_PATTERN, VENDORS_HUB, actorUrl, cveUrl, cweUrl, productUrl, vendorUrl } from '../../client/src/lib/urls.js';
+import type { CweHub, CweIndexRow, ProductHub, VendorHub, VendorIndexRow } from './hub-data.js';
 import { MIN_CVES_FOR_INDEX } from './hub-data.js';
 import { KEV_FAQ } from '../../client/src/lib/kev-content.js';
 import { actorJsonLd, blogPostJsonLd, cveJsonLd, hubJsonLd, landingJsonLd } from '../../client/src/lib/jsonld.js';
 import type { HeadTags } from './head-inject.js';
-import { renderActorBody, renderActorsHubBody, renderCveBody, renderCveHubBody, renderCweHubBody, renderCweIndexBody, renderKevHubBody, renderLandingBody, renderVendorHubBody, renderVendorsIndexBody, type ActorsHubData, type CveBodyData, type CveHubData, type KevHubData } from './page-body.js';
+import { renderActorBody, renderActorsHubBody, renderCveBody, renderCveHubBody, renderCweHubBody, renderCweIndexBody, renderKevHubBody, renderLandingBody, renderProductHubBody, renderVendorHubBody, renderVendorsIndexBody, type ActorsHubData, type CveBodyData, type CveHubData, type KevHubData } from './page-body.js';
 
 export interface PageHead extends HeadTags {
   status: 200 | 301 | 404;
@@ -54,6 +54,7 @@ export interface PageData {
   getCweIndex(): Promise<CweIndexRow[]>;
   getVendorHub(slug: string): Promise<VendorHub | null>;
   getCweHub(id: string): Promise<CweHub | null>;
+  getProductHub(vendorSlug: string, productSlug: string): Promise<ProductHub | null>;
   /** One page of the threat actor directory, most recently updated first. */
   getActorsPage(page: number, pageSize: number): Promise<ActorsHubData>;
   /** The newest CVEs and the total count. */
@@ -173,6 +174,32 @@ export async function resolvePageHead(rawPathname: string, data: PageData, searc
       title: DEFAULT_TITLE,
       description: DEFAULT_DESCRIPTION,
       noindex: true,
+    };
+  }
+
+  // Product pages: /vendors/<vendor>/<product>. Only products with enough KEV entries have a page.
+  if (segments.length === 3 && section === 'vendors') {
+    const productSlug = segments[2];
+    if (id !== id.toLowerCase() || productSlug !== productSlug.toLowerCase()) {
+      return redirectTo(productUrl(id.toLowerCase(), productSlug.toLowerCase()));
+    }
+    const hub = await data.getProductHub(id, productSlug);
+    if (!hub) return notFound('Product Not Found | WhatCyber', 'This product page could not be found.');
+    const seo = productSeo(hub);
+    const parent = hub.vendorHub ? { name: hub.vendorHub.name, path: vendorUrl(hub.vendorHub.slug) } : { name: 'Vendors', path: VENDORS_HUB };
+    return {
+      status: 200,
+      title: seo.title,
+      description: seo.description,
+      canonical: canonicalFor(pathname),
+      jsonLd: hubJsonLd({
+        path: productUrl(hub.vendorSlug, hub.productSlug),
+        name: hub.productName,
+        title: seo.title,
+        description: seo.description,
+        parent,
+      }),
+      body: renderProductHubBody(hub),
     };
   }
 

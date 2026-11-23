@@ -7,7 +7,7 @@
  * (migrations/009_hub_stats.sql), refreshed once a day by scripts/refresh-hub-stats.ts.
  */
 
-import { vendorSlug } from '../../client/src/lib/urls.js';
+import { slugify, vendorSlug } from '../../client/src/lib/urls.js';
 
 /** The neon tagged-template query function. */
 export type Sql = (strings: TemplateStringsArray, ...values: any[]) => PromiseLike<any[]>;
@@ -17,6 +17,16 @@ export const TOP_CWES = 50;
 /** A hub is only indexed when it has at least this many CVEs; the top lists are far above it. */
 export const MIN_CVES_FOR_INDEX = 20;
 export const HUB_LIST_SIZE = 25;
+/** A product gets a page when CISA lists at least this many of its vulnerabilities. */
+export const MIN_KEV_FOR_PRODUCT = 5;
+export const TOP_PRODUCTS = 60;
+export const NEWS_SIZE = 6;
+
+// Vendor names that are also everyday words: matching them in article titles brings in unrelated news.
+const AMBIGUOUS_NEWS_VENDORS = new Set(['progress', 'python', 'eclipse', 'zoom', 'elastic', 'canonical', 'vim', 'gnu', 'sap', 'hp', 'f5', 'go', 'golang']);
+
+// KEV product names that name no single product.
+const GENERIC_PRODUCT = /\b(multiple|various)\b|mobile devices|chipsets/i;
 
 // ---------------------------------------------------------------------------------------------
 // Names
@@ -111,6 +121,19 @@ export interface SeverityCounts {
   LOW: number;
 }
 
+export interface ProductLink {
+  slug: string;
+  name: string;
+  kevCount: number;
+}
+
+export interface HubNews {
+  title: string;
+  url: string;
+  source: string;
+  publishedAt: string | null;
+}
+
 export interface VendorHub {
   slug: string;
   vendor: string;
@@ -121,6 +144,9 @@ export interface VendorHub {
   recent: HubCve[];
   kev: HubKev[];
   topWeaknesses: { id: string; name: string | null; count: number }[];
+  /** Products with known exploited vulnerabilities that have their own page. */
+  products: ProductLink[];
+  news: HubNews[];
 }
 
 export interface CweHub {
@@ -133,6 +159,21 @@ export interface CweHub {
   severity: SeverityCounts;
   recent: HubCve[];
   kev: HubKev[];
+  /** Vendors with the most CVEs for this weakness. `slug` is set when the vendor has a page. */
+  topVendors: { slug: string | null; name: string; count: number }[];
+}
+
+export interface ProductHub {
+  vendorSlug: string;
+  productSlug: string;
+  vendorName: string;
+  productName: string;
+  kevCount: number;
+  /** The vendor's hub page, when it has one. */
+  vendorHub: { slug: string; name: string } | null;
+  kev: HubKev[];
+  /** Newest CVEs whose description names this vendor and product. */
+  recent: HubCve[];
 }
 
 export interface VendorIndexRow {
@@ -203,7 +244,10 @@ export async function getVendorHub(sql: Sql, slug: string): Promise<VendorHub | 
   if (!stat) return null;
   const filter = JSON.stringify([stat.vendor]);
 
-  const [recent, severity, kev, weaknesses] = await Promise.all([
+  const newsEligible = !AMBIGUOUS_NEWS_VENDORS.has(stat.slug) && stat.display_name.length >= 3;
+  const newsPattern = `\\m${stat.display_name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\M`;
+
+  const [recent, severity, kev, weaknesses, products, news] = await Promise.all([
     sql`SELECT id, published_date, cvss_v3_severity, cvss_v3_score FROM vulnerabilities
         WHERE vendors @> ${filter}::jsonb ORDER BY published_date DESC, id DESC LIMIT ${HUB_LIST_SIZE}`,
     sql`SELECT cvss_v3_severity AS severity, count(*)::int AS n FROM vulnerabilities
@@ -214,6 +258,10 @@ export async function getVendorHub(sql: Sql, slug: string): Promise<VendorHub | 
         ORDER BY date_added DESC LIMIT ${HUB_LIST_SIZE}`,
     sql`SELECT w AS id, count(*)::int AS n FROM vulnerabilities, unnest(weaknesses) AS w
         WHERE vendors @> ${filter}::jsonb AND w LIKE 'CWE-%' GROUP BY w ORDER BY n DESC LIMIT 5`,
+    sql`SELECT product_slug, product_name, kev_count FROM product_stats WHERE vendor_slug = ${stat.slug} ORDER BY kev_count DESC, product_name LIMIT 12`,
+    newsEligible
+      ? sql`SELECT title, url, source, published_at FROM articles WHERE title ~* ${newsPattern} ORDER BY published_at DESC LIMIT ${NEWS_SIZE}`
+      : Promise.resolve([] as any[]),
   ]);
 
   const names = weaknesses.length
@@ -231,11 +279,13 @@ export async function getVendorHub(sql: Sql, slug: string): Promise<VendorHub | 
     recent: recent.map(mapCve),
     kev: kev.map(mapKev),
     topWeaknesses: weaknesses.map((w: any) => ({ id: w.id, name: (nameOf.get(w.id) as string) ?? null, count: Number(w.n) })),
+    products: products.map((p: any) => ({ slug: p.product_slug, name: p.product_name, kevCount: Number(p.kev_count) })),
+    news: news.map((n: any) => ({ title: n.title, url: n.url, source: n.source, publishedAt: iso(n.published_at) })),
   };
 }
 
 export async function getCweHub(sql: Sql, id: string): Promise<CweHub | null> {
-  const stat = (await sql`SELECT id, cve_count, kev_count FROM cwe_stats WHERE id = ${id}`)[0];
+  const stat = (await sql`SELECT id, cve_count, kev_count, top_vendors FROM cwe_stats WHERE id = ${id}`)[0];
   if (!stat) return null;
 
   const [meta, recent, severity, kev] = await Promise.all([
@@ -259,6 +309,39 @@ export async function getCweHub(sql: Sql, id: string): Promise<CweHub | null> {
     severity: severityFrom(severity),
     recent: recent.map(mapCve),
     kev: kev.map(mapKev),
+    topVendors: Array.isArray(stat.top_vendors) ? stat.top_vendors : [],
+  };
+}
+
+export async function getProductHub(sql: Sql, vendorSlugValue: string, productSlug: string): Promise<ProductHub | null> {
+  const stat = (
+    await sql`SELECT vendor_slug, product_slug, vendor_name, product_name, kev_count FROM product_stats
+              WHERE vendor_slug = ${vendorSlugValue} AND product_slug = ${productSlug}`
+  )[0];
+  if (!stat) return null;
+
+  const [kev, recent, vendor] = await Promise.all([
+    sql`SELECT cve_id, vendor_project, product, vulnerability_name, date_added, known_ransomware_campaign_use
+        FROM known_exploited_vulnerabilities
+        WHERE lower(regexp_replace(vendor_project, '[^a-zA-Z0-9]+', '', 'g')) = ${normalizeVendor(stat.vendor_name)}
+          AND product = ${stat.product_name}
+        ORDER BY date_added DESC LIMIT ${HUB_LIST_SIZE}`,
+    // The CVE descriptions are full-text indexed (idx_vulnerabilities_fts); match vendor and product names.
+    sql`SELECT id, published_date, cvss_v3_severity, cvss_v3_score FROM vulnerabilities
+        WHERE to_tsvector('english'::regconfig, COALESCE(search_vector, '')) @@ plainto_tsquery('english', ${`${stat.vendor_name} ${stat.product_name}`})
+        ORDER BY published_date DESC, id DESC LIMIT ${HUB_LIST_SIZE}`,
+    sql`SELECT slug, display_name FROM vendor_stats WHERE slug = ${stat.vendor_slug}`,
+  ]);
+
+  return {
+    vendorSlug: stat.vendor_slug,
+    productSlug: stat.product_slug,
+    vendorName: stat.vendor_name,
+    productName: stat.product_name,
+    kevCount: Number(stat.kev_count),
+    vendorHub: vendor[0] ? { slug: vendor[0].slug, name: vendor[0].display_name } : null,
+    kev: kev.map(mapKev),
+    recent: recent.map(mapCve),
   };
 }
 
@@ -285,7 +368,7 @@ export async function getHubCweIds(sql: Sql, ids: string[]): Promise<string[]> {
  * Recomputes vendor_stats and cwe_stats. `client` is the neon client (it needs .transaction), so
  * the tables are swapped in one step and a page never sees a half-filled list.
  */
-export async function refreshHubStats(client: any): Promise<{ vendors: number; cwes: number }> {
+export async function refreshHubStats(client: any): Promise<{ vendors: number; cwes: number; products: number }> {
   const vendors = await client`SELECT v AS vendor, count(*)::int AS n FROM vulnerabilities, jsonb_array_elements_text(vendors) AS v
                                GROUP BY v ORDER BY n DESC LIMIT ${TOP_VENDORS * 3}`;  // spare rows: excluded and duplicate vendors are skipped
   const cwes = await client`SELECT w AS id, count(*)::int AS n FROM vulnerabilities, unnest(weaknesses) AS w
@@ -314,7 +397,41 @@ export async function refreshHubStats(client: any): Promise<{ vendors: number; c
     if (vendorRows.length === TOP_VENDORS) break;
   }
 
-  const statements: any[] = [client`DELETE FROM vendor_stats`, client`DELETE FROM cwe_stats`];
+  // Most affected vendors per weakness, from one grouped scan of (weakness, vendor) pairs.
+  const pairs = await client`SELECT w AS cwe, v AS vendor, count(*)::int AS n
+                             FROM vulnerabilities, unnest(weaknesses) AS w, jsonb_array_elements_text(vendors) AS v
+                             WHERE w LIKE 'CWE-%' GROUP BY w, v`;
+  const hubBySlug = new Map(vendorRows.map((v) => [v.slug, v]));
+  const topVendorsByCwe = new Map<string, { slug: string | null; name: string; count: number }[]>();
+  const wantedCwes = new Set((cwes as any[]).map((c) => c.id));
+  for (const r of (pairs as any[]).sort((a, b) => Number(b.n) - Number(a.n))) {
+    if (!wantedCwes.has(r.cwe)) continue;
+    const slug = vendorSlug(r.vendor);
+    if (EXCLUDED_VENDORS.has(slug)) continue;
+    const list = topVendorsByCwe.get(r.cwe) ?? [];
+    if (list.length >= 8) continue;
+    const hub = hubBySlug.get(slug);
+    list.push({ slug: hub ? slug : null, name: hub?.name ?? prettifyVendor(r.vendor), count: Number(r.n) });
+    topVendorsByCwe.set(r.cwe, list);
+  }
+
+  // Products: KEV products with enough entries, under the vendor hub slug when the vendor has one.
+  const kevProducts = await client`SELECT vendor_project, product, count(*)::int AS n FROM known_exploited_vulnerabilities
+                                   GROUP BY vendor_project, product HAVING count(*) >= ${MIN_KEV_FOR_PRODUCT} ORDER BY n DESC`;
+  const slugByNormalized = new Map(vendorRows.map((v) => [normalizeVendor(v.vendor), v.slug]));
+  const productRows: { vendorSlug: string; productSlug: string; vendorName: string; productName: string; n: number }[] = [];
+  const productSeen = new Set<string>();
+  for (const r of kevProducts as any[]) {
+    if (GENERIC_PRODUCT.test(r.product)) continue;
+    const vSlug = slugByNormalized.get(normalizeVendor(r.vendor_project)) ?? slugify(r.vendor_project);
+    const pSlug = slugify(r.product);
+    if (!vSlug || !pSlug || productSeen.has(`${vSlug}/${pSlug}`)) continue;
+    productSeen.add(`${vSlug}/${pSlug}`);
+    productRows.push({ vendorSlug: vSlug, productSlug: pSlug, vendorName: r.vendor_project, productName: r.product, n: Number(r.n) });
+    if (productRows.length === TOP_PRODUCTS) break;
+  }
+
+  const statements: any[] = [client`DELETE FROM vendor_stats`, client`DELETE FROM cwe_stats`, client`DELETE FROM product_stats`];
   vendorRows.forEach((v, i) => {
     statements.push(
       client`INSERT INTO vendor_stats (slug, vendor, display_name, cve_count, kev_count, rank)
@@ -323,10 +440,17 @@ export async function refreshHubStats(client: any): Promise<{ vendors: number; c
   });
   (cwes as any[]).forEach((c, i) => {
     statements.push(
-      client`INSERT INTO cwe_stats (id, cve_count, kev_count, rank) VALUES (${c.id}, ${Number(c.n)}, ${kevCwe.get(c.id) ?? 0}, ${i + 1})`
+      client`INSERT INTO cwe_stats (id, cve_count, kev_count, rank, top_vendors)
+             VALUES (${c.id}, ${Number(c.n)}, ${kevCwe.get(c.id) ?? 0}, ${i + 1}, ${JSON.stringify(topVendorsByCwe.get(c.id) ?? [])}::jsonb)`
+    );
+  });
+  productRows.forEach((p, i) => {
+    statements.push(
+      client`INSERT INTO product_stats (vendor_slug, product_slug, vendor_name, product_name, kev_count, rank)
+             VALUES (${p.vendorSlug}, ${p.productSlug}, ${p.vendorName}, ${p.productName}, ${p.n}, ${i + 1})`
     );
   });
   await client.transaction(statements);
 
-  return { vendors: vendorRows.length, cwes: cwes.length };
+  return { vendors: vendorRows.length, cwes: cwes.length, products: productRows.length };
 }

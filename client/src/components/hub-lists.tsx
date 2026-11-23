@@ -1,7 +1,7 @@
 import { Link } from 'wouter';
 import { cveUrl } from '@/lib/urls';
 import { longDate } from '@/lib/cve-summary';
-import type { HubCve, HubKev, SeverityCounts } from '../../../server/services/hub-data';
+import type { HubCve, HubKev, HubNews, SeverityCounts } from '../../../server/services/hub-data';
 
 /** Shared pieces of the vendor and CWE pages (WHA-24). */
 
@@ -78,5 +78,23 @@ export function HubSection({ title, children }: { title: string; children: React
       <h2 className="border-b border-slate-700 pb-2 text-lg font-bold text-slate-100">{title}</h2>
       {children}
     </section>
+  );
+}
+
+export function HubNewsList({ rows }: { rows: HubNews[] }) {
+  return (
+    <ul className="divide-y divide-slate-800 rounded-lg border border-slate-800 bg-slate-900/40">
+      {rows.map((item) => (
+        <li key={item.url} className="px-4 py-3">
+          <a href={item.url} target="_blank" rel="nofollow noopener noreferrer" className="text-sm font-medium text-slate-200 hover:text-whatcyber-teal">
+            {item.title}
+          </a>
+          <div className="mt-1 text-xs text-slate-500">
+            {item.source}
+            {item.publishedAt ? ` · ${longDate(item.publishedAt)}` : ''}
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }

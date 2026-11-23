@@ -7,7 +7,7 @@ import { createImageUrlBuilder } from '@sanity/image-url';
 import { DEFAULT_DESCRIPTION, DEFAULT_TITLE, canonicalFor, isNoindexPath } from '../client/src/lib/seo-core.js';
 import { UUID_PATTERN } from '../client/src/lib/urls.js';
 import { injectHead } from '../server/services/head-inject.js';
-import { getCweHub, getCweIndex, getHubCweIds, getHubVendorSlugs, getVendorHub, getVendorIndex } from '../server/services/hub-data.js';
+import { getCweHub, getCweIndex, getProductHub, getHubCweIds, getHubVendorSlugs, getVendorHub, getVendorIndex } from '../server/services/hub-data.js';
 import { injectBody, stripBody } from '../server/services/page-body.js';
 import { resolvePageHead, type PageData } from '../server/services/page-head.js';
 
@@ -230,6 +230,9 @@ function createDataSource(): PageData {
     async getCweHub(id) {
       return getCweHub(sql(), id);
     },
+    async getProductHub(vendor, product) {
+      return getProductHub(sql(), vendor, product);
+    },
 
     async getPost(slug) {
       const post = await sanity.fetch(
@@ -276,9 +279,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const head = await resolvePageHead(pathname, createDataSource(), search);
     if (head.status === 301 && head.redirect) {
       // Keep the visitor's own query string, but not the parameters Vercel adds when it rewrites
-      // /cve/:id to this function (route, section and id).
+      // /cve/:id to this function (route, section, id, vendor and product).
       const query = new URL(req.url!, 'https://placeholder.invalid').searchParams;
       query.delete('route');
+      query.delete('vendor');
+      query.delete('product');
       query.delete('section');
       query.delete('id');
       const search = query.toString();
