@@ -2,6 +2,8 @@ import * as dotenv from 'dotenv';
 import { fetchAndStoreNvdCves, splitNvdWindows } from '../server/services/nvd.js';
 import { syncNvdHistory } from '../server/services/nvd-history.js';
 import { getNvdSyncState, saveNvdSyncState } from '../server/services/r2.js';
+import { CHANGE_EVENT_RETENTION_DAYS, pruneChangeEvents } from '../server/services/cve-change-events.js';
+import { getDb } from '../server/db.js';
 
 dotenv.config();
 
@@ -23,7 +25,9 @@ function parseDays(args: string[]): number | null {
 async function main() {
   const args = process.argv.slice(2);
   const days = parseDays(args);
-  const historyOnly = args.includes('--history-only');
+  // --events-only fills cve_change_events without touching R2 (backfill, WHA-56). Implies --history-only.
+  const eventsOnly = args.includes('--events-only');
+  const historyOnly = eventsOnly || args.includes('--history-only');
   const end = new Date();
 
   const state = await getNvdSyncState();
@@ -39,12 +43,16 @@ async function main() {
       // CVEs go first: history is only kept for CVEs we store, including brand new ones.
       await fetchAndStoreNvdCves(window.start, window.end, 0, 1000, 'modified');
     }
-    await syncNvdHistory(window.start, window.end);
+    await syncNvdHistory(window.start, window.end, { eventsOnly });
   }
 
   if (!historyOnly) {
     await saveNvdSyncState({ lastSyncedAt: end.toISOString() });
   }
+
+  // Keeps cve_change_events to its 90-day window; full history stays in R2.
+  const pruned = await pruneChangeEvents(getDb());
+  if (pruned > 0) console.log(`Removed ${pruned} change events older than ${CHANGE_EVENT_RETENTION_DAYS} days`);
   console.log('NVD sync complete.');
   process.exit(0);
 }

@@ -4,6 +4,7 @@ import type { CveChangeEvent } from '../../shared/cve-history.js';
 import { getDb } from '../db.js';
 import { mergeChangeEvents } from './nvd-history.js';
 import { getCveHistory, getEpssSyncState, saveCveHistory, saveEpssSyncState } from './r2.js';
+import { toChangeEventRow, upsertChangeEvents } from './cve-change-events.js';
 
 // FIRST's stable link to the latest daily file. It redirects to the dated file.
 const EPSS_CURRENT_URL = 'https://epss.empiricalsecurity.com/epss_scores-current.csv.gz';
@@ -121,6 +122,9 @@ async function loadStoredEpss(): Promise<StoredEpss[]> {
 }
 
 async function recordJumps(jumps: EpssJump[], scoreDate: string): Promise<void> {
+  // The cross-CVE index (WHA-56) gets an epss_jump row with the same id as the R2 history event.
+  const inserted = await upsertChangeEvents(getDb(), jumps.map(jump => toChangeEventRow(jump.cveId, toEpssEvent(jump, scoreDate))));
+  console.log(`[EPSS] ${inserted} new epss_jump rows in cve_change_events`);
   for (let i = 0; i < jumps.length; i += R2_BATCH_SIZE) {
     await Promise.all(
       jumps.slice(i, i + R2_BATCH_SIZE).map(async jump => {

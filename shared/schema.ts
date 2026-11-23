@@ -96,6 +96,20 @@ export const vulnerabilities = pgTable("vulnerabilities", {
   createdAt: timestamp("created_at").default(sql`now()`),
 });
 
+// Recent CVE change events across all CVEs, kept 90 days (WHA-56). Values stay in R2 history.
+// See migrations/010_cve_change_events.sql and server/services/cve-change-events.ts.
+export const cveChangeEvents = pgTable("cve_change_events", {
+  id: text("id").primaryKey(), // NVD cveChangeId, or epss-<date>-<CVE>
+  cveId: varchar("cve_id", { length: 32 }).notNull(),
+  eventName: text("event_name").notNull(),
+  types: text("types").array().notNull().default(sql`'{}'`),
+  changeTypes: text("change_types").array().notNull().default(sql`'{}'`),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+}, (table) => [
+  index("idx_cve_change_events_created").on(table.createdAt, table.id),
+  index("idx_cve_change_events_cve").on(table.cveId),
+]);
+
 export const knownExploitedVulnerabilities = pgTable("known_exploited_vulnerabilities", {
   cveID: varchar("cve_id").primaryKey(),
   vendorProject: text("vendor_project").notNull(),

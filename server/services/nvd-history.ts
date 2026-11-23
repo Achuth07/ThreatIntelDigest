@@ -1,6 +1,8 @@
 import type { CveChangeEvent } from '../../shared/cve-history.js';
 import { fetchNvdJson, getStoredLastModified } from './nvd.js';
 import { getCveHistory, saveCveHistory } from './r2.js';
+import { getDb } from '../db.js';
+import { toChangeEventRow, upsertChangeEvents } from './cve-change-events.js';
 
 const HISTORY_PAGE_SIZE = 5000;
 const R2_BATCH_SIZE = 20;
@@ -59,12 +61,20 @@ async function fetchChangesByCve(start: Date, end: Date): Promise<Map<string, Cv
   return byCve;
 }
 
-export async function syncNvdHistory(start: Date, end: Date): Promise<void> {
+// eventsOnly skips the R2 history files and only fills cve_change_events (for backfills).
+export async function syncNvdHistory(start: Date, end: Date, options: { eventsOnly?: boolean } = {}): Promise<void> {
   const byCve = await fetchChangesByCve(start, end);
   const stored = await getStoredLastModified(Array.from(byCve.keys()));
   const cveIds = Array.from(byCve.keys()).filter(cveId => stored.has(cveId));
   let failures = 0;
   let written = 0;
+
+  // The cross-CVE index gets the same events as the R2 files (WHA-56). A failure here throws
+  // before the sync saves its watermark, so the next run covers this window again.
+  const rows = cveIds.flatMap(cveId => byCve.get(cveId)!.map(event => toChangeEventRow(cveId, event)));
+  const inserted = await upsertChangeEvents(getDb(), rows);
+  console.log(`[NVD History] ${rows.length} change events, ${inserted} new in cve_change_events`);
+  if (options.eventsOnly) return;
 
   for (let i = 0; i < cveIds.length; i += R2_BATCH_SIZE) {
     const results = await Promise.allSettled(
