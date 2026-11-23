@@ -479,6 +479,39 @@ ${hubFooterLinks}`;
 }
 
 // ---------------------------------------------------------------------------------------------
+// Threat feed (WHA-17)
+
+export interface FeedArticle {
+  title: string;
+  summary: string | null;
+  url: string;
+  source: string;
+  threatLevel: string | null;
+  publishedAt: unknown;
+}
+
+export function renderFeedBody(articles: FeedArticle[]): string {
+  const sources = Array.from(new Set(articles.map((a) => a.source))).slice(0, 8);
+  const inner = `
+<p class="crumbs"><a href="/">WhatCyber</a> / Threat feed</p>
+<h1>Latest Threat Intelligence</h1>
+<p>${esc(HUB_ANSWERS.feed)}</p>
+<ul>${articles
+    .map((a) => {
+      const link = safeUrl(a.url);
+      const summary = plain(a.summary ?? '');
+      const level = ['CRITICAL', 'HIGH'].includes(String(a.threatLevel).toUpperCase()) ? ` <span class="tag warn">${esc(String(a.threatLevel).toLowerCase())} threat</span>` : '';
+      return `<li>${link ? `<a href="${esc(link)}" rel="nofollow noopener">${esc(a.title)}</a>` : esc(a.title)} &ndash; ${esc(a.source)}${formatDate(a.publishedAt) ? `, ${esc(formatDate(a.publishedAt))}` : ''}${level}${summary ? `<br>${esc(summary.length > 220 ? summary.slice(0, 217) + '...' : summary)}` : ''}</li>`;
+    })
+    .join('')}</ul>
+<p class="crumbs">${formatDate(articles[0]?.publishedAt) ? `Newest story: ${esc(formatDate(articles[0]?.publishedAt))}. ` : ''}${sources.length ? `Publishers in this list: ${esc(sources.join(', '))}. ` : ''}Full list of sources: <a href="/sources">/sources</a>.</p>
+<h2>More on WhatCyber</h2>
+<ul><li><a href="${esc(KEV_HUB)}">CISA Known Exploited Vulnerabilities catalog</a></li><li><a href="${esc(CVE_HUB)}">Latest CVEs</a></li><li><a href="${esc(ACTORS_HUB)}">Threat actor profiles</a></li><li><a href="/blog">Blog</a></li></ul>`;
+
+  return shell('Threat feed', inner);
+}
+
+// ---------------------------------------------------------------------------------------------
 // Landing page (WHA-96)
 
 const LANDING_SECTIONS = [

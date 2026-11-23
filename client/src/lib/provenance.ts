@@ -54,6 +54,7 @@ export const HUB_ANSWERS = {
     'A threat actor is a group of attackers that security researchers track under one name, such as APT28 or Lazarus Group. This directory profiles the groups catalogued by MITRE ATT&CK, with their aliases, descriptions and the latest news that names them.',
   vendors:
     'This page ranks the vendors with the most CVEs in the National Vulnerability Database. Each vendor page lists its newest CVEs, the ones CISA has confirmed are exploited, its products with exploited vulnerabilities and the weaknesses behind most of its flaws.',
+  feed: 'The threat feed collects the newest cybersecurity news from trusted security publishers in one list, newest first, with a short summary of each story. Every headline links to the original article on the publisher\'s site.',
   cwe: 'CWE, the Common Weakness Enumeration, is the MITRE catalog of software weakness types, such as cross-site scripting (CWE-79) or out-of-bounds write (CWE-787). This page ranks the weaknesses behind the most CVEs and shows how many of those CVEs are known to be exploited.',
 } as const;
 

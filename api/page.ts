@@ -2,8 +2,6 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { neon } from '@neondatabase/serverless';
-import { createClient } from '@sanity/client';
-import { createImageUrlBuilder } from '@sanity/image-url';
 import { DEFAULT_DESCRIPTION, DEFAULT_TITLE, canonicalFor, isNoindexPath } from '../client/src/lib/seo-core.js';
 import { UUID_PATTERN } from '../client/src/lib/urls.js';
 import { injectHead } from '../server/services/head-inject.js';
@@ -45,14 +43,6 @@ function createDataSource(): PageData {
     if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not set');
     return neon(process.env.DATABASE_URL);
   };
-
-  const sanity = createClient({
-    projectId: '0odjb7zx',
-    dataset: 'production',
-    useCdn: true,
-    apiVersion: '2024-01-01',
-  });
-  const imageBuilder = createImageUrlBuilder(sanity);
 
   return {
     async getCve(cveId) {
@@ -221,6 +211,19 @@ function createDataSource(): PageData {
       };
     },
 
+    async getLatestArticles(limit) {
+      const rows = await sql()`SELECT title, summary, url, source, threat_level, published_at FROM articles
+                               ORDER BY published_at DESC LIMIT ${limit}`;
+      return (rows as any[]).map((r) => ({
+        title: r.title,
+        summary: r.summary,
+        url: r.url,
+        source: r.source,
+        threatLevel: r.threat_level ?? null,
+        publishedAt: r.published_at,
+      }));
+    },
+
     async getVendorIndex() {
       return getVendorIndex(sql());
     },
@@ -238,6 +241,16 @@ function createDataSource(): PageData {
     },
 
     async getPost(slug) {
+      // Loaded here, not at the top: only blog posts need the CMS client, and importing it costs
+      // 200 to 500 ms of cold start that every other page would pay.
+      const [{ createClient }, { createImageUrlBuilder }] = await Promise.all([import('@sanity/client'), import('@sanity/image-url')]);
+      const sanity = createClient({
+        projectId: '0odjb7zx',
+        dataset: 'production',
+        useCdn: true,
+        apiVersion: '2024-01-01',
+      });
+      const imageBuilder = createImageUrlBuilder(sanity);
       const post = await sanity.fetch(
         `*[_type == "post" && slug.current == $slug][0] { title, seoTitle, seoDescription, excerpt, mainImage, publishedAt, _updatedAt, "authorName": author->name }`,
         { slug }
@@ -266,7 +279,13 @@ const CACHE = {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const requestUrl = new URL(req.url!, `https://${req.headers.host}`);
   const pathname = requestUrl.pathname;
-  const search = `?page=${requestUrl.searchParams.get('page') ?? ''}`;
+  // The visitor's own query keys that change what a page shows (the rewrite adds others, which are not passed on).
+  const searchParams = new URLSearchParams();
+  for (const key of ['page', 'source', 'search', 'view']) {
+    const value = requestUrl.searchParams.get(key);
+    if (value !== null) searchParams.set(key, value);
+  }
+  const search = `?${searchParams.toString()}`;
 
   let shell: string;
   try {
