@@ -3,6 +3,14 @@ import { cors } from 'hono/cors';
 import { requestId } from 'hono/request-id';
 import type { Context } from 'hono';
 import { pingRoute, pingHandler } from './routes/ping.js';
+import { getDb } from '../db.js';
+import { authenticateAdmin } from './auth.js';
+import { ADMIN_LIMITS, IP_LIMITS, hashIp, hit, pruneOldWindows, rateLimitHeaders } from './rate-limit.js';
+
+// Vercel sets x-real-ip and x-forwarded-for itself, so clients cannot choose their own address.
+function clientIp(c: Context): string {
+  return c.req.header('x-real-ip') || c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+}
 
 // The public v1 API (WHA-38): its own Vercel function (api/v1.ts), separate from the action-based
 // handlers in api/index.ts. Routes, validation and the OpenAPI spec share one definition through
@@ -18,10 +26,16 @@ export function errorBody(c: Context<ApiEnv>, code: string, message: string) {
 function createV1() {
   const v1 = new OpenAPIHono<ApiEnv>();
   v1.openapi(pingRoute, pingHandler);
+  v1.openAPIRegistry.registerComponent('securitySchemes', 'bearerAuth', { type: 'http', scheme: 'bearer' });
   v1.doc('/openapi.json', {
     openapi: '3.1.0',
-    info: { title: 'WhatCyber API', version: '1.0.0', description: 'CVE, KEV, threat actor and news data from WhatCyber.' },
+    info: {
+      title: 'WhatCyber API',
+      version: '1.0.0',
+      description: 'CVE, KEV, threat actor and news data from WhatCyber. Admin-only for now; limited to 30 requests a minute per IP, and 60 a minute and 1,000 a day per account.',
+    },
     servers: [{ url: 'https://api.whatcyber.com/v1' }],
+    security: [{ bearerAuth: [] }],
   });
   return v1;
 }
@@ -46,6 +60,35 @@ export function createApp() {
   app.use('*', async (c, next) => {
     await next();
     c.header('X-Robots-Tag', 'noindex');
+  });
+
+  // Strict rate limiting, then admin-only access. CORS preflights were answered above.
+  app.use('*', async (c, next) => {
+    const db = getDb();
+    const send = (headers: Record<string, string>) => { for (const [key, value] of Object.entries(headers)) c.header(key, value); };
+    try {
+      const ipResults = await hit(db, `ip:${hashIp(clientIp(c))}`, IP_LIMITS);
+      send(rateLimitHeaders(ipResults));
+      if (ipResults.some(r => r.exceeded)) {
+        return c.json(errorBody(c, 'rate_limited', 'Too many requests. Wait for the time in Retry-After.'), 429);
+      }
+
+      const auth = await authenticateAdmin(db, c.req.header('authorization'));
+      if (!auth.ok) return c.json(errorBody(c, auth.code, auth.message), auth.status);
+
+      const adminResults = await hit(db, `admin:${auth.admin.userId}`, ADMIN_LIMITS);
+      const all = [...ipResults, ...adminResults];
+      send(rateLimitHeaders(all));
+      if (all.some(r => r.exceeded)) {
+        return c.json(errorBody(c, 'rate_limited', 'Too many requests. Wait for the time in Retry-After.'), 429);
+      }
+      if (Math.random() < 0.01) pruneOldWindows(db).catch(error => console.error('[api-v1] rate limit cleanup failed', error));
+    } catch (error) {
+      // Without the counters there is no limit to enforce, so refuse rather than let requests through.
+      console.error(`[api-v1] ${c.get('requestId')} access check failed`, error);
+      return c.json(errorBody(c, 'unavailable', 'The API is not accepting requests right now.'), 503);
+    }
+    await next();
   });
 
   // api.whatcyber.com/v1/... in production; /api/v1/... on the main domain and in previews.
