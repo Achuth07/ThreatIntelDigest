@@ -15,6 +15,9 @@
     "api/page.ts": {
       "maxDuration": 10,
       "includeFiles": "dist/public/index.html"
+    },
+    "api/v1.ts": {
+      "maxDuration": 30
     }
   },
   "crons": [
@@ -28,6 +31,17 @@
     }
   ],
   "redirects": [
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "api.whatcyber.com"
+        }
+      ],
+      "destination": "https://www.whatcyber.com/",
+      "permanent": false
+    },
     {
       "source": "/vulnerabilities",
       "destination": "/cve",
@@ -55,6 +69,20 @@
     }
   ],
   "rewrites": [
+    {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "api.whatcyber.com"
+        }
+      ],
+      "destination": "/api/v1"
+    },
+    {
+      "source": "/api/v1/(.*)",
+      "destination": "/api/v1"
+    },
     {
       "source": "/api/(.*)",
       "destination": "/api/index.ts"
@@ -106,6 +134,21 @@
   ],
   "headers": [
     {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "api.whatcyber.com"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex"
+        }
+      ]
+    },
+    {
       "source": "/api/rss/(.*)",
       "headers": [
         {
@@ -119,7 +162,7 @@
       ]
     },
     {
-      "source": "/api/((?!rss/).*)",
+      "source": "/api/((?!rss/|v1(?:/|$)).*)",
       "headers": [
         {
           "key": "Access-Control-Allow-Origin",
