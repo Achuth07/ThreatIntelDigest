@@ -124,11 +124,15 @@
       "destination": "/api/page"
     },
     {
-      "source": "/:section(article|blog|threat-actors|cve|vendors|cwe)/:id",
+      "source": "/:section(article|blog|threat-actors|cve|vendors|cwe|tools)/:id",
       "destination": "/api/page"
     },
     {
       "source": "/vendors/:vendor/:product",
+      "destination": "/api/page"
+    },
+    {
+      "source": "/tools/:tool/:variant",
       "destination": "/api/page"
     }
   ],
