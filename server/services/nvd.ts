@@ -2,6 +2,7 @@
 import { sql } from 'drizzle-orm';
 import { getDb } from '../db.js';
 import { uploadCveToR2 } from './r2.js';
+import { upsertCatalog, type CatalogEntry } from './catalog.js';
 
 // NVD allows at most 120 days per request; smaller windows also keep each run's memory use low.
 const NVD_WINDOW_DAYS = 30;
@@ -117,6 +118,7 @@ export async function fetchAndStoreNvdCves(
 
         if (vulnerabilities.length > 0) {
             const valuesChunks: any[] = [];
+            const catalogEntries: CatalogEntry[] = [];
             const errors: string[] = [];
             const stored = dateField === 'modified'
                 ? await getStoredLastModified(vulnerabilities.map((vuln: any) => vuln.cve.id))
@@ -246,6 +248,7 @@ export async function fetchAndStoreNvdCves(
                         continue;
                     }
 
+                    catalogEntries.push({ cveId, products: affectedProducts.map(p => ({ vendor: p.vendor, product: p.product })) });
                     valuesChunks.push(sql`(${cveId}, ${cve.published}, ${cve.lastModified}, ${cve.vulnStatus}, ${cvssV3Score !== null ? String(cvssV3Score) : null}, ${cvssV3Severity}, ${cvssV2Score !== null ? String(cvssV2Score) : null}, ${cvssV2Severity}, ${weaknessesLiteral}::text[], ${JSON.stringify(vendorsArray)}::jsonb, ${cvssVector}, ${exploitabilityScore !== null ? String(exploitabilityScore) : null}, ${impactScore !== null ? String(impactScore) : null}, ${true}, ${searchVector})`);
                     processedCount++;
 
@@ -284,6 +287,8 @@ export async function fetchAndStoreNvdCves(
                     has_r2_backing = EXCLUDED.has_r2_backing,
                     search_vector = EXCLUDED.search_vector
                 `);
+                // Vendor and product catalog (WHA-51), from the same CPE data.
+                await upsertCatalog(db, catalogEntries);
             }
         }
 

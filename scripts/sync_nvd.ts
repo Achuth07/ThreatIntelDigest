@@ -3,6 +3,7 @@ import { fetchAndStoreNvdCves, splitNvdWindows } from '../server/services/nvd.js
 import { syncNvdHistory } from '../server/services/nvd-history.js';
 import { getNvdSyncState, saveNvdSyncState } from '../server/services/r2.js';
 import { CHANGE_EVENT_RETENTION_DAYS, pruneChangeEvents } from '../server/services/cve-change-events.js';
+import { rebuildKevProductMap } from '../server/services/catalog.js';
 import { getDb } from '../server/db.js';
 
 dotenv.config();
@@ -53,6 +54,10 @@ async function main() {
   // Keeps cve_change_events to its 90-day window; full history stays in R2.
   const pruned = await pruneChangeEvents(getDb());
   if (pruned > 0) console.log(`Removed ${pruned} change events older than ${CHANGE_EVENT_RETENTION_DAYS} days`);
+
+  // New KEV entries and new CPE data change which catalog product each KEV name maps to (WHA-51).
+  const kev = await rebuildKevProductMap(getDb() as any);
+  console.log(`KEV product map: ${kev.mapped} of ${kev.entries} entries mapped, ${kev.unmapped.length} unmatched names`);
   console.log('NVD sync complete.');
   process.exit(0);
 }
