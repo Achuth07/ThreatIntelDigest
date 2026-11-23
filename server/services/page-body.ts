@@ -9,9 +9,9 @@
  * Keep this in step with what the pages show: same facts, simpler layout.
  */
 
-import { ACTORS_HUB, CVE_HUB, CWE_HUB, KEV_HUB, VENDORS_HUB, actorUrl, cveUrl, cweUrl, vendorUrl } from '../../client/src/lib/urls.js';
+import { ACTORS_HUB, CVE_HUB, CWE_HUB, KEV_HUB, VENDORS_HUB, actorUrl, cveUrl, cweUrl, productUrl, vendorUrl } from '../../client/src/lib/urls.js';
 import { LANDING_FAQ } from '../../client/src/lib/jsonld.js';
-import type { CweHub, CweIndexRow, HubCve, HubKev, SeverityCounts, VendorHub, VendorIndexRow } from './hub-data.js';
+import type { CweHub, CweIndexRow, HubCve, HubKev, HubNews, ProductHub, SeverityCounts, VendorHub, VendorIndexRow } from './hub-data.js';
 import { cveSummary, cveTimeline } from '../../client/src/lib/cve-summary.js';
 import { KEV_ANSWER, KEV_FAQ } from '../../client/src/lib/kev-content.js';
 import { pageList } from '../../client/src/lib/page-list.js';
@@ -368,6 +368,12 @@ function kevList(rows: HubKev[]): string {
     .join('')}</ul>`;
 }
 
+function newsList(rows: HubNews[]): string {
+  return `<ul>${rows
+    .map((n) => `<li><a href="${esc(safeUrl(n.url) ?? '#')}" rel="nofollow noopener">${esc(n.title)}</a> &ndash; ${esc(n.source)}${n.publishedAt ? `, ${esc(formatDate(n.publishedAt))}` : ''}</li>`)
+    .join('')}</ul>`;
+}
+
 const hubFooterLinks = `<h2>More on WhatCyber</h2>
 <ul><li><a href="${esc(VENDORS_HUB)}">Vulnerabilities by vendor</a></li><li><a href="${esc(CWE_HUB)}">Vulnerabilities by weakness (CWE)</a></li><li><a href="${esc(KEV_HUB)}">CISA Known Exploited Vulnerabilities catalog</a></li><li><a href="${esc(CVE_HUB)}">Latest CVEs</a></li></ul>`;
 
@@ -404,6 +410,8 @@ export function renderVendorHubBody(hub: VendorHub): string {
 <h2>Latest ${esc(hub.name)} CVEs</h2>
 ${cveList(hub.recent)}
 ${hub.kev.length ? `<h2>Known exploited ${esc(hub.name)} vulnerabilities</h2>\n${kevList(hub.kev)}` : ''}
+${hub.products.length ? `<h2>${esc(hub.name)} products with known exploited vulnerabilities</h2><ul>${hub.products.map((pr) => `<li><a href="${esc(productUrl(hub.slug, pr.slug))}">${esc(pr.name)}</a>: ${fmt(pr.kevCount)} ${pr.kevCount === 1 ? 'entry' : 'entries'} in the KEV catalog</li>`).join('')}</ul>` : ''}
+${hub.news.length ? `<h2>${esc(hub.name)} in the news</h2>\n${newsList(hub.news)}` : ''}
 ${hub.topWeaknesses.length ? `<h2>Most common weaknesses</h2><ul>${hub.topWeaknesses.map((w) => `<li><a href="${esc(cweUrl(w.id))}">${esc(w.id)}${w.name ? `: ${esc(w.name)}` : ''}</a> (${fmt(w.count)} CVEs)</li>`).join('')}</ul>` : ''}
 ${hubFooterLinks}`;
   return shell(hub.name, inner);
@@ -421,8 +429,24 @@ ${description ? `<p>${esc(description)}</p>` : ''}
 <h2>Latest CVEs with ${esc(hub.id)}</h2>
 ${cveList(hub.recent)}
 ${hub.kev.length ? `<h2>Known exploited vulnerabilities with ${esc(hub.id)}</h2>\n${kevList(hub.kev)}` : ''}
+${hub.topVendors.length ? `<h2>Most affected vendors</h2><ul>${hub.topVendors.map((v) => `<li>${v.slug ? `<a href="${esc(vendorUrl(v.slug))}">${esc(v.name)}</a>` : esc(v.name)}: ${fmt(v.count)} CVEs</li>`).join('')}</ul>` : ''}
 ${hubFooterLinks}`;
   return shell(hub.id, inner);
+}
+
+export function renderProductHubBody(hub: ProductHub): string {
+  const name = `${hub.vendorName} ${hub.productName}`;
+  const inner = `
+<p class="crumbs"><a href="/">WhatCyber</a> / <a href="${esc(VENDORS_HUB)}">Vendors</a> / ${hub.vendorHub ? `<a href="${esc(vendorUrl(hub.vendorHub.slug))}">${esc(hub.vendorHub.name)}</a>` : esc(hub.vendorName)} / ${esc(hub.productName)}</p>
+<h1>${esc(name)} vulnerabilities</h1>
+<p>CISA lists ${fmt(hub.kevCount)} ${esc(name)} ${hub.kevCount === 1 ? 'vulnerability' : 'vulnerabilities'} in its Known Exploited Vulnerabilities (KEV) catalog, which means attackers are exploiting ${hub.kevCount === 1 ? 'it' : 'them'} in the wild. The newest are listed first.</p>
+<h2>Known exploited ${esc(name)} vulnerabilities</h2>
+${kevList(hub.kev)}
+<h2>Latest CVEs mentioning ${esc(name)}</h2>
+${cveList(hub.recent)}
+${hub.vendorHub ? `<p><a href="${esc(vendorUrl(hub.vendorHub.slug))}">All ${esc(hub.vendorHub.name)} vulnerabilities</a></p>` : ''}
+${hubFooterLinks}`;
+  return shell(name, inner);
 }
 
 // ---------------------------------------------------------------------------------------------

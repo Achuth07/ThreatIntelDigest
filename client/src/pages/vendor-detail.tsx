@@ -4,10 +4,10 @@ import { Loader2 } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
 import { VulnsSidebar } from '@/components/layout/sidebars/vulns-sidebar';
 import { SEO } from '@/components/seo';
-import { HubCveList, HubKevList, HubSection, SeverityStrip } from '@/components/hub-lists';
+import { HubCveList, HubKevList, HubNewsList, HubSection, SeverityStrip } from '@/components/hub-lists';
 import { useSsrHandoff } from '@/lib/ssr-handoff';
 import { vendorSeo } from '@/lib/seo-text';
-import { VENDORS_HUB, cweUrl, vendorUrl } from '@/lib/urls';
+import { VENDORS_HUB, cweUrl, productUrl, vendorUrl } from '@/lib/urls';
 import type { VendorHub } from '../../../server/services/hub-data';
 
 /** /vendors/:slug: the newest and the exploited CVEs of one vendor (WHA-24). */
@@ -78,6 +78,29 @@ export default function VendorDetailPage() {
         {hub.kev.length > 0 && (
           <HubSection title={`Known exploited ${hub.name} vulnerabilities`}>
             <HubKevList rows={hub.kev} />
+          </HubSection>
+        )}
+
+        {hub.products.length > 0 && (
+          <HubSection title={`${hub.name} products with known exploited vulnerabilities`}>
+            <ul className="space-y-2">
+              {hub.products.map((p) => (
+                <li key={p.slug} className="text-sm text-slate-300">
+                  <Link href={productUrl(hub.slug, p.slug)} className="text-whatcyber-teal hover:underline">
+                    {p.name}
+                  </Link>{' '}
+                  <span className="text-slate-500">
+                    ({p.kevCount.toLocaleString('en-US')} {p.kevCount === 1 ? 'entry' : 'entries'} in the KEV catalog)
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </HubSection>
+        )}
+
+        {hub.news.length > 0 && (
+          <HubSection title={`${hub.name} in the news`}>
+            <HubNewsList rows={hub.news} />
           </HubSection>
         )}
 

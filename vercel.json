@@ -94,6 +94,10 @@
     {
       "source": "/:section(article|blog|threat-actors|cve|vendors|cwe)/:id",
       "destination": "/api/page"
+    },
+    {
+      "source": "/vendors/:vendor/:product",
+      "destination": "/api/page"
     }
   ],
   "headers": [

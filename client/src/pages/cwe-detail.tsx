@@ -7,7 +7,7 @@ import { SEO } from '@/components/seo';
 import { HubCveList, HubKevList, HubSection, SeverityStrip } from '@/components/hub-lists';
 import { useSsrHandoff } from '@/lib/ssr-handoff';
 import { cweSeo } from '@/lib/seo-text';
-import { CWE_HUB, cweUrl } from '@/lib/urls';
+import { CWE_HUB, cweUrl, vendorUrl } from '@/lib/urls';
 import type { CweHub } from '../../../server/services/hub-data';
 
 /** /cwe/:id: the newest and the exploited CVEs with one weakness (WHA-24). */
@@ -83,6 +83,25 @@ export default function CweDetailPage() {
         {hub.kev.length > 0 && (
           <HubSection title={`Known exploited vulnerabilities with ${hub.id}`}>
             <HubKevList rows={hub.kev} />
+          </HubSection>
+        )}
+
+        {hub.topVendors.length > 0 && (
+          <HubSection title="Most affected vendors">
+            <ul className="grid gap-x-8 gap-y-1 text-sm sm:grid-cols-2">
+              {hub.topVendors.map((v) => (
+                <li key={v.name} className="flex justify-between border-b border-slate-800/60 py-1 text-slate-300">
+                  {v.slug ? (
+                    <Link href={vendorUrl(v.slug)} className="text-whatcyber-teal hover:underline">
+                      {v.name}
+                    </Link>
+                  ) : (
+                    <span>{v.name}</span>
+                  )}
+                  <span className="text-slate-400">{v.count.toLocaleString('en-US')} CVEs</span>
+                </li>
+              ))}
+            </ul>
           </HubSection>
         )}
       </div>

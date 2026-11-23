@@ -1,6 +1,6 @@
 import { createClient } from '@sanity/client';
 import { sql } from 'drizzle-orm';
-import { actorUrl, cveUrl, cweUrl, vendorUrl } from '../../client/src/lib/urls.js';
+import { actorUrl, cveUrl, cweUrl, productUrl, vendorUrl } from '../../client/src/lib/urls.js';
 
 export const SITE_URL = 'https://www.whatcyber.com';
 
@@ -123,8 +123,10 @@ export async function renderSitemap(
       const db = await getDb();
       const vendors = rowsOf(await db.execute(sql`SELECT slug, updated_at AS lastmod FROM vendor_stats ORDER BY rank`));
       const cwes = rowsOf(await db.execute(sql`SELECT id, updated_at AS lastmod FROM cwe_stats ORDER BY rank`));
+      const products = rowsOf(await db.execute(sql`SELECT vendor_slug, product_slug, updated_at AS lastmod FROM product_stats ORDER BY rank`));
       return urlset([
         ...vendors.map((row) => ({ path: vendorUrl(row.slug), lastmod: row.lastmod })),
+        ...products.map((row) => ({ path: productUrl(row.vendor_slug, row.product_slug), lastmod: row.lastmod })),
         ...cwes.map((row) => ({ path: cweUrl(row.id), lastmod: row.lastmod })),
       ]);
     }

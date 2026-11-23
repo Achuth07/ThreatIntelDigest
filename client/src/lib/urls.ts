@@ -24,6 +24,7 @@ export const actorUrl = (actor: { slug?: string | null; id: string }) =>
 export const CWE_ID_PATTERN = /^CWE-\d{1,5}$/i;
 
 export const vendorUrl = (slug: string) => `${VENDORS_HUB}/${slug}`;
+export const productUrl = (vendor: string, product: string) => `${VENDORS_HUB}/${vendor}/${product}`;
 export const cweUrl = (id: string) => `${CWE_HUB}/${id.toUpperCase()}`;
 
 /**
