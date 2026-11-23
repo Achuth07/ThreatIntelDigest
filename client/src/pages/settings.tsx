@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import {
   User, Shield, Settings as SettingsIcon, Key, Bell, CreditCard,
-  Monitor, LogOut, Save, AlertCircle, Eye, EyeOff,
-  RefreshCw, Trash2, Check, X, ChevronRight
+  Monitor, LogOut, Save, AlertCircle,
+  RefreshCw, Check, X, ChevronRight
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,6 +20,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { AppShell } from '@/components/layout/app-shell';
 import { DashboardSidebar } from '@/components/layout/sidebars/dashboard-sidebar';
 import { SEO } from '@/components/seo';
+import { ApiKeysSection } from '@/components/settings/api-keys-section';
 
 interface UserSettings {
   displayName?: string;
@@ -46,8 +47,6 @@ export default function Settings() {
     emailWatchlistAlerts: false,
   });
 
-  const [apiKey, setApiKey] = useState('');
-  const [apiKeyVisible, setApiKeyVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isEditingDisplayName, setIsEditingDisplayName] = useState(false);
   const [displayNameError, setDisplayNameError] = useState('');
@@ -107,11 +106,8 @@ export default function Settings() {
       loadUserPreferences();
     }
 
-    // Load API key from localStorage
-    const savedApiKey = localStorage.getItem('user_api_key');
-    if (savedApiKey) {
-      setApiKey(savedApiKey);
-    }
+    // An earlier placeholder kept a made-up key in localStorage; real keys live on the server.
+    localStorage.removeItem('user_api_key');
   }, [user, navigate, hasLoadedOnce, isLoadingPreferences, loadUserPreferences]);
 
   const validateDisplayName = (name: string): boolean => {
@@ -212,28 +208,6 @@ export default function Settings() {
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const handleGenerateApiKey = () => {
-    // Generate a random API key
-    const newKey = `tk_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
-    setApiKey(newKey);
-    localStorage.setItem('user_api_key', newKey);
-
-    toast({
-      title: "API Key Generated",
-      description: "Your new API key has been created. Keep it secure!",
-    });
-  };
-
-  const handleRevokeApiKey = () => {
-    setApiKey('');
-    localStorage.removeItem('user_api_key');
-
-    toast({
-      title: "API Key Revoked",
-      description: "Your API key has been deleted successfully.",
-    });
   };
 
   const handleSignOutEverywhere = () => {
@@ -582,71 +556,11 @@ export default function Settings() {
                   <CardTitle className="text-slate-100">API & Integrations</CardTitle>
                 </div>
                 <CardDescription className="text-slate-400">
-                  Connect external services and manage API access
+                  Create keys for the WhatCyber API and manage API access
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* My API Key */}
-                <div>
-                  <h4 className="text-sm font-medium text-slate-300 mb-3">My API Key</h4>
-                  {apiKey ? (
-                    <div className="space-y-3">
-                      <div className="flex items-center space-x-2">
-                        <div className="flex-1 relative">
-                          <Input
-                            value={apiKeyVisible ? apiKey : '•'.repeat(apiKey.length)}
-                            readOnly
-                            className="bg-slate-950 border-slate-800 text-slate-100 pr-10 font-mono text-sm"
-                          />
-                          <button
-                            onClick={() => setApiKeyVisible(!apiKeyVisible)}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300"
-                          >
-                            {apiKeyVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                          </button>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800"
-                          onClick={() => {
-                            navigator.clipboard.writeText(apiKey);
-                            toast({ title: "Copied!", description: "API key copied to clipboard" });
-                          }}
-                        >
-                          Copy
-                        </Button>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"
-                        onClick={handleRevokeApiKey}
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Revoke API Key
-                      </Button>
-                    </div>
-                  ) : (
-                    <div>
-                      <Button
-                        variant="outline"
-                        className="border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10"
-                        onClick={handleGenerateApiKey}
-                      >
-                        <Key className="w-4 h-4 mr-2" />
-                        Generate API Key
-                      </Button>
-                    </div>
-                  )}
-                  <p className="text-xs text-slate-500 mt-2">
-                    Use this key to access your curated feed via our API
-                  </p>
-                  <p className="text-xs text-slate-500 mt-1">
-                    <AlertCircle className="w-3 h-3 inline mr-1" />
-                    API endpoints coming in a future update
-                  </p>
-                </div>
+                <ApiKeysSection isAdmin={!!user.isAdmin} />
 
                 <Separator className="bg-slate-800" />
 

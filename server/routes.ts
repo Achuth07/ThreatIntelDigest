@@ -19,6 +19,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Log when API routes are being registered
   console.log('Registering API routes...');
 
+  // The v1 API (Hono) is its own Vercel function in production (api/v1.ts); mount it for local dev.
+  // express.json() has already read the body, so it is passed on re-serialised.
+  const { app: v1App } = await import('./api-v1/app');
+  app.all(/^\/api\/v1(\/.*)?$/, async (req, res) => {
+    const headers = new Headers();
+    for (const [key, value] of Object.entries(req.headers)) {
+      if (key === 'content-length' || value === undefined) continue;
+      headers.set(key, Array.isArray(value) ? value.join(', ') : value);
+    }
+    const hasBody = !['GET', 'HEAD'].includes(req.method) && req.body && typeof req.body === 'object' && Object.keys(req.body).length > 0;
+    const response = await v1App.fetch(new Request(`http://${req.headers.host}${req.originalUrl}`, {
+      method: req.method,
+      headers,
+      body: hasBody ? JSON.stringify(req.body) : undefined,
+    }));
+    res.status(response.status);
+    response.headers.forEach((value, key) => res.setHeader(key, value));
+    res.send(Buffer.from(await response.arrayBuffer()));
+  });
+
   // Import the consolidated API handler
   const { default: consolidatedApiHandler } = await import('../api/index');
 
