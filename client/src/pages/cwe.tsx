@@ -1,4 +1,6 @@
 import { Link } from 'wouter';
+import { HUB_ANSWERS } from '@/lib/provenance';
+import { DataProvenance } from '@/components/data-provenance';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
@@ -28,10 +30,7 @@ export default function CweIndexPage() {
       <div className="mx-auto max-w-5xl space-y-6 p-4 pb-20 lg:p-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-100 lg:text-3xl">Common software weaknesses (CWE)</h1>
-          <p className="mt-2 max-w-3xl text-slate-400">
-            The {data?.length ?? 50} weaknesses behind the most CVEs, with how many vulnerabilities each one causes and how many are known to be exploited.
-            CWE is the Common Weakness Enumeration maintained by MITRE.
-          </p>
+          <p className="mt-2 max-w-3xl text-slate-400">{HUB_ANSWERS.cwe}</p>
         </div>
         {isLoading ? (
           <div className="flex justify-center py-20">
@@ -56,6 +55,7 @@ export default function CweIndexPage() {
             ))}
           </ul>
         )}
+        <DataProvenance kind="cwe" latest={data?.[0]?.updatedAt} label="Rankings updated" />
       </div>
     </AppShell>
   );

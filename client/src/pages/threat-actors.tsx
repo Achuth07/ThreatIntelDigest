@@ -1,4 +1,6 @@
 import { actorUrl } from '@/lib/urls';
+import { HUB_ANSWERS } from '@/lib/provenance';
+import { DataProvenance } from '@/components/data-provenance';
 import { Pagination } from '@/components/pagination';
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -50,7 +52,7 @@ export default function ThreatActorsPage() {
                         Threat Actor Directory
                     </h1>
                     <p className="text-slate-400 max-w-2xl">
-                        Explore known threat groups, intrusion sets, and APTs. Data sourced from MITRE ATT&CK and enriched with real-time news.
+                        {HUB_ANSWERS.actors}
                     </p>
                 </div>
 
@@ -142,6 +144,8 @@ export default function ThreatActorsPage() {
                                 label="Threat actor pages"
                             />
                         )}
+
+                        <DataProvenance kind="actors" latest={data?.data?.[0]?.lastUpdated} label="Most recent update" />
                     </>
                 )}
             </div>

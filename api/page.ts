@@ -190,13 +190,13 @@ function createDataSource(): PageData {
     async getActorsPage(page, pageSize) {
       const query = sql();
       const [countRows, rows] = await Promise.all([
-        query`SELECT count(*)::int AS total FROM threat_groups`,
+        query`SELECT count(*)::int AS total, max(last_updated) AS latest FROM threat_groups`,
         query`SELECT id, slug, name, aliases, description FROM threat_groups
               ORDER BY last_updated DESC NULLS LAST, name
               LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`,
       ]);
       const total = Number((countRows[0] as any)?.total ?? 0);
-      return { page, total, totalPages: Math.max(1, Math.ceil(total / pageSize)), entries: rows as any[] };
+      return { page, total, latest: (countRows[0] as any)?.latest ?? null, totalPages: Math.max(1, Math.ceil(total / pageSize)), entries: rows as any[] };
     },
 
     async getLatestCves(limit) {

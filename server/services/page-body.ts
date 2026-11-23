@@ -14,6 +14,7 @@ import { LANDING_FAQ } from '../../client/src/lib/jsonld.js';
 import type { CweHub, CweIndexRow, HubCve, HubKev, HubNews, ProductHub, SeverityCounts, VendorHub, VendorIndexRow } from './hub-data.js';
 import { cveSummary, cveTimeline } from '../../client/src/lib/cve-summary.js';
 import { KEV_ANSWER, KEV_FAQ } from '../../client/src/lib/kev-content.js';
+import { HUB_ANSWERS, cveSources, isoDay, sourcesFor, type HubKind } from '../../client/src/lib/provenance.js';
 import { pageList } from '../../client/src/lib/page-list.js';
 
 const esc = (value: unknown) =>
@@ -76,6 +77,15 @@ const STYLE = `
 #ssr-content:not([data-handed-off]) ~ #root{position:absolute;left:-99999px;top:0;width:100%}
 #ssr-content[data-handed-off]{visibility:hidden;position:absolute;left:-99999px;top:0;height:0;min-height:0;overflow:hidden}
 `.replace(/\n/g, '');
+
+/** When the page's data last changed and where it comes from (WHA-28). Same wording as the app. */
+function provenance(kind: HubKind, latest?: unknown, label = 'Latest entry'): string {
+  const day = isoDay(latest);
+  const links = sourcesFor(kind)
+    .map((source) => `<a href="${esc(source.url)}" rel="noopener">${esc(source.name)}</a>`)
+    .join(', ');
+  return `<p class="crumbs">${day ? `${esc(label)}: ${esc(day)}. ` : ''}Sources: ${links}.</p>`;
+}
 
 function shell(title: string, inner: string): string {
   return `<div id="ssr-content"><style>${STYLE}</style>
@@ -179,6 +189,8 @@ ${nvd?.weaknesses?.length ? `<h2>Weaknesses (CWE)</h2><ul>${nvd.weaknesses.map((
 ${products.length ? `<h2>Affected products</h2><ul>${products.map((p) => { const versions = (p.versions ?? []).filter((v) => v && v !== '-' && v !== '*').slice(0, 12); return `<li>${esc([p.vendor, p.product].filter(Boolean).join(' '))}${versions.length ? ` (versions: ${esc(versions.join(', '))})` : ''}</li>`; }).join('')}${moreProducts > 0 ? `<li>and ${moreProducts} more</li>` : ''}</ul>` : nvd?.vendors?.length ? `<h2>Affected vendors</h2><p>${esc(nvd.vendors.join(', '))}</p>` : ''}
 ${data.actors?.length ? `<h2>Threat actors named in news about this CVE</h2><p>Groups mentioned in news articles that also name ${esc(id)}. This is not a confirmed attribution.</p><ul>${data.actors.map((a) => `<li><a href="${esc(actorUrl(a))}">${esc(a.name)}</a></li>`).join('')}</ul>` : ''}
 ${references.length ? `<h2>References</h2><ul>${references.map((r) => `<li><a href="${esc(safeUrl(r.url))}" rel="nofollow noopener">${esc(r.url)}</a></li>`).join('')}</ul>` : ''}
+<h2>Primary sources</h2>
+<ul>${cveSources(id, Boolean(kev)).map((src) => `<li><a href="${esc(src.url)}" rel="noopener">${esc(src.name)}</a></li>`).join('')}</ul>
 <h2>More on WhatCyber</h2>
 <ul>${(data.vendorHubs ?? []).map((v) => `<li><a href="${esc(vendorUrl(v.slug))}">${esc(v.name)} vulnerabilities</a></li>`).join('')}<li><a href="${esc(CVE_HUB)}">Latest CVEs</a></li><li><a href="${esc(KEV_HUB)}">CISA Known Exploited Vulnerabilities catalog</a></li><li><a href="${esc(ACTORS_HUB)}">Threat actor profiles</a></li></ul>`;
 
@@ -266,6 +278,7 @@ ${page === 1 ? `<p>${esc(KEV_ANSWER)}</p>` : ''}
 ${pager(KEV_HUB, page, totalPages, 'KEV catalog pages')}
 ${page === 1 && data.topVendors?.length ? `<h2>Most affected vendors</h2><ul>${data.topVendors.map((v) => `<li>${esc(v.vendor)}: ${v.count} ${v.count === 1 ? 'entry' : 'entries'}</li>`).join('')}</ul>` : ''}
 ${page === 1 ? `<h2>Frequently asked questions</h2>\n${KEV_FAQ.map(({ question, answer }) => `<h3>${esc(question)}</h3><p>${esc(answer)}</p>`).join('\n')}` : ''}
+${provenance('kev', page === 1 ? entries[0]?.dateAdded : undefined, 'Newest entry added')}
 <h2>More on WhatCyber</h2>
 <ul><li><a href="${esc(CVE_HUB)}">Latest CVEs</a></li><li><a href="${esc(ACTORS_HUB)}">Threat actor profiles</a></li><li><a href="/threatfeed">Threat feed</a></li></ul>`;
 
@@ -279,6 +292,8 @@ export interface ActorsHubData {
   page: number;
   totalPages: number;
   total: number;
+  /** The most recent update of any profile. */
+  latest?: unknown;
   entries: { id: string; slug: string | null; name: string; aliases: string[] | null; description: string | null }[];
 }
 
@@ -287,7 +302,8 @@ export function renderActorsHubBody(data: ActorsHubData): string {
   const inner = `
 <p class="crumbs"><a href="/">WhatCyber</a> / Threat actors</p>
 <h1>Threat Actor Directory</h1>
-<p>Known threat groups, intrusion sets and APTs, sourced from MITRE ATT&amp;CK${total ? `: ${total} profiles` : ''}${totalPages > 1 ? `, page ${page} of ${totalPages}` : ''}.</p>
+<p>${esc(HUB_ANSWERS.actors)}</p>
+<p>${total ? `${total} profiles` : 'Profiles'}${totalPages > 1 ? `, page ${page} of ${totalPages}` : ''}, most recently updated first.</p>
 <ul>${entries
     .map((a) => {
       const aliases = (a.aliases ?? []).filter(Boolean).slice(0, 4);
@@ -296,6 +312,7 @@ export function renderActorsHubBody(data: ActorsHubData): string {
     })
     .join('')}</ul>
 ${pager(ACTORS_HUB, page, totalPages, 'Threat actor pages')}
+${provenance('actors', data.latest, 'Most recent update')}
 <h2>More on WhatCyber</h2>
 <ul><li><a href="${esc(KEV_HUB)}">CISA Known Exploited Vulnerabilities catalog</a></li><li><a href="${esc(CVE_HUB)}">Latest CVEs</a></li><li><a href="/threatfeed">Threat feed</a></li></ul>`;
 
@@ -321,7 +338,8 @@ export function renderCveHubBody(data: CveHubData): string {
   const inner = `
 <p class="crumbs"><a href="/">WhatCyber</a> / Vulnerabilities</p>
 <h1>Latest CVEs</h1>
-<p>Newly published vulnerabilities from the National Vulnerability Database with CVSS scores and affected vendors${total ? `, ${total.toLocaleString('en-US')} CVEs tracked` : ''}. Newest first.</p>
+<p>${esc(HUB_ANSWERS.cve)}</p>
+<p>${total ? `${total.toLocaleString('en-US')} CVEs tracked. ` : ''}Newest first.</p>
 <ul>${entries
     .map((c) => {
       const vendors = (c.vendors ?? []).filter(Boolean).slice(0, 3);
@@ -333,6 +351,7 @@ export function renderCveHubBody(data: CveHubData): string {
       return `<li><a href="${esc(cveUrl(c.id))}">${esc(c.id)}</a>${bits.length ? ` &ndash; ${esc(bits.join(' · '))}` : ''}</li>`;
     })
     .join('')}</ul>
+${provenance('cve', entries[0]?.publishedDate, 'Newest CVE published')}
 <h2>More on WhatCyber</h2>
 <ul><li><a href="${esc(KEV_HUB)}">CISA Known Exploited Vulnerabilities catalog</a></li><li><a href="${esc(ACTORS_HUB)}">Threat actor profiles</a></li><li><a href="/threatfeed">Threat feed</a></li></ul>`;
 
@@ -381,10 +400,12 @@ export function renderVendorsIndexBody(rows: VendorIndexRow[]): string {
   const inner = `
 <p class="crumbs"><a href="/">WhatCyber</a> / Vendors</p>
 <h1>Vulnerabilities by vendor</h1>
-<p>The ${rows.length} vendors with the most CVEs in the National Vulnerability Database, with how many of their vulnerabilities are in CISA's Known Exploited Vulnerabilities catalog.</p>
+<p>${esc(HUB_ANSWERS.vendors)}</p>
+<p>The ${rows.length} vendors with the most CVEs, with how many of their vulnerabilities are in CISA's Known Exploited Vulnerabilities catalog.</p>
 <ul>${rows
     .map((v) => `<li><a href="${esc(vendorUrl(v.slug))}">${esc(v.name)}</a>: ${fmt(v.cveCount)} CVEs${v.kevCount ? `, ${fmt(v.kevCount)} known exploited` : ''}</li>`)
     .join('')}</ul>
+${provenance('vendors', rows[0]?.updatedAt, 'Rankings updated')}
 ${hubFooterLinks}`;
   return shell('Vulnerabilities by vendor', inner);
 }
@@ -393,10 +414,12 @@ export function renderCweIndexBody(rows: CweIndexRow[]): string {
   const inner = `
 <p class="crumbs"><a href="/">WhatCyber</a> / Weaknesses</p>
 <h1>Common software weaknesses (CWE)</h1>
-<p>The ${rows.length} weaknesses behind the most CVEs, with how many vulnerabilities each one causes and how many are known to be exploited. CWE is the Common Weakness Enumeration maintained by MITRE.</p>
+<p>${esc(HUB_ANSWERS.cwe)}</p>
+<p>The ${rows.length} weaknesses behind the most CVEs.</p>
 <ul>${rows
     .map((c) => `<li><a href="${esc(cweUrl(c.id))}">${esc(c.id)}${c.name ? `: ${esc(c.name)}` : ''}</a> &ndash; ${fmt(c.cveCount)} CVEs${c.kevCount ? `, ${fmt(c.kevCount)} known exploited` : ''}</li>`)
     .join('')}</ul>
+${provenance('cwe', rows[0]?.updatedAt, 'Rankings updated')}
 ${hubFooterLinks}`;
   return shell('Common software weaknesses', inner);
 }
@@ -413,6 +436,7 @@ ${hub.kev.length ? `<h2>Known exploited ${esc(hub.name)} vulnerabilities</h2>\n$
 ${hub.products.length ? `<h2>${esc(hub.name)} products with known exploited vulnerabilities</h2><ul>${hub.products.map((pr) => `<li><a href="${esc(productUrl(hub.slug, pr.slug))}">${esc(pr.name)}</a>: ${fmt(pr.kevCount)} ${pr.kevCount === 1 ? 'entry' : 'entries'} in the KEV catalog</li>`).join('')}</ul>` : ''}
 ${hub.news.length ? `<h2>${esc(hub.name)} in the news</h2>\n${newsList(hub.news)}` : ''}
 ${hub.topWeaknesses.length ? `<h2>Most common weaknesses</h2><ul>${hub.topWeaknesses.map((w) => `<li><a href="${esc(cweUrl(w.id))}">${esc(w.id)}${w.name ? `: ${esc(w.name)}` : ''}</a> (${fmt(w.count)} CVEs)</li>`).join('')}</ul>` : ''}
+${provenance('vendor', hub.recent[0]?.publishedDate, 'Newest CVE published')}
 ${hubFooterLinks}`;
   return shell(hub.name, inner);
 }
@@ -430,6 +454,7 @@ ${description ? `<p>${esc(description)}</p>` : ''}
 ${cveList(hub.recent)}
 ${hub.kev.length ? `<h2>Known exploited vulnerabilities with ${esc(hub.id)}</h2>\n${kevList(hub.kev)}` : ''}
 ${hub.topVendors.length ? `<h2>Most affected vendors</h2><ul>${hub.topVendors.map((v) => `<li>${v.slug ? `<a href="${esc(vendorUrl(v.slug))}">${esc(v.name)}</a>` : esc(v.name)}: ${fmt(v.count)} CVEs</li>`).join('')}</ul>` : ''}
+${provenance('weakness', hub.recent[0]?.publishedDate, 'Newest CVE published')}
 ${hubFooterLinks}`;
   return shell(hub.id, inner);
 }
@@ -445,6 +470,7 @@ ${kevList(hub.kev)}
 <h2>Latest CVEs mentioning ${esc(name)}</h2>
 ${cveList(hub.recent)}
 ${hub.vendorHub ? `<p><a href="${esc(vendorUrl(hub.vendorHub.slug))}">All ${esc(hub.vendorHub.name)} vulnerabilities</a></p>` : ''}
+${provenance('product', hub.kev[0]?.dateAdded, 'Newest KEV entry added')}
 ${hubFooterLinks}`;
   return shell(name, inner);
 }

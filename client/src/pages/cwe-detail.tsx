@@ -1,4 +1,5 @@
 import { Link, useRoute } from 'wouter';
+import { DataProvenance } from '@/components/data-provenance';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
@@ -104,6 +105,8 @@ export default function CweDetailPage() {
             </ul>
           </HubSection>
         )}
+
+        <DataProvenance kind="weakness" latest={hub.recent[0]?.publishedDate} label="Newest CVE published" />
       </div>
     </AppShell>
   );
