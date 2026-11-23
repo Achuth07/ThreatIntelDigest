@@ -172,6 +172,7 @@ export function renderCveBody(data: CveBodyData): string {
     cvssScore: nvd?.cvssV3Score ?? nvd?.cvssV2Score ?? null,
     severity: nvd?.cvssV3Severity ?? nvd?.cvssV2Severity ?? null,
     epssScore: nvd?.epssScore ?? null,
+    status: nvd?.status ?? null,
   };
   const summary = cveSummary(summaryFacts);
   const timeline = cveTimeline(summaryFacts);
