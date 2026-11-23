@@ -20,10 +20,10 @@ import { CWE_HUB, CWE_ID_PATTERN, UUID_PATTERN, VENDORS_HUB, actorUrl, cveUrl, c
 import type { CweHub, CweIndexRow, ProductHub, VendorHub, VendorIndexRow } from './hub-data.js';
 import { MIN_CVES_FOR_INDEX } from './hub-data.js';
 import { KEV_FAQ } from '../../client/src/lib/kev-content.js';
-import { CVSS4_FAQ, CVSS4_TOOL_PATH, CVSS_FAQ, CVSS_TOOL_PATH } from '../../client/src/lib/cvss-content.js';
+import { CVSS4_LEGACY_PATH, CVSS_FAQ, CVSS_TOOL_PATH } from '../../client/src/lib/cvss-content.js';
 import { actorJsonLd, blogPostJsonLd, cveJsonLd, hubJsonLd, landingJsonLd } from '../../client/src/lib/jsonld.js';
 import type { HeadTags } from './head-inject.js';
-import { renderActorBody, renderActorsHubBody, renderCveBody, renderCveHubBody, renderCvss4ToolBody, renderCvssToolBody, renderCweHubBody, renderCweIndexBody, renderFeedBody, renderKevHubBody, renderLandingBody, renderProductHubBody, renderVendorHubBody, renderVendorsIndexBody, type ActorsHubData, type CveBodyData, type FeedArticle, type CveHubData, type KevHubData } from './page-body.js';
+import { renderActorBody, renderActorsHubBody, renderCveBody, renderCveHubBody, renderCvssToolBody, renderCweHubBody, renderCweIndexBody, renderFeedBody, renderKevHubBody, renderLandingBody, renderProductHubBody, renderVendorHubBody, renderVendorsIndexBody, type ActorsHubData, type CveBodyData, type FeedArticle, type CveHubData, type KevHubData } from './page-body.js';
 
 export interface PageHead extends HeadTags {
   status: 200 | 301 | 404;
@@ -191,20 +191,17 @@ export async function resolvePageHead(rawPathname: string, data: PageData, searc
 
   // The CVSS calculators (WHA-29). ?vector=... only fills the form, so the canonical stays the plain page.
   if (segments.length === 2 && section === 'tools') {
-    const tools: Record<string, { name: string; faq: { question: string; answer: string }[]; body: () => string }> = {
-      [CVSS_TOOL_PATH]: { name: 'CVSS calculator', faq: CVSS_FAQ, body: renderCvssToolBody },
-      [CVSS4_TOOL_PATH]: { name: 'CVSS 4.0 calculator', faq: CVSS4_FAQ, body: renderCvss4ToolBody },
-    };
-    const tool = tools[pathname];
-    if (!tool) return notFound('Tool Not Found | WhatCyber', 'This tool could not be found.');
-    const meta = STATIC_PAGE_META[pathname];
+    // The CVSS 4.0 calculator was briefly its own page; it is now a tab of the one calculator.
+    if (pathname === CVSS4_LEGACY_PATH) return redirectTo(CVSS_TOOL_PATH);
+    if (pathname !== CVSS_TOOL_PATH) return notFound('Tool Not Found | WhatCyber', 'This tool could not be found.');
+    const meta = STATIC_PAGE_META[CVSS_TOOL_PATH];
     return {
       status: 200,
       title: meta.title,
       description: meta.description,
       canonical: canonicalFor(pathname),
-      jsonLd: hubJsonLd({ path: pathname, name: tool.name, title: meta.title, description: meta.description, faq: tool.faq }),
-      body: tool.body(),
+      jsonLd: hubJsonLd({ path: pathname, name: 'CVSS calculator', title: meta.title, description: meta.description, faq: CVSS_FAQ }),
+      body: renderCvssToolBody(),
     };
   }
 

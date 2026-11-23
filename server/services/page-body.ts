@@ -14,7 +14,7 @@ import { LANDING_FAQ } from '../../client/src/lib/jsonld.js';
 import type { CweHub, CweIndexRow, HubCve, HubKev, HubNews, ProductHub, SeverityCounts, VendorHub, VendorIndexRow } from './hub-data.js';
 import { cveSummary, cveTimeline } from '../../client/src/lib/cve-summary.js';
 import { KEV_ANSWER, KEV_FAQ } from '../../client/src/lib/kev-content.js';
-import { CVSS4_ANSWER, CVSS4_FAQ, CVSS4_TOOL_PATH, CVSS_ANSWER, CVSS_FAQ, CVSS_TOOL_PATH } from '../../client/src/lib/cvss-content.js';
+import { CVSS_ANSWER, CVSS_FAQ, CVSS_TOOL_PATH } from '../../client/src/lib/cvss-content.js';
 import { EXAMPLES_4, METRICS4, calculate4, parseVector4 } from '../../client/src/lib/cvss4.js';
 import { EXAMPLES, METRICS, SEVERITY_RANGES, calculate, parseVector } from '../../client/src/lib/cvss.js';
 import { HUB_ANSWERS, cveSources, isoDay, sourcesFor, type HubKind } from '../../client/src/lib/provenance.js';
@@ -536,68 +536,45 @@ export function renderFeedBody(articles: FeedArticle[]): string {
 // ---------------------------------------------------------------------------------------------
 // CVSS calculator (WHA-29)
 
-/** The calculator page as readable HTML: what CVSS is, the metrics, the ratings, worked examples and the FAQ. */
+/** The calculator page as readable HTML: both versions' metrics and worked examples, the ratings and the FAQ. */
 export function renderCvssToolBody(): string {
+  const base4 = METRICS4.filter((m) => m.group === 'base');
+  const metricList = (metric: { name: string; key: string; question: string; values: { code: string; label: string; description: string }[] }, suffix = '') =>
+    `<h3>${esc(metric.name)} (${esc(metric.key)})${suffix}</h3><p>${esc(metric.question)}</p><ul>${metric.values
+      .map((value) => `<li>${esc(value.label)} (${esc(value.code)}): ${esc(value.description)}</li>`)
+      .join('')}</ul>`;
+
   const inner = `
 <p class="crumbs"><a href="/">WhatCyber</a> / CVSS calculator</p>
 <h1>CVSS calculator</h1>
 <p>${esc(CVSS_ANSWER)}</p>
-<p>Choose a value for each of the eight metrics and the calculator shows the base score, the severity rating and the vector string. It needs JavaScript to calculate; the reference below works without it. For CVSS v4.0 vectors use the <a href="${esc(CVSS4_TOOL_PATH)}">CVSS 4.0 calculator</a>.</p>
-<h2>The eight base metrics</h2>
-${METRICS.map(
-  (metric) => `<h3>${esc(metric.name)} (${esc(metric.key)})</h3><p>${esc(metric.question)}</p><ul>${metric.values
-    .map((value) => `<li>${esc(value.label)} (${esc(value.code)}): ${esc(value.description)}</li>`)
-    .join('')}</ul>`
-).join('\n')}
-<h2>Severity ratings</h2>
-<ul>${SEVERITY_RANGES.map((band) => `<li>${esc(band.severity)}: ${esc(band.range)}</li>`).join('')}</ul>
-<h2>Worked examples</h2>
+<p>The calculator has a tab for CVSS 4.0 and one for CVSS 3.1. Choose a value for each metric and it shows the score, the severity rating and the vector string. It needs JavaScript to calculate; the reference below works without it.</p>
+<h2>CVSS 4.0 base metrics</h2>
+${base4.map((metric) => metricList(metric, metric.subgroup ? `, ${esc(metric.subgroup.toLowerCase())}` : '')).join('\n')}
+<p>CVSS 4.0 also has a threat metric, Exploit Maturity (Attacked, Proof-of-Concept, Unreported), environmental metrics (three security requirements and a modified version of every base metric) and supplemental metrics (Safety, Automatable, Recovery, Value Density, Vulnerability Response Effort and Provider Urgency) that describe a flaw without changing its score.</p>
+<h2>CVSS 4.0 worked examples</h2>
+<ul>${EXAMPLES_4.map((example) => {
+    const score = calculate4(parseVector4(example.vector)!);
+    return `<li>${esc(example.name)}. <a href="${esc(`${CVSS_TOOL_PATH}?vector=${encodeURIComponent(example.vector)}`)}">${esc(example.vector)}</a> scores ${score.score.toFixed(1)} (${esc(score.severity)}).</li>`;
+  }).join('')}</ul>
+<h2>CVSS 3.1 base metrics</h2>
+${METRICS.map((metric) => metricList(metric)).join('\n')}
+<h2>CVSS 3.1 worked examples</h2>
 <ul>${EXAMPLES.map((example) => {
     const parsed = parseVector(example.vector)!;
     const score = calculate(parsed.metrics, parsed.version);
     return `<li><a href="${esc(cveUrl(example.cveId))}">${esc(example.cveId)}</a>: ${esc(example.name)}. <a href="${esc(`${CVSS_TOOL_PATH}?vector=${encodeURIComponent(example.vector)}`)}">${esc(example.vector)}</a> scores ${score.base.toFixed(1)} (${esc(score.severity)}).</li>`;
   }).join('')}</ul>
+<h2>Severity ratings</h2>
+<p>Both versions use the same bands.</p>
+<ul>${SEVERITY_RANGES.map((band) => `<li>${esc(band.severity)}: ${esc(band.range)}</li>`).join('')}</ul>
 <h2>Frequently asked questions</h2>
 ${CVSS_FAQ.map(({ question, answer }) => `<h3>${esc(question)}</h3><p>${esc(answer)}</p>`).join('\n')}
-<p class="crumbs">Formulas: the <a href="https://www.first.org/cvss/v3.1/specification-document" rel="noopener">FIRST CVSS v3.1 specification</a>.</p>
+<p class="crumbs">Formulas: the <a href="https://www.first.org/cvss/v3.1/specification-document" rel="noopener">FIRST CVSS v3.1 specification</a>. CVSS v4.0: the <a href="https://www.first.org/cvss/v4.0/specification-document" rel="noopener">FIRST CVSS v4.0 specification</a> and its <a href="https://github.com/FIRSTdotorg/cvss-v4-calculator" rel="noopener">reference calculator</a> (BSD-2-Clause, FIRST.ORG, Inc. and Red Hat).</p>
 <h2>More on WhatCyber</h2>
 <ul><li><a href="${esc(KEV_HUB)}">CISA Known Exploited Vulnerabilities catalog</a></li><li><a href="${esc(CVE_HUB)}">Latest CVEs</a></li><li><a href="${esc(CWE_HUB)}">Vulnerabilities by weakness (CWE)</a></li><li><a href="${esc(VENDORS_HUB)}">Vulnerabilities by vendor</a></li></ul>`;
 
   return shell('CVSS calculator', inner);
-}
-
-/** The CVSS 4.0 calculator page as readable HTML (WHA-29). */
-export function renderCvss4ToolBody(): string {
-  const base = METRICS4.filter((m) => m.group === 'base');
-  const inner = `
-<p class="crumbs"><a href="/">WhatCyber</a> / CVSS 4.0 calculator</p>
-<h1>CVSS 4.0 calculator</h1>
-<p>${esc(CVSS4_ANSWER)}</p>
-<p>Choose a value for each metric and the calculator shows the score, the severity rating and the vector string. It needs JavaScript to calculate; the reference below works without it. For v3.1 and v3.0 vectors use the <a href="${esc(CVSS_TOOL_PATH)}">CVSS 3.1 calculator</a>.</p>
-<h2>The base metrics</h2>
-${base
-  .map(
-    (metric) => `<h3>${esc(metric.name)} (${esc(metric.key)})${metric.subgroup ? `, ${esc(metric.subgroup.toLowerCase())}` : ''}</h3><p>${esc(metric.question)}</p><ul>${metric.values
-      .map((value) => `<li>${esc(value.label)} (${esc(value.code)}): ${esc(value.description)}</li>`)
-      .join('')}</ul>`
-  )
-  .join('\n')}
-<h2>Threat, environmental and supplemental metrics</h2>
-<p>The threat metric, Exploit Maturity, has the values Attacked, Proof-of-Concept and Unreported. The environmental metrics are the three security requirements (confidentiality, integrity and availability) and a modified version of every base metric. The supplemental metrics (Safety, Automatable, Recovery, Value Density, Vulnerability Response Effort and Provider Urgency) describe a flaw without changing its score.</p>
-<h2>Severity ratings</h2>
-<ul>${SEVERITY_RANGES.map((band) => `<li>${esc(band.severity)}: ${esc(band.range)}</li>`).join('')}</ul>
-<h2>Worked examples</h2>
-<ul>${EXAMPLES_4.map((example) => {
-    const score = calculate4(parseVector4(example.vector)!);
-    return `<li>${esc(example.name)}. <a href="${esc(`${CVSS4_TOOL_PATH}?vector=${encodeURIComponent(example.vector)}`)}">${esc(example.vector)}</a> scores ${score.score.toFixed(1)} (${esc(score.severity)}).</li>`;
-  }).join('')}</ul>
-<h2>Frequently asked questions</h2>
-${CVSS4_FAQ.map(({ question, answer }) => `<h3>${esc(question)}</h3><p>${esc(answer)}</p>`).join('\n')}
-<p class="crumbs">Scoring: the <a href="https://www.first.org/cvss/v4.0/specification-document" rel="noopener">FIRST CVSS v4.0 specification</a> and its <a href="https://github.com/FIRSTdotorg/cvss-v4-calculator" rel="noopener">reference calculator</a> (BSD-2-Clause, FIRST.ORG, Inc. and Red Hat).</p>
-<h2>More on WhatCyber</h2>
-<ul><li><a href="${esc(CVSS_TOOL_PATH)}">CVSS 3.1 calculator</a></li><li><a href="${esc(KEV_HUB)}">CISA Known Exploited Vulnerabilities catalog</a></li><li><a href="${esc(CVE_HUB)}">Latest CVEs</a></li><li><a href="${esc(CWE_HUB)}">Vulnerabilities by weakness (CWE)</a></li></ul>`;
-
-  return shell('CVSS 4.0 calculator', inner);
 }
 
 // ---------------------------------------------------------------------------------------------

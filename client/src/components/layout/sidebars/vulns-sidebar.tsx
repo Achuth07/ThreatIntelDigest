@@ -39,17 +39,10 @@ export function VulnsSidebar() {
         />
         <SidebarItem
           icon={Calculator}
-          label="CVSS 3.1 calculator"
+          label="CVSS calculator"
           href="/tools/cvss-calculator"
           active={location.startsWith('/tools/cvss-calculator')}
           testId="button-cvss-calculator"
-        />
-        <SidebarItem
-          icon={Calculator}
-          label="CVSS 4.0 calculator"
-          href="/tools/cvss-4-calculator"
-          active={location.startsWith('/tools/cvss-4-calculator')}
-          testId="button-cvss4-calculator"
         />
       </SidebarSection>
     </>

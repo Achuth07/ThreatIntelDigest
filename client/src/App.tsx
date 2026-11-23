@@ -41,7 +41,6 @@ const ExploitedVulnerabilitiesPage = lazy(() => import("@/pages/exploited-vulner
 const CVEDetailPage = lazy(() => import("@/pages/cve-detail"));
 const VulnerabilitiesPage = lazy(() => import("@/pages/vulnerabilities"));
 const CvssCalculatorPage = lazy(() => import("@/pages/cvss-calculator"));
-const Cvss4CalculatorPage = lazy(() => import("@/pages/cvss4-calculator"));
 const VendorsPage = lazy(() => import("@/pages/vendors"));
 const VendorDetailPage = lazy(() => import("@/pages/vendor-detail"));
 const ProductDetailPage = lazy(() => import("@/pages/product-detail"));
@@ -130,7 +129,8 @@ function Router() {
         <Route path="/cve" component={VulnerabilitiesPage} />
         <Route path="/cve/:id" component={CVEDetailPage} />
         <Route path="/tools/cvss-calculator" component={CvssCalculatorPage} />
-        <Route path="/tools/cvss-4-calculator" component={Cvss4CalculatorPage} />
+        {/* The CVSS 4.0 calculator is a tab of the one calculator page; the server answers this with a 301, this covers in-app links. */}
+        <Route path="/tools/cvss-4-calculator">{() => <Redirect to={`/tools/cvss-calculator${window.location.search}`} replace />}</Route>
         <Route path="/vendors" component={VendorsPage} />
         <Route path="/vendors/:slug" component={VendorDetailPage} />
         <Route path="/vendors/:vendor/:product" component={ProductDetailPage} />

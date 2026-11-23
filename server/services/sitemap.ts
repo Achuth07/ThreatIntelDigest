@@ -33,7 +33,6 @@ const CORE_PATHS = [
   '/vendors',
   '/cwe',
   '/tools/cvss-calculator',
-  '/tools/cvss-4-calculator',
   '/blog',
   '/about',
   '/sources',
