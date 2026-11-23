@@ -130,6 +130,10 @@
     {
       "source": "/vendors/:vendor/:product",
       "destination": "/api/page"
+    },
+    {
+      "source": "/tools/:tool/:variant",
+      "destination": "/api/page"
     }
   ],
   "headers": [

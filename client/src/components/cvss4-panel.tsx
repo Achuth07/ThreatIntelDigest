@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { CopyButtons, ScoreCard, SEVERITY_STYLE } from '@/components/cvss-shared';
-import { CVSS_TOOL_PATH } from '@/lib/cvss-content';
+import { cvssPath } from '@/lib/cvss-content';
 import { EXAMPLES_4, METRICS4, calculate4, parseVector4, toVectorString4, type Group4, type Metric4Def, type Metric4Key, type Metrics4 } from '@/lib/cvss4';
 
 /** One metric: its question, the choices as radio buttons and what the chosen value means. */
@@ -143,7 +143,7 @@ export function Cvss4Panel({
             </label>
             <Input id="cvss4-vector" value={vectorText} onChange={(e) => applyVectorText(e.target.value)} className="bg-card font-mono text-xs" spellCheck={false} aria-invalid={!!vectorError} />
             {vectorError && <p className="text-xs text-red-400">{vectorError}</p>}
-            <CopyButtons vector={vector} link={`${typeof window === 'undefined' ? '' : window.location.origin}${CVSS_TOOL_PATH}?vector=${encodeURIComponent(vector)}`} />
+            <CopyButtons vector={vector} link={`${typeof window === 'undefined' ? '' : window.location.origin}${cvssPath('4-0')}?vector=${encodeURIComponent(vector)}`} />
           </div>
         </aside>
       </div>

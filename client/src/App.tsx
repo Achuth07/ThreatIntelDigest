@@ -128,9 +128,9 @@ function Router() {
         <Route path="/cisa-kev" component={ExploitedVulnerabilitiesPage} />
         <Route path="/cve" component={VulnerabilitiesPage} />
         <Route path="/cve/:id" component={CVEDetailPage} />
-        <Route path="/tools/cvss-calculator" component={CvssCalculatorPage} />
+        <Route path="/tools/cvss-calculator/:version?" component={CvssCalculatorPage} />
         {/* The CVSS 4.0 calculator is a tab of the one calculator page; the server answers this with a 301, this covers in-app links. */}
-        <Route path="/tools/cvss-4-calculator">{() => <Redirect to={`/tools/cvss-calculator${window.location.search}`} replace />}</Route>
+        <Route path="/tools/cvss-4-calculator">{() => <Redirect to={`/tools/cvss-calculator/4-0${window.location.search}`} replace />}</Route>
         <Route path="/vendors" component={VendorsPage} />
         <Route path="/vendors/:slug" component={VendorDetailPage} />
         <Route path="/vendors/:vendor/:product" component={ProductDetailPage} />

@@ -4,7 +4,7 @@ import { Loader2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CopyButtons, ScoreCard, SEVERITY_STYLE } from '@/components/cvss-shared';
-import { CVSS_TOOL_PATH } from '@/lib/cvss-content';
+import { cvssPath } from '@/lib/cvss-content';
 import { EXAMPLES, METRICS, calculate, parseVector, toVectorString, type CvssVersion, type Metrics } from '@/lib/cvss';
 import { CVE_ID_PATTERN, cveUrl } from '@/lib/urls';
 
@@ -129,7 +129,7 @@ export function Cvss3Panel({
             </label>
             <Input id="cvss-vector" value={vectorText} onChange={(e) => applyVectorText(e.target.value)} className="bg-card font-mono text-xs" spellCheck={false} aria-invalid={!!vectorError} />
             {vectorError && <p className="text-xs text-red-400">{vectorError}</p>}
-            <CopyButtons vector={vector} link={`${typeof window === 'undefined' ? '' : window.location.origin}${CVSS_TOOL_PATH}?vector=${encodeURIComponent(vector)}`} />
+            <CopyButtons vector={vector} link={`${typeof window === 'undefined' ? '' : window.location.origin}${cvssPath('3-1')}?vector=${encodeURIComponent(vector)}`} />
           </div>
 
           <form

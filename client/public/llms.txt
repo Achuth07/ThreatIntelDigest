@@ -16,7 +16,9 @@ The pages below answer the questions people most often ask about vulnerabilities
 
 ## Tools
 
-- [CVSS calculator](https://www.whatcyber.com/tools/cvss-calculator): one calculator with a switch between CVSS v4.0 and v3.1. It works out the score from the metrics, shows the severity rating and the vector string, and (for v3) loads the vector of any published CVE to check its score.
+- [CVSS calculator](https://www.whatcyber.com/tools/cvss-calculator): overview of the calculators for CVSS v4.0 and v3.1.
+- [CVSS 4.0 calculator](https://www.whatcyber.com/tools/cvss-calculator/4-0): works out the CVSS 4.0 score (CVSS-B, BT, BE, BTE) from the base, threat, environmental and supplemental metrics, with the severity rating and vector string.
+- [CVSS 3.1 calculator](https://www.whatcyber.com/tools/cvss-calculator/3-1): works out the CVSS 3.1 base score from the eight base metrics, shows the severity and the vector string, and loads the vector of any published CVE to check its NVD score.
 
 ## Page patterns
 
