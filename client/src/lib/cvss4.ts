@@ -10,8 +10,8 @@
  * Keep this file free of React and browser APIs, the server uses it too.
  */
 
-import { CVSS4_LOOKUP } from './cvss4-lookup';
-import { severityOf, type Severity } from './cvss';
+import { CVSS4_LOOKUP } from './cvss4-lookup.js';
+import { severityOf, type Severity } from './cvss.js';
 
 export type Metric4Key =
   | 'AV' | 'AC' | 'AT' | 'PR' | 'UI' | 'VC' | 'VI' | 'VA' | 'SC' | 'SI' | 'SA'
