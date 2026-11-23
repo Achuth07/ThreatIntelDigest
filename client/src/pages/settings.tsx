@@ -250,7 +250,7 @@ export default function Settings() {
               <TabsTrigger
                 key={tab}
                 value={tab.toLowerCase().replace(' & ', '-').replace(/ /g, '-')}
-                className="data-[state=active]:bg-slate-800 data-[state=active]:text-cyan-400 text-slate-400 hover:text-slate-200 whitespace-nowrap"
+                className="shrink-0 data-[state=active]:bg-slate-800 data-[state=active]:text-cyan-400 text-slate-400 hover:text-slate-200 whitespace-nowrap"
               >
                 {tab}
               </TabsTrigger>
