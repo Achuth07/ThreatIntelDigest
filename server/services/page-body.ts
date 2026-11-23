@@ -126,6 +126,8 @@ export interface CveBodyData {
     cvssV2Severity: string | null;
     cvssVector: string | null;
     epssScore: number | null;
+    /** False when stored text exists but could not be read, so its absence says nothing. */
+    contentKnown?: boolean;
     weaknesses: string[];
     vendors: string[];
     description: string;

@@ -1,6 +1,7 @@
 import { createClient } from '@sanity/client';
 import { sql } from 'drizzle-orm';
 import { actorUrl, cveUrl, cweUrl, productUrl, vendorUrl } from '../../client/src/lib/urls.js';
+import { CVE_SITEMAP_PAGE_SIZE, countTier2, getTier2Days, listTier2, type RawSql } from './cve-tier.js';
 
 export const SITE_URL = 'https://www.whatcyber.com';
 
@@ -65,8 +66,26 @@ function urlset(entries: Entry[]): string {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;
 }
 
-function sitemapIndex(): string {
-  const body = SITEMAP_NAMES.map(
+/**
+ * The tier 2 CVE sitemaps (WHA-23): sitemap-cve-1.xml, sitemap-cve-2.xml, ... Empty while tier 2 is off.
+ * They are not in SITEMAP_NAMES because how many there are depends on the data.
+ */
+async function tier2Sql(): Promise<RawSql | null> {
+  if (!process.env.DATABASE_URL) return null;
+  const { neon } = await import('@neondatabase/serverless');
+  return neon(process.env.DATABASE_URL) as unknown as RawSql;
+}
+
+async function tier2Files(): Promise<number> {
+  const query = await tier2Sql();
+  if (!query) return 0;
+  const days = await getTier2Days(query);
+  if (!days) return 0;
+  return Math.ceil((await countTier2(query, days)) / CVE_SITEMAP_PAGE_SIZE);
+}
+
+function sitemapIndex(extraNames: string[] = []): string {
+  const body = [...SITEMAP_NAMES, ...extraNames].map(
     (name) => `  <sitemap>\n    <loc>${SITE_URL}/sitemap-${name}.xml</loc>\n  </sitemap>`
   ).join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</sitemapindex>\n`;
@@ -84,7 +103,22 @@ export async function renderSitemap(
   name: string | undefined,
   getDb: () => Promise<any> | any
 ): Promise<string | null> {
-  if (!name) return sitemapIndex();
+  if (!name) {
+    const files = await tier2Files();
+    return sitemapIndex(Array.from({ length: files }, (_, i) => `cve-${i + 1}`));
+  }
+
+  const cvePage = name.match(/^cve-([1-9]\d{0,2})$/);
+  if (cvePage) {
+    const query = await tier2Sql();
+    const days = query ? await getTier2Days(query) : 0;
+    if (!query || !days) return null;
+    const page = Number(cvePage[1]);
+    const rows = await listTier2(query, days, CVE_SITEMAP_PAGE_SIZE, (page - 1) * CVE_SITEMAP_PAGE_SIZE);
+    if (!rows.length) return null;
+    return urlset(rows.filter((row) => CVE_ID.test(row.id)).map((row) => ({ path: cveUrl(row.id), lastmod: row.lastmod })));
+  }
+
   if (!(SITEMAP_NAMES as readonly string[]).includes(name)) return null;
 
   switch (name as SitemapName) {
