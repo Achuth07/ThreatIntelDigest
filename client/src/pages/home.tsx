@@ -13,6 +13,7 @@ import { ChevronDown, Clock } from 'lucide-react';
 import { getAuthenticatedUser } from '@/lib/auth';
 import { SEO } from '@/components/seo';
 import { STATIC_PAGE_META } from '@/lib/page-meta';
+import { useSsrHandoff } from '@/lib/ssr-handoff';
 import type { Article, Bookmark, RssSource } from '@shared/schema';
 
 type FeedView = 'feed' | 'bookmarks' | 'follow';
@@ -75,6 +76,9 @@ export default function Home() {
       },
     ],
   });
+
+  // The server-written copy of the newest articles stays until the app has its own list.
+  useSsrHandoff(!articlesLoading);
 
   // Fetch bookmarks
   const { data: bookmarks = [], refetch: refetchBookmarks } = useQuery<Bookmark[]>({

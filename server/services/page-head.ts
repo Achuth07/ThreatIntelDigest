@@ -22,7 +22,7 @@ import { MIN_CVES_FOR_INDEX } from './hub-data.js';
 import { KEV_FAQ } from '../../client/src/lib/kev-content.js';
 import { actorJsonLd, blogPostJsonLd, cveJsonLd, hubJsonLd, landingJsonLd } from '../../client/src/lib/jsonld.js';
 import type { HeadTags } from './head-inject.js';
-import { renderActorBody, renderActorsHubBody, renderCveBody, renderCveHubBody, renderCweHubBody, renderCweIndexBody, renderKevHubBody, renderLandingBody, renderProductHubBody, renderVendorHubBody, renderVendorsIndexBody, type ActorsHubData, type CveBodyData, type CveHubData, type KevHubData } from './page-body.js';
+import { renderActorBody, renderActorsHubBody, renderCveBody, renderCveHubBody, renderCweHubBody, renderCweIndexBody, renderFeedBody, renderKevHubBody, renderLandingBody, renderProductHubBody, renderVendorHubBody, renderVendorsIndexBody, type ActorsHubData, type CveBodyData, type FeedArticle, type CveHubData, type KevHubData } from './page-body.js';
 
 export interface PageHead extends HeadTags {
   status: 200 | 301 | 404;
@@ -49,6 +49,8 @@ export interface PageData {
   } | null>;
   /** One page of the KEV catalog, newest first. Throws only when the data source itself fails. */
   getKevPage(page: number, pageSize: number): Promise<KevHubData>;
+  /** The newest news articles, for the threat feed page. */
+  getLatestArticles(limit: number): Promise<FeedArticle[]>;
   /** The top vendors and CWEs (vendor_stats, cwe_stats) and the hub behind each (WHA-24). */
   getVendorIndex(): Promise<VendorIndexRow[]>;
   getCweIndex(): Promise<CweIndexRow[]>;
@@ -75,6 +77,8 @@ export interface PageData {
 const KEV_PAGE_SIZE = 50;
 /** Same page size as the app's directory (client/src/pages/threat-actors.tsx). */
 const ACTORS_PAGE_SIZE = 20;
+/** Articles written into /threatfeed (the app's first page shows 10; the extra ones add links). */
+const FEED_SIZE = 20;
 /** The newest CVEs written into /cve. The app pages through the rest client-side. */
 const CVE_HUB_SIZE = 50;
 const CVE_ID = /^CVE-\d{4}-\d{4,}$/;
@@ -132,6 +136,12 @@ export async function resolvePageHead(rawPathname: string, data: PageData, searc
       body = renderActorsHubBody(await data.getActorsPage(Number.isFinite(requested) && requested > 1 ? requested : 1, ACTORS_PAGE_SIZE));
     } else if (pathname === '/cve') {
       body = renderCveHubBody(await data.getLatestCves(CVE_HUB_SIZE));
+    } else if (pathname === '/threatfeed') {
+      // Filtered and personal views (?source, ?search, ?view) differ from the default list, so they get no copy.
+      const params = new URLSearchParams(search);
+      if (!params.has('source') && !params.has('search') && !params.has('view')) {
+        body = renderFeedBody(await data.getLatestArticles(FEED_SIZE));
+      }
     } else if (pathname === '/vendors') {
       body = renderVendorsIndexBody(await data.getVendorIndex());
     } else if (pathname === '/cwe') {
@@ -141,7 +151,8 @@ export async function resolvePageHead(rawPathname: string, data: PageData, searc
       status: 200,
       title: fixed.title,
       description: fixed.description,
-      canonical: canonicalFor(pathname, search),
+      // The feed pages in the app, not by URL, so ?page=N is never a separate page.
+      canonical: canonicalFor(pathname, pathname === '/threatfeed' ? '' : search),
       noindex: isNoindexPath(pathname),
       body,
       jsonLd: hubName
