@@ -44,6 +44,12 @@ export const STATIC_PAGE_META: Record<string, PageMeta> = {
       'Work out a CVSS v3.1 base score from the eight metrics, see the severity rating and copy the vector string. Load any published CVE to check its score.',
     keywords: 'CVSS calculator, CVSS 3.1 calculator, CVSS score, CVSS vector, vulnerability severity',
   },
+  '/tools/cvss-4-calculator': {
+    title: 'CVSS 4.0 Calculator: Score a CVSS v4.0 Vector | WhatCyber',
+    description:
+      'Score a CVSS v4.0 vector from the base, threat and environmental metrics. See the severity rating, the CVSS-B, BT, BE or BTE label and the vector string.',
+    keywords: 'CVSS 4.0 calculator, CVSS v4 calculator, CVSS 4.0 score, CVSS 4.0 vector, vulnerability severity',
+  },
   '/vendors': {
     title: 'Vulnerabilities by Vendor: Microsoft, Linux, Google and More | WhatCyber',
     description:

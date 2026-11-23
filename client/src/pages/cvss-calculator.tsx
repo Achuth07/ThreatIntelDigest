@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { STATIC_PAGE_META } from '@/lib/page-meta';
 import { useSsrHandoff } from '@/lib/ssr-handoff';
-import { CVSS_ANSWER, CVSS_FAQ, CVSS_TOOL_PATH } from '@/lib/cvss-content';
+import { CVSS4_TOOL_PATH, CVSS_ANSWER, CVSS_FAQ, CVSS_TOOL_PATH } from '@/lib/cvss-content';
 import { DEFAULT_METRICS, EXAMPLES, METRICS, SEVERITY_RANGES, calculate, parseVector, toVectorString, type CvssVersion, type Metrics, type Severity } from '@/lib/cvss';
 import { CVE_ID_PATTERN, cveUrl } from '@/lib/urls';
 
@@ -66,7 +66,11 @@ export default function CvssCalculatorPage() {
       setVersion(parsed.version);
       setVectorError('');
     } else {
-      setVectorError('Not a complete CVSS v3 base vector. Example: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H');
+      setVectorError(
+        /^CVSS:4\.0\//i.test(text.trim())
+          ? 'This is a CVSS v4.0 vector. Open it in the CVSS 4.0 calculator.'
+          : 'Not a complete CVSS v3 base vector. Example: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H'
+      );
     }
   };
 
@@ -114,6 +118,13 @@ export default function CvssCalculatorPage() {
         <div className="space-y-3">
           <h1 className="text-2xl font-bold text-slate-100 lg:text-3xl">CVSS calculator</h1>
           <p className="max-w-3xl text-slate-400">{CVSS_ANSWER}</p>
+          <p className="text-sm text-slate-500">
+            Scoring a CVSS v4.0 vector? Use the{' '}
+            <Link href={CVSS4_TOOL_PATH} className="text-whatcyber-teal hover:underline">
+              CVSS 4.0 calculator
+            </Link>
+            .
+          </p>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
