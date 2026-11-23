@@ -1,4 +1,5 @@
 import { Link, useRoute } from 'wouter';
+import { DataProvenance } from '@/components/data-provenance';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
@@ -96,6 +97,8 @@ export default function ProductDetailPage() {
             </Link>
           </p>
         )}
+
+        <DataProvenance kind="product" latest={hub.kev[0]?.dateAdded} label="Newest KEV entry added" />
       </div>
     </AppShell>
   );

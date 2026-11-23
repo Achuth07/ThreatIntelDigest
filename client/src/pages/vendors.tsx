@@ -1,4 +1,6 @@
 import { Link } from 'wouter';
+import { HUB_ANSWERS } from '@/lib/provenance';
+import { DataProvenance } from '@/components/data-provenance';
 import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
@@ -29,10 +31,7 @@ export default function VendorsPage() {
       <div className="mx-auto max-w-5xl space-y-6 p-4 pb-20 lg:p-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-100 lg:text-3xl">Vulnerabilities by vendor</h1>
-          <p className="mt-2 max-w-3xl text-slate-400">
-            The {data?.length ?? 100} vendors with the most CVEs in the National Vulnerability Database, with how many of their vulnerabilities are in
-            CISA&apos;s Known Exploited Vulnerabilities catalog.
-          </p>
+          <p className="mt-2 max-w-3xl text-slate-400">{HUB_ANSWERS.vendors}</p>
         </div>
         {isLoading ? (
           <div className="flex justify-center py-20">
@@ -56,6 +55,7 @@ export default function VendorsPage() {
             ))}
           </ul>
         )}
+        <DataProvenance kind="vendors" latest={data?.[0]?.updatedAt} label="Rankings updated" />
       </div>
     </AppShell>
   );

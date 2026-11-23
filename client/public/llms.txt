@@ -1,0 +1,41 @@
+# WhatCyber
+
+> WhatCyber is a threat intelligence site. It tracks more than 270,000 CVEs from the National Vulnerability Database, the CISA Known Exploited Vulnerabilities (KEV) catalog, threat actor profiles based on MITRE ATT&CK, and cybersecurity news from trusted sources. Every page is plain HTML that can be read without JavaScript, shows the date of its latest entry, and links to the primary source.
+
+The pages below answer the questions people most often ask about vulnerabilities: which flaws are being exploited, how severe a CVE is, which vendors and products are affected, and which threat groups are active.
+
+## Hubs
+
+- [CISA KEV catalog](https://www.whatcyber.com/cisa-kev): the vulnerabilities CISA has confirmed are exploited in the wild, newest first, with due dates and ransomware use. Includes a short FAQ on how the catalog works.
+- [Latest CVEs](https://www.whatcyber.com/cve): newly published CVEs with CVSS severity scores.
+- [Threat actors](https://www.whatcyber.com/threat-actors): profiles of more than 170 threat groups, with aliases and descriptions from MITRE ATT&CK.
+- [Vulnerabilities by vendor](https://www.whatcyber.com/vendors): the 100 vendors with the most CVEs, each with its newest CVEs, exploited vulnerabilities and most common weaknesses.
+- [Common software weaknesses (CWE)](https://www.whatcyber.com/cwe): the 50 weaknesses behind the most CVEs, with how many are known to be exploited.
+- [Threat feed](https://www.whatcyber.com/threatfeed): cybersecurity news aggregated from trusted sources.
+- [Blog](https://www.whatcyber.com/blog): analysis and guides on vulnerabilities and threat intelligence.
+
+## Page patterns
+
+- CVE page: https://www.whatcyber.com/cve/CVE-YYYY-NNNN. A plain summary, CVSS and EPSS scores, KEV status and due date, timeline, weaknesses, affected products, references and related news. Example: https://www.whatcyber.com/cve/CVE-2024-3400
+- Threat actor page: https://www.whatcyber.com/threat-actors/<name>, for example https://www.whatcyber.com/threat-actors/apt28
+- Vendor page: https://www.whatcyber.com/vendors/<vendor>, for example https://www.whatcyber.com/vendors/fortinet
+- Product page: https://www.whatcyber.com/vendors/<vendor>/<product>, for example https://www.whatcyber.com/vendors/fortinet/fortios. Products with known exploited vulnerabilities only.
+- Weakness page: https://www.whatcyber.com/cwe/CWE-<number>, for example https://www.whatcyber.com/cwe/CWE-79
+
+## Data sources
+
+- [CISA Known Exploited Vulnerabilities catalog](https://www.cisa.gov/known-exploited-vulnerabilities-catalog): which CVEs are exploited, due dates, ransomware use
+- [National Vulnerability Database](https://nvd.nist.gov/): CVE records, CVSS scores, weaknesses and affected products
+- [FIRST EPSS](https://www.first.org/epss/): the probability that a CVE will be exploited in the next 30 days
+- [MITRE ATT&CK groups](https://attack.mitre.org/groups/): threat actor names, aliases and descriptions
+- [MITRE CWE](https://cwe.mitre.org/): weakness names and descriptions
+
+## About
+
+- [About WhatCyber](https://www.whatcyber.com/about)
+- [Sources of the news feed](https://www.whatcyber.com/sources)
+- [Contact](https://www.whatcyber.com/contact)
+
+## Optional
+
+- [Sitemap index](https://www.whatcyber.com/sitemap.xml): every public page, split by type (core, blog, KEV, threat actors, vendor, product and weakness hubs)

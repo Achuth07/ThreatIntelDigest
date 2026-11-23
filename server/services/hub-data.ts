@@ -181,6 +181,8 @@ export interface VendorIndexRow {
   name: string;
   cveCount: number;
   kevCount: number;
+  /** When the rankings were last computed. */
+  updatedAt: string | null;
 }
 
 export interface CweIndexRow {
@@ -188,6 +190,7 @@ export interface CweIndexRow {
   name: string | null;
   cveCount: number;
   kevCount: number;
+  updatedAt: string | null;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -225,15 +228,15 @@ function severityFrom(rows: any[]): SeverityCounts {
 // Indexes
 
 export async function getVendorIndex(sql: Sql): Promise<VendorIndexRow[]> {
-  const rows = await sql`SELECT slug, display_name, cve_count, kev_count FROM vendor_stats ORDER BY rank LIMIT ${TOP_VENDORS}`;
-  return rows.map((r) => ({ slug: r.slug, name: r.display_name, cveCount: Number(r.cve_count), kevCount: Number(r.kev_count) }));
+  const rows = await sql`SELECT slug, display_name, cve_count, kev_count, updated_at FROM vendor_stats ORDER BY rank LIMIT ${TOP_VENDORS}`;
+  return rows.map((r) => ({ slug: r.slug, name: r.display_name, cveCount: Number(r.cve_count), kevCount: Number(r.kev_count), updatedAt: iso(r.updated_at) }));
 }
 
 export async function getCweIndex(sql: Sql): Promise<CweIndexRow[]> {
-  const rows = await sql`SELECT s.id, c.name, s.cve_count, s.kev_count
+  const rows = await sql`SELECT s.id, c.name, s.cve_count, s.kev_count, s.updated_at
                          FROM cwe_stats s LEFT JOIN cwe_categories c ON c.id = s.id
                          ORDER BY s.rank LIMIT ${TOP_CWES}`;
-  return rows.map((r) => ({ id: r.id, name: r.name ?? null, cveCount: Number(r.cve_count), kevCount: Number(r.kev_count) }));
+  return rows.map((r) => ({ id: r.id, name: r.name ?? null, cveCount: Number(r.cve_count), kevCount: Number(r.kev_count), updatedAt: iso(r.updated_at) }));
 }
 
 // ---------------------------------------------------------------------------------------------
