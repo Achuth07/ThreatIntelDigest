@@ -124,7 +124,7 @@
       "destination": "/api/page"
     },
     {
-      "source": "/:section(article|blog|threat-actors|cve|vendors|cwe)/:id",
+      "source": "/:section(article|blog|threat-actors|cve|vendors|cwe|tools)/:id",
       "destination": "/api/page"
     },
     {

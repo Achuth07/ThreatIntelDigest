@@ -14,6 +14,8 @@ import { LANDING_FAQ } from '../../client/src/lib/jsonld.js';
 import type { CweHub, CweIndexRow, HubCve, HubKev, HubNews, ProductHub, SeverityCounts, VendorHub, VendorIndexRow } from './hub-data.js';
 import { cveSummary, cveTimeline } from '../../client/src/lib/cve-summary.js';
 import { KEV_ANSWER, KEV_FAQ } from '../../client/src/lib/kev-content.js';
+import { CVSS_ANSWER, CVSS_FAQ, CVSS_TOOL_PATH } from '../../client/src/lib/cvss-content.js';
+import { EXAMPLES, METRICS, SEVERITY_RANGES, calculate, parseVector } from '../../client/src/lib/cvss.js';
 import { HUB_ANSWERS, cveSources, isoDay, sourcesFor, type HubKind } from '../../client/src/lib/provenance.js';
 import { pageList } from '../../client/src/lib/page-list.js';
 
@@ -185,6 +187,7 @@ ${kev?.vulnerabilityName ? `<p>${esc(kev.vulnerabilityName)}</p>` : ''}
 <p>${esc(summary)}</p>
 ${description ? `<h2>Description</h2><p>${esc(description)}</p>` : ''}
 ${facts.length ? `<h2>Key facts</h2><dl>${facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}</dl>` : ''}
+${nvd?.cvssVector && parseVector(nvd.cvssVector) ? `<p><a href="${esc(`${CVSS_TOOL_PATH}?vector=${encodeURIComponent(nvd.cvssVector)}`)}">Recalculate this score in the CVSS calculator</a></p>` : ''}
 ${kev?.requiredAction ? `<h2>Required action</h2><p>${esc(plain(kev.requiredAction))}</p>` : ''}
 ${kev?.notes ? `<p>${esc(plain(kev.notes))}</p>` : ''}
 ${timeline.length ? `<h2>Timeline</h2><ul>${timeline.map((e) => `<li>${esc(e.date)}: ${esc(e.label)}${e.note ? ` (${esc(e.note)})` : ''}</li>`).join('')}</ul>` : ''}
@@ -527,6 +530,39 @@ export function renderFeedBody(articles: FeedArticle[]): string {
 <ul><li><a href="${esc(KEV_HUB)}">CISA Known Exploited Vulnerabilities catalog</a></li><li><a href="${esc(CVE_HUB)}">Latest CVEs</a></li><li><a href="${esc(ACTORS_HUB)}">Threat actor profiles</a></li><li><a href="/blog">Blog</a></li></ul>`;
 
   return shell('Threat feed', inner);
+}
+
+// ---------------------------------------------------------------------------------------------
+// CVSS calculator (WHA-29)
+
+/** The calculator page as readable HTML: what CVSS is, the metrics, the ratings, worked examples and the FAQ. */
+export function renderCvssToolBody(): string {
+  const inner = `
+<p class="crumbs"><a href="/">WhatCyber</a> / CVSS calculator</p>
+<h1>CVSS calculator</h1>
+<p>${esc(CVSS_ANSWER)}</p>
+<p>Choose a value for each of the eight metrics and the calculator shows the base score, the severity rating and the vector string. It needs JavaScript to calculate; the reference below works without it.</p>
+<h2>The eight base metrics</h2>
+${METRICS.map(
+  (metric) => `<h3>${esc(metric.name)} (${esc(metric.key)})</h3><p>${esc(metric.question)}</p><ul>${metric.values
+    .map((value) => `<li>${esc(value.label)} (${esc(value.code)}): ${esc(value.description)}</li>`)
+    .join('')}</ul>`
+).join('\n')}
+<h2>Severity ratings</h2>
+<ul>${SEVERITY_RANGES.map((band) => `<li>${esc(band.severity)}: ${esc(band.range)}</li>`).join('')}</ul>
+<h2>Worked examples</h2>
+<ul>${EXAMPLES.map((example) => {
+    const parsed = parseVector(example.vector)!;
+    const score = calculate(parsed.metrics, parsed.version);
+    return `<li><a href="${esc(cveUrl(example.cveId))}">${esc(example.cveId)}</a>: ${esc(example.name)}. <a href="${esc(`${CVSS_TOOL_PATH}?vector=${encodeURIComponent(example.vector)}`)}">${esc(example.vector)}</a> scores ${score.base.toFixed(1)} (${esc(score.severity)}).</li>`;
+  }).join('')}</ul>
+<h2>Frequently asked questions</h2>
+${CVSS_FAQ.map(({ question, answer }) => `<h3>${esc(question)}</h3><p>${esc(answer)}</p>`).join('\n')}
+<p class="crumbs">Formulas: the <a href="https://www.first.org/cvss/v3.1/specification-document" rel="noopener">FIRST CVSS v3.1 specification</a>.</p>
+<h2>More on WhatCyber</h2>
+<ul><li><a href="${esc(KEV_HUB)}">CISA Known Exploited Vulnerabilities catalog</a></li><li><a href="${esc(CVE_HUB)}">Latest CVEs</a></li><li><a href="${esc(CWE_HUB)}">Vulnerabilities by weakness (CWE)</a></li><li><a href="${esc(VENDORS_HUB)}">Vulnerabilities by vendor</a></li></ul>`;
+
+  return shell('CVSS calculator', inner);
 }
 
 // ---------------------------------------------------------------------------------------------

@@ -38,6 +38,12 @@ export const STATIC_PAGE_META: Record<string, PageMeta> = {
       'Browse newly published CVEs, filter by severity and vendor, and see CVSS scores. Data from the National Vulnerability Database.',
     keywords: 'CVE, vulnerabilities, security flaws, exploit, cvss, nvd',
   },
+  '/tools/cvss-calculator': {
+    title: 'CVSS Calculator: Score a CVSS 3.1 Vector | WhatCyber',
+    description:
+      'Work out a CVSS v3.1 base score from the eight metrics, see the severity rating and copy the vector string. Load any published CVE to check its score.',
+    keywords: 'CVSS calculator, CVSS 3.1 calculator, CVSS score, CVSS vector, vulnerability severity',
+  },
   '/vendors': {
     title: 'Vulnerabilities by Vendor: Microsoft, Linux, Google and More | WhatCyber',
     description:

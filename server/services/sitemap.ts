@@ -32,6 +32,7 @@ const CORE_PATHS = [
   '/threat-actors',
   '/vendors',
   '/cwe',
+  '/tools/cvss-calculator',
   '/blog',
   '/about',
   '/sources',

@@ -1,5 +1,5 @@
 import { useLocation } from 'wouter';
-import { ShieldAlert, Flame, Bug, Building2, Layers } from 'lucide-react';
+import { ShieldAlert, Flame, Bug, Building2, Layers, Calculator } from 'lucide-react';
 import { SidebarSection, SidebarItem, SidebarBadge } from '@/components/layout/sidebar-primitives';
 
 export function VulnsSidebar() {
@@ -36,6 +36,13 @@ export function VulnsSidebar() {
           href="/cwe"
           active={location.startsWith('/cwe')}
           testId="button-cwe"
+        />
+        <SidebarItem
+          icon={Calculator}
+          label="CVSS calculator"
+          href="/tools/cvss-calculator"
+          active={location.startsWith('/tools/cvss-calculator')}
+          testId="button-cvss-calculator"
         />
       </SidebarSection>
     </>

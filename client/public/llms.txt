@@ -14,6 +14,10 @@ The pages below answer the questions people most often ask about vulnerabilities
 - [Threat feed](https://www.whatcyber.com/threatfeed): cybersecurity news aggregated from trusted sources.
 - [Blog](https://www.whatcyber.com/blog): analysis and guides on vulnerabilities and threat intelligence.
 
+## Tools
+
+- [CVSS calculator](https://www.whatcyber.com/tools/cvss-calculator): works out a CVSS v3.1 or v3.0 base score from the eight metrics, shows the severity rating and the vector string, and loads the vector of any published CVE to check its score.
+
 ## Page patterns
 
 - CVE page: https://www.whatcyber.com/cve/CVE-YYYY-NNNN. A plain summary, CVSS and EPSS scores, KEV status and due date, timeline, weaknesses, affected products, references and related news. Example: https://www.whatcyber.com/cve/CVE-2024-3400
