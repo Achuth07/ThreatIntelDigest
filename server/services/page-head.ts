@@ -271,9 +271,14 @@ export async function resolvePageHead(rawPathname: string, data: PageData, searc
       description,
     });
 
+    // WHA-23: a CVE outside the KEV catalog with no description or no references is thin. It stays out
+    // of the index until it has them. When the stored text could not be read right now, it is not judged.
+    const thin = !kev && Boolean(nvd) && nvd?.contentKnown !== false && (!nvd?.description || (nvd?.references ?? []).length === 0);
+
     return {
       status: 200,
       ...seo,
+      noindex: thin || undefined,
       canonical: `${SITE_URL}${cveUrl(id)}`,
       body: renderCveBody(record),
       jsonLd: cveJsonLd({

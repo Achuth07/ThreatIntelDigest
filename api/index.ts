@@ -29,7 +29,7 @@ async function handleSitemapRequest(name: string | undefined, res: VercelRespons
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Sitemaps are rewritten here from vercel.json; answer before any storage setup.
   const sitemapPath = new URL(req.url!, `https://${req.headers.host}`).pathname;
-  const sitemapMatch = sitemapPath.match(/^\/sitemap(?:-([a-z]+))?\.xml$/);
+  const sitemapMatch = sitemapPath.match(/^\/sitemap(?:-([a-z0-9-]+))?\.xml$/);
   if (sitemapMatch) {
     return handleSitemapRequest(sitemapMatch[1], res);
   }

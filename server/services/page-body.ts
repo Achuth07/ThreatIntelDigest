@@ -126,6 +126,8 @@ export interface CveBodyData {
     cvssV2Severity: string | null;
     cvssVector: string | null;
     epssScore: number | null;
+    /** False when stored text exists but could not be read, so its absence says nothing. */
+    contentKnown?: boolean;
     weaknesses: string[];
     vendors: string[];
     description: string;
@@ -170,6 +172,7 @@ export function renderCveBody(data: CveBodyData): string {
     cvssScore: nvd?.cvssV3Score ?? nvd?.cvssV2Score ?? null,
     severity: nvd?.cvssV3Severity ?? nvd?.cvssV2Severity ?? null,
     epssScore: nvd?.epssScore ?? null,
+    status: nvd?.status ?? null,
   };
   const summary = cveSummary(summaryFacts);
   const timeline = cveTimeline(summaryFacts);

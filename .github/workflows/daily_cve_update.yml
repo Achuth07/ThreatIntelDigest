@@ -52,3 +52,12 @@ jobs:
         if [ -n "$DAYS" ]; then args+=(--days "$DAYS"); fi
         if [ "$HISTORY_ONLY" = "true" ]; then args+=(--history-only); fi
         npx tsx scripts/sync_nvd.ts "${args[@]}"
+
+    # WHA-23: announce new CVE tier 2 pages to IndexNow right after they are ingested. Does nothing while
+    # tier 2 is off (scripts/set-cve-tier2.ts), and never fails the sync.
+    - name: Send new CVE pages to IndexNow
+      if: ${{ github.event.inputs.history_only != 'true' }}
+      continue-on-error: true
+      env:
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      run: npx tsx scripts/submit-cve-indexnow.ts

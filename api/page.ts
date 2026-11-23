@@ -134,6 +134,9 @@ function createDataSource(): PageData {
               epssScore: num(v.epss_score),
               weaknesses: list(v.weaknesses).length ? list(v.weaknesses) : list(stored?.weaknesses),
               vendors: list(v.vendors),
+              // False when the stored text should exist but could not be read (timeout); then the page
+              // is not judged by its text (WHA-23).
+              contentKnown: !v?.has_r2_backing || stored !== null,
               description: typeof stored?.description === 'string' ? stored.description : '',
               affectedProducts: list(stored?.affectedProducts),
               references: list(stored?.references).length ? list(stored?.references) : list(stored?.referenceUrls),

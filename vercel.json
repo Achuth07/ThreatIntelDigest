@@ -84,6 +84,10 @@
       "destination": "/api/index.ts"
     },
     {
+      "source": "/sitemap-cve-:part.xml",
+      "destination": "/api/index.ts"
+    },
+    {
       "source": "/robots.txt",
       "destination": "/robots.txt"
     },
