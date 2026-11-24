@@ -21,9 +21,10 @@ import type { CweHub, CweIndexRow, ProductHub, VendorHub, VendorIndexRow } from 
 import { MIN_CVES_FOR_INDEX } from './hub-data.js';
 import { KEV_FAQ } from '../../client/src/lib/kev-content.js';
 import { CVSS4_LEGACY_PATH, CVSS_TOOL_PATH, CVSS_VERSION_SLUGS, CVSS_VIEW_TEXT, cvssPath, faqFor, isCvssVersionSlug, type CvssView } from '../../client/src/lib/cvss-content.js';
+import { EXPOSURE_FAQ, EXPOSURE_META, EXPOSURE_TOOL_PATH } from '../../client/src/lib/exposure-content.js';
 import { actorJsonLd, blogPostJsonLd, cveJsonLd, hubJsonLd, landingJsonLd } from '../../client/src/lib/jsonld.js';
 import type { HeadTags } from './head-inject.js';
-import { renderActorBody, renderActorsHubBody, renderCveBody, renderCveHubBody, renderCvssToolBody, renderCweHubBody, renderCweIndexBody, renderFeedBody, renderKevHubBody, renderLandingBody, renderProductHubBody, renderVendorHubBody, renderVendorsIndexBody, type ActorsHubData, type CveBodyData, type FeedArticle, type CveHubData, type KevHubData } from './page-body.js';
+import { renderActorBody, renderActorsHubBody, renderCveBody, renderCveHubBody, renderCvssToolBody, renderExposureToolBody, renderCweHubBody, renderCweIndexBody, renderFeedBody, renderKevHubBody, renderLandingBody, renderProductHubBody, renderVendorHubBody, renderVendorsIndexBody, type ActorsHubData, type CveBodyData, type FeedArticle, type CveHubData, type KevHubData } from './page-body.js';
 
 export interface PageHead extends HeadTags {
   status: 200 | 301 | 404;
@@ -194,6 +195,18 @@ export async function resolvePageHead(rawPathname: string, data: PageData, searc
   if (section === 'tools' && (segments.length === 2 || segments.length === 3)) {
     // The CVSS 4.0 calculator was briefly its own page; it is now the 4.0 address of the one calculator.
     if (pathname === CVSS4_LEGACY_PATH) return redirectTo(cvssPath('4-0'));
+    if (pathname === EXPOSURE_TOOL_PATH) {
+      // The vendors with the most KEV entries link to their hubs; the page still works if the list is unavailable.
+      const vendors = await data.getVendorIndex().catch(() => []);
+      return {
+        status: 200,
+        title: EXPOSURE_META.title,
+        description: EXPOSURE_META.description,
+        canonical: canonicalFor(pathname),
+        jsonLd: hubJsonLd({ path: pathname, name: 'KEV exposure checker', title: EXPOSURE_META.title, description: EXPOSURE_META.description, faq: EXPOSURE_FAQ }),
+        body: renderExposureToolBody(vendors),
+      };
+    }
     const view: CvssView | null =
       pathname === CVSS_TOOL_PATH ? 'overview' : segments.length === 3 && id === 'cvss-calculator' && isCvssVersionSlug(segments[2]) ? segments[2] : null;
     if (!view) return notFound('Tool Not Found | WhatCyber', 'This tool could not be found.');

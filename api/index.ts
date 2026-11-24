@@ -4,6 +4,7 @@ import { storage, initializeStorage } from '../server/storage.js';
 import { fetchCveFromR2, getCveHistory } from '../server/services/r2.js';
 import { excerptFromSearchVector, SEARCH_VECTOR_HEAD } from '../server/services/cve-text.js';
 import { cleanAttackText } from '../server/services/attack-import.js';
+import { EXPOSURE_CACHE, kevCatalogResponse, kevExposureResponse } from '../server/services/kev-exposure.js';
 import { extractCveMentions, getArticleCveIds, getArticlesMentioningCve, linkArticleCves, mergeRelatedNews } from '../server/services/article-cves.js';
 
 // Module-level guard: only initialize storage once per warm function invocation
@@ -5304,8 +5305,30 @@ async function handleKevEndpoints(req: VercelRequest, res: VercelResponse, actio
     }
   }
 
+  // GET /api/kev/catalog and /api/kev/exposure (KEV exposure checker, WHA-29). They sit before
+  // /api/kev/:cveId, which would otherwise take them for a CVE ID.
+  if ((pathname === '/api/kev/catalog' || pathname === '/api/kev/catalog/') && method === 'GET') {
+    try {
+      res.setHeader('Cache-Control', EXPOSURE_CACHE);
+      return res.json(await kevCatalogResponse(storage));
+    } catch (error) {
+      console.error('Error fetching KEV catalog:', error);
+      return res.status(500).json({ error: 'Failed to fetch KEV catalog' });
+    }
+  }
+  if ((pathname === '/api/kev/exposure' || pathname === '/api/kev/exposure/') && method === 'GET') {
+    try {
+      const result = await kevExposureResponse(storage, req.query.item);
+      if (result.status === 200) res.setHeader('Cache-Control', EXPOSURE_CACHE);
+      return res.status(result.status).json(result.body);
+    } catch (error) {
+      console.error('Error fetching KEV exposure:', error);
+      return res.status(500).json({ error: 'Failed to fetch KEV exposure' });
+    }
+  }
+
   // GET /api/kev/:cveId
-  const singleCveMatch = pathname.match(/^\/api\/kev\/([\w-]+(?:-[\w-]+)*)\/?$/);
+  const singleCveMatch =pathname.match(/^\/api\/kev\/([\w-]+(?:-[\w-]+)*)\/?$/);
   if (singleCveMatch && singleCveMatch[1] && method === 'GET') {
     try {
       const cveId = singleCveMatch[1];

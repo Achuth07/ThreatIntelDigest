@@ -56,6 +56,12 @@ export const STATIC_PAGE_META: Record<string, PageMeta> = {
       'Free CVSS 3.1 calculator. Choose the eight base metrics to get the base score, the severity and the vector string, or load any published CVE to check its NVD score.',
     keywords: 'CVSS 3.1 calculator, CVSS v3.1 calculator, CVSS 3.1 score, CVSS 3.1 vector, CVSS 3.0 calculator, NVD score',
   },
+  '/tools/kev-exposure-checker': {
+    title: 'KEV Exposure Checker: Which Exploited CVEs Hit Your Stack | WhatCyber',
+    description:
+      'Pick the vendors and products you run and see every CISA Known Exploited Vulnerability that affects them, with CISA due dates, ransomware use and scores. Shareable and exportable.',
+    keywords: 'KEV exposure checker, CISA KEV by vendor, known exploited vulnerabilities by product, KEV due date, patch priority',
+  },
   '/vendors': {
     title: 'Vulnerabilities by Vendor: Microsoft, Linux, Google and More | WhatCyber',
     description:

@@ -1093,6 +1093,73 @@ export class PostgresStorage implements IStorage {
     }
   }
 
+  async getKevCatalog(): Promise<{ vendor: string; count: number; products: { product: string; count: number }[] }[]> {
+    try {
+      const rows = await this.db
+        .select({
+          vendor: knownExploitedVulnerabilities.vendorProject,
+          product: knownExploitedVulnerabilities.product,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(knownExploitedVulnerabilities)
+        .groupBy(knownExploitedVulnerabilities.vendorProject, knownExploitedVulnerabilities.product);
+      const byVendor = new Map<string, { vendor: string; count: number; products: { product: string; count: number }[] }>();
+      for (const row of rows) {
+        const entry = byVendor.get(row.vendor) ?? { vendor: row.vendor, count: 0, products: [] };
+        entry.count += row.count;
+        entry.products.push({ product: row.product, count: row.count });
+        byVendor.set(row.vendor, entry);
+      }
+      const catalog = Array.from(byVendor.values()).sort((a, b) => b.count - a.count || a.vendor.localeCompare(b.vendor));
+      for (const entry of catalog) entry.products.sort((a, b) => b.count - a.count || a.product.localeCompare(b.product));
+      return catalog;
+    } catch (error) {
+      console.error('Error fetching KEV catalog:', error);
+      return [];
+    }
+  }
+
+  async getKevExposure(items: { vendor: string; product: string }[], limit: number): Promise<import('../client/src/lib/exposure.js').ExposureEntry[]> {
+    if (items.length === 0) return [];
+    const k = knownExploitedVulnerabilities;
+    // Names match exactly, ignoring case: the visitor picks them from the catalog list or follows a shared link.
+    const match = items.map((item) =>
+      item.product
+        ? and(sql`lower(${k.vendorProject}) = ${item.vendor.toLowerCase()}`, sql`lower(${k.product}) = ${item.product.toLowerCase()}`)
+        : sql`lower(${k.vendorProject}) = ${item.vendor.toLowerCase()}`,
+    );
+    const rows = await this.db
+      .select({
+        cveId: k.cveID,
+        vendor: k.vendorProject,
+        product: k.product,
+        name: k.vulnerabilityName,
+        dateAdded: k.dateAdded,
+        dueDate: k.dueDate,
+        ransomware: k.knownRansomwareCampaignUse,
+        cvssScore: vulnerabilities.cvssV3Score,
+        epss: vulnerabilities.epssScore,
+      })
+      .from(k)
+      .leftJoin(vulnerabilities, eq(k.cveID, vulnerabilities.id))
+      .where(or(...match))
+      .orderBy(desc(k.dateAdded))
+      .limit(limit);
+    const day = (value: Date | string | null) => (value ? new Date(value).toISOString().slice(0, 10) : null);
+    const num = (value: unknown) => (value == null || value === '' || !Number.isFinite(Number(value)) ? null : Number(value));
+    return rows.map((row) => ({
+      cveId: row.cveId,
+      vendor: row.vendor,
+      product: row.product,
+      name: row.name,
+      dateAdded: day(row.dateAdded),
+      dueDate: day(row.dueDate),
+      ransomware: row.ransomware === 'Known',
+      cvssScore: num(row.cvssScore),
+      epss: num(row.epss),
+    }));
+  }
+
   async getRelatedArticlesForKev(params: { cveID: string; product?: string; vendor?: string; vulnerabilityName?: string; limit?: number }): Promise<Article[]> {
     try {
       const { cveID, product, vendor, vulnerabilityName, limit = 10 } = params;

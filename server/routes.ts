@@ -9,6 +9,7 @@ import { JSDOM } from 'jsdom';
 import { Readability } from '@mozilla/readability';
 import { submitUrl } from "./services/indexnow";
 import { fetchCisaKevData } from "./services/cisa-service";
+import { kevCatalogResponse, kevExposureResponse } from "./services/kev-exposure";
 
 const parser = new Parser();
 
@@ -486,6 +487,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching KEV vendors:', error);
       res.status(500).json({ error: 'Failed to fetch KEV vendors' });
+    }
+  });
+
+  // KEV exposure checker (WHA-29): the catalog to pick from, and the entries for a stack.
+  app.get('/api/kev/catalog', async (_req, res) => {
+    try {
+      res.json(await kevCatalogResponse(storage));
+    } catch (error) {
+      console.error('Error fetching KEV catalog:', error);
+      res.status(500).json({ error: 'Failed to fetch KEV catalog' });
+    }
+  });
+
+  app.get('/api/kev/exposure', async (req, res) => {
+    try {
+      const result = await kevExposureResponse(storage, req.query.item);
+      res.status(result.status).json(result.body);
+    } catch (error) {
+      console.error('Error fetching KEV exposure:', error);
+      res.status(500).json({ error: 'Failed to fetch KEV exposure' });
     }
   });
 

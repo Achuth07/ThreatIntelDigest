@@ -35,6 +35,7 @@ const CORE_PATHS = [
   '/tools/cvss-calculator',
   '/tools/cvss-calculator/4-0',
   '/tools/cvss-calculator/3-1',
+  '/tools/kev-exposure-checker',
   '/blog',
   '/about',
   '/sources',

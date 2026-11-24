@@ -1,5 +1,5 @@
 import { useLocation } from 'wouter';
-import { ShieldAlert, Flame, Bug, Building2, Layers, Calculator } from 'lucide-react';
+import { ShieldAlert, Flame, Bug, Building2, Layers, Calculator, Crosshair } from 'lucide-react';
 import { SidebarSection, SidebarItem, SidebarBadge } from '@/components/layout/sidebar-primitives';
 
 export function VulnsSidebar() {
@@ -43,6 +43,13 @@ export function VulnsSidebar() {
           href="/tools/cvss-calculator"
           active={location.startsWith('/tools/cvss-calculator')}
           testId="button-cvss-calculator"
+        />
+        <SidebarItem
+          icon={Crosshair}
+          label="KEV exposure checker"
+          href="/tools/kev-exposure-checker"
+          active={location.startsWith('/tools/kev-exposure-checker')}
+          testId="button-kev-exposure-checker"
         />
       </SidebarSection>
     </>
