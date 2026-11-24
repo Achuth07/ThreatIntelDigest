@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { sql, type SQL } from 'drizzle-orm';
-import { looksLikeApiKey, lookupKey } from './api-keys.js';
+import { looksLikeApiKey, lookupKey, type Scope } from './api-keys.js';
 
 // Admin-only access for the v1 API while it is not public (API keys arrive with WHA-42 to WHA-46).
 // Accepts the site's session token (Authorization: Bearer <token>) when it belongs to the admin.
@@ -9,11 +9,14 @@ import { looksLikeApiKey, lookupKey } from './api-keys.js';
 
 // via: 'key' for an API key (WHA-42), 'session' for the site's login token. Managing keys needs a
 // session, so a leaked key cannot be used to create more keys.
-export interface AdminIdentity { userId: number; email: string; via: 'session' | 'key'; keyId?: string }
+export interface AdminIdentity { userId: number; email: string; via: 'session' | 'key'; keyId?: string; scopes?: Scope[] }
+
+// One message for every bad credential, so responses do not reveal which part was wrong (WHA-45).
+const INVALID_CREDENTIALS = 'The API key or token is invalid, revoked or expired.';
 
 export type AuthResult =
   | { ok: true; admin: AdminIdentity }
-  | { ok: false; status: 401 | 403 | 503; code: string; message: string };
+  | { ok: false; status: 401 | 403 | 503; code: 'invalid_token' | 'forbidden' | 'unavailable'; message: string };
 
 interface Executor { execute(query: SQL): Promise<{ rows: any[] }> }
 
@@ -49,25 +52,25 @@ export async function authenticateAdmin(db: Executor, authorization: string | un
   const secret = process.env.SESSION_SECRET;
   const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   if (!secret || !adminEmail) {
-    return { ok: false, status: 503, code: 'auth_unavailable', message: 'The API is not accepting requests right now.' };
+    return { ok: false, status: 503, code: 'unavailable', message: 'The API is not accepting requests right now.' };
   }
   const bearer = authorization?.startsWith('Bearer ') ? authorization.slice(7).trim() : undefined;
   const presentedKey = apiKeyHeader?.trim() || (bearer && looksLikeApiKey(bearer) ? bearer : undefined);
 
   if (presentedKey) {
     const owner = await lookupKey(db, presentedKey);
-    if (!owner) return { ok: false, status: 401, code: 'invalid_api_key', message: 'The API key is invalid, revoked or expired.' };
+    if (!owner) return { ok: false, status: 401, code: 'invalid_token', message: INVALID_CREDENTIALS };
     // Admin-only for now: a key works only while its owner is the admin account.
     if (owner.email.trim().toLowerCase() !== adminEmail) return { ok: false, status: 403, code: 'forbidden', message: 'The API is admin-only for now.' };
-    return { ok: true, admin: { userId: owner.userId, email: owner.email.trim().toLowerCase(), via: 'key', keyId: owner.keyId } };
+    return { ok: true, admin: { userId: owner.userId, email: owner.email.trim().toLowerCase(), via: 'key', keyId: owner.keyId, scopes: owner.scopes } };
   }
 
   if (!bearer) {
-    return { ok: false, status: 401, code: 'unauthorized', message: 'Send an API key as "Authorization: Bearer wc_live_..." or in the X-API-Key header. Create one in Settings. The API is admin-only for now.' };
+    return { ok: false, status: 401, code: 'invalid_token', message: 'Send an API key as "X-API-Key: wc_live_..." or "Authorization: Bearer wc_live_...". Create one in Settings. The API is admin-only for now.' };
   }
   const claims = verifySessionToken(bearer, secret);
   if (!claims) {
-    return { ok: false, status: 401, code: 'invalid_token', message: 'The token is invalid or has expired.' };
+    return { ok: false, status: 401, code: 'invalid_token', message: INVALID_CREDENTIALS };
   }
   const email = String(claims.email ?? '').trim().toLowerCase();
   const userId = Number(claims.userId);

@@ -35,12 +35,12 @@ const EXPIRY_OPTIONS = [
 
 interface ApiKey {
   id: string;
-  keyId: string;
+  key_id: string;
   name: string;
   scopes: string[];
-  createdAt: string;
-  lastUsedAt: string | null;
-  expiresAt: string | null;
+  created_at: string;
+  last_used_at: string | null;
+  expires_at: string | null;
 }
 
 async function callKeysApi<T>(method: 'GET' | 'POST' | 'DELETE', path = '', body?: unknown): Promise<T | null> {
@@ -80,9 +80,9 @@ export function ApiKeysSection({ isAdmin }: { isAdmin: boolean }) {
     setLoading(true);
     setLoadError('');
     try {
-      const data = await callKeysApi<{ keys: ApiKey[]; maxActiveKeys: number }>('GET');
+      const data = await callKeysApi<{ keys: ApiKey[]; max_active_keys: number }>('GET');
       setKeys(data?.keys ?? []);
-      setMaxKeys(data?.maxActiveKeys ?? 5);
+      setMaxKeys(data?.max_active_keys ?? 5);
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : 'Could not load your keys.');
     } finally {
@@ -105,11 +105,11 @@ export function ApiKeysSection({ isAdmin }: { isAdmin: boolean }) {
     setCreating(true);
     setCreateError('');
     try {
-      const data = await callKeysApi<{ key: string; apiKey: ApiKey }>('POST', '', { name: name.trim(), scopes, expiresInDays: expiry ? Number(expiry) : null });
+      const data = await callKeysApi<{ key: string; api_key: ApiKey }>('POST', '', { name: name.trim(), scopes, expires_in_days: expiry ? Number(expiry) : null });
       setCreateOpen(false);
       setCopied(false);
       setNewKey(data!.key);
-      setKeys(current => [data!.apiKey, ...current]);
+      setKeys(current => [data!.api_key, ...current]);
     } catch (error) {
       setCreateError(error instanceof Error ? error.message : 'Could not create the key.');
     } finally {
@@ -181,7 +181,7 @@ export function ApiKeysSection({ isAdmin }: { isAdmin: boolean }) {
       ) : (
         <ul className="divide-y divide-slate-800 rounded-lg border border-slate-800 bg-slate-950">
           {keys.map(key => {
-            const expired = key.expiresAt !== null && new Date(key.expiresAt) < new Date();
+            const expired = key.expires_at !== null && new Date(key.expires_at) < new Date();
             return (
               <li key={key.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0 space-y-1">
@@ -189,13 +189,13 @@ export function ApiKeysSection({ isAdmin }: { isAdmin: boolean }) {
                     <span className="font-medium text-slate-200">{key.name}</span>
                     {expired && <Badge variant="outline" className="border-red-500/40 text-red-400">Expired</Badge>}
                   </div>
-                  <p className="font-mono text-xs text-slate-500">wc_live_{key.keyId}.••••••••</p>
+                  <p className="font-mono text-xs text-slate-500">wc_live_{key.key_id}.••••••••</p>
                   <p className="text-xs text-slate-500">
-                    Created {format(new Date(key.createdAt), 'd MMM yyyy')}
+                    Created {format(new Date(key.created_at), 'd MMM yyyy')}
                     {' · '}
-                    {key.lastUsedAt ? `Last used ${formatDistanceToNow(new Date(key.lastUsedAt), { addSuffix: true })}` : 'Never used'}
+                    {key.last_used_at ? `Last used ${formatDistanceToNow(new Date(key.last_used_at), { addSuffix: true })}` : 'Never used'}
                     {' · '}
-                    {key.expiresAt ? `${expired ? 'Expired' : 'Expires'} ${format(new Date(key.expiresAt), 'd MMM yyyy')}` : 'No expiry'}
+                    {key.expires_at ? `${expired ? 'Expired' : 'Expires'} ${format(new Date(key.expires_at), 'd MMM yyyy')}` : 'No expiry'}
                   </p>
                   <div className="flex flex-wrap gap-1 pt-1">
                     {key.scopes.map(scope => (

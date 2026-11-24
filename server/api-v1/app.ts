@@ -6,6 +6,8 @@ import { pingRoute, pingHandler } from './routes/ping.js';
 import { getDb } from '../db.js';
 import { authenticateAdmin, type AdminIdentity } from './auth.js';
 import { registerAccountKeyRoutes } from './routes/account-keys.js';
+import { registerCveRoutes } from './routes/cves.js';
+import { errorBody } from './lib/responses.js';
 import { ADMIN_LIMITS, IP_LIMITS, hashIp, hit, pruneOldWindows, rateLimitHeaders } from './rate-limit.js';
 
 // Vercel sets x-real-ip and x-forwarded-for itself, so clients cannot choose their own address.
@@ -19,15 +21,13 @@ function clientIp(c: Context): string {
 
 export type ApiEnv = { Variables: { requestId: string; admin: AdminIdentity } };
 
-// Shared error body. WHA-39 extends this into the full error and pagination format.
-export function errorBody(c: Context<ApiEnv>, code: string, message: string) {
-  return { error: { code, message }, requestId: c.get('requestId') };
-}
+export { errorBody } from './lib/responses.js';
 
 function createV1() {
   const v1 = new OpenAPIHono<ApiEnv>();
   v1.openapi(pingRoute, pingHandler);
   registerAccountKeyRoutes(v1);
+  registerCveRoutes(v1);
   v1.openAPIRegistry.registerComponent('securitySchemes', 'bearerAuth', { type: 'http', scheme: 'bearer' });
   v1.openAPIRegistry.registerComponent('securitySchemes', 'apiKeyHeader', { type: 'apiKey', in: 'header', name: 'X-API-Key' });
   v1.doc('/openapi.json', {

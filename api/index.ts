@@ -3340,7 +3340,8 @@ async function handleVulnerabilitiesEndpoints(req: VercelRequest, res: VercelRes
       case 'relevant':
         // For "Most Relevant", we might want to sort by CVSS score (highest first) 
         // and then by last modified date
-        orderByClause = 'ORDER BY COALESCE(cvss_v3_score, cvss_v2_score) DESC NULLS LAST, last_modified_date DESC, published_date DESC';
+        // The scores are stored as text; compare them as numbers so 10 ranks above 9.9 (migration 015).
+        orderByClause = 'ORDER BY COALESCE(cvss_v3_score::numeric, cvss_v2_score::numeric) DESC NULLS LAST, last_modified_date DESC, published_date DESC';
         break;
       case 'newest':
       default:
