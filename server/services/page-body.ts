@@ -14,6 +14,7 @@ import { LANDING_FAQ } from '../../client/src/lib/jsonld.js';
 import type { CweHub, CweIndexRow, HubCve, HubKev, HubNews, ProductHub, SeverityCounts, VendorHub, VendorIndexRow } from './hub-data.js';
 import { cveSummary, cveTimeline } from '../../client/src/lib/cve-summary.js';
 import { KEV_ANSWER, KEV_FAQ } from '../../client/src/lib/kev-content.js';
+import { EXPOSURE_ANSWER, EXPOSURE_FAQ } from '../../client/src/lib/exposure-content.js';
 import { CVSS_TOOL_PATH, CVSS_VIEW_TEXT, cvssPath, faqFor, type CvssView } from '../../client/src/lib/cvss-content.js';
 import { EXAMPLES_4, METRICS4, calculate4, parseVector4 } from '../../client/src/lib/cvss4.js';
 import { EXAMPLES, METRICS, SEVERITY_RANGES, calculate, parseVector } from '../../client/src/lib/cvss.js';
@@ -596,6 +597,24 @@ ${faqFor(view).map(({ question, answer }) => `<h3>${esc(question)}</h3><p>${esc(
 <ul><li><a href="${esc(KEV_HUB)}">CISA Known Exploited Vulnerabilities catalog</a></li><li><a href="${esc(CVE_HUB)}">Latest CVEs</a></li><li><a href="${esc(CWE_HUB)}">Vulnerabilities by weakness (CWE)</a></li><li><a href="${esc(VENDORS_HUB)}">Vulnerabilities by vendor</a></li></ul>`;
 
   return shell(CVSS_VIEW_TEXT[view].h1, inner);
+}
+
+/** The KEV exposure checker as readable HTML: what it does, the vendors with the most KEV entries and the FAQ. */
+export function renderExposureToolBody(vendors: VendorIndexRow[]): string {
+  const top = [...vendors].sort((a, b) => b.kevCount - a.kevCount).filter((v) => v.kevCount > 0).slice(0, 20);
+  const inner = `
+<p class="crumbs"><a href="/">WhatCyber</a> / KEV exposure checker</p>
+<h1>KEV exposure checker</h1>
+<p>${esc(EXPOSURE_ANSWER)}</p>
+<p>Search for a vendor or product, add it to your list, and the checker lists the matching KEV entries with the CISA due date, the date added, ransomware use, and the CVSS and EPSS scores. The list is kept in the page address so you can share it, and the table exports to CSV. It needs JavaScript; the vendor pages below work without it.</p>
+${top.length ? `<h2>Vendors with the most exploited vulnerabilities</h2>
+<ul>${top.map((v) => `<li><a href="${esc(vendorUrl(v.slug))}">${esc(v.name)}</a>: ${v.kevCount} KEV entr${v.kevCount === 1 ? 'y' : 'ies'}</li>`).join('')}</ul>` : ''}
+<h2>Frequently asked questions</h2>
+${EXPOSURE_FAQ.map(({ question, answer }) => `<h3>${esc(question)}</h3><p>${esc(answer)}</p>`).join('\n')}
+<p class="crumbs">Data: the <a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog" rel="noopener">CISA Known Exploited Vulnerabilities catalog</a>, with scores from the National Vulnerability Database and FIRST EPSS.</p>
+<h2>More on WhatCyber</h2>
+<ul><li><a href="${esc(KEV_HUB)}">CISA Known Exploited Vulnerabilities catalog</a></li><li><a href="${esc(VENDORS_HUB)}">Vulnerabilities by vendor</a></li><li><a href="${esc(CVE_HUB)}">Latest CVEs</a></li><li><a href="${esc(CVSS_TOOL_PATH)}">CVSS calculator</a></li></ul>`;
+  return shell('KEV exposure checker', inner);
 }
 
 // ---------------------------------------------------------------------------------------------

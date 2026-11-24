@@ -88,6 +88,10 @@ export interface IStorage {
   batchCreateKnownExploitedVulnerabilities(kevs: InsertKnownExploitedVulnerability[]): Promise<KnownExploitedVulnerability[]>;
   kevExists(cveID: string): Promise<boolean>;
   getKevVendors(): Promise<{ vendorProject: string; count: number }[]>;
+  /** Every KEV vendor with its products and entry counts, for the exposure checker (WHA-29). */
+  getKevCatalog(): Promise<{ vendor: string; count: number; products: { product: string; count: number }[] }[]>;
+  /** The KEV entries of the given vendors and products (an empty product = the whole vendor). */
+  getKevExposure(items: { vendor: string; product: string }[], limit: number): Promise<import('../client/src/lib/exposure.js').ExposureEntry[]>;
   getRelatedArticlesForKev(params: { cveID: string; product?: string; vendor?: string; vulnerabilityName?: string; limit?: number }): Promise<Article[]>;
 
   // Email Authentication
@@ -749,6 +753,14 @@ export class MemStorage implements IStorage {
   }
 
   async getKevVendors(): Promise<{ vendorProject: string; count: number }[]> {
+    return [];
+  }
+
+  async getKevCatalog(): Promise<{ vendor: string; count: number; products: { product: string; count: number }[] }[]> {
+    return [];
+  }
+
+  async getKevExposure(): Promise<import('../client/src/lib/exposure.js').ExposureEntry[]> {
     return [];
   }
 
