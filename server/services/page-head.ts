@@ -22,9 +22,10 @@ import { MIN_CVES_FOR_INDEX } from './hub-data.js';
 import { KEV_FAQ } from '../../client/src/lib/kev-content.js';
 import { CVSS4_LEGACY_PATH, CVSS_TOOL_PATH, CVSS_VERSION_SLUGS, CVSS_VIEW_TEXT, cvssPath, faqFor, isCvssVersionSlug, type CvssView } from '../../client/src/lib/cvss-content.js';
 import { EXPOSURE_FAQ, EXPOSURE_META, EXPOSURE_TOOL_PATH } from '../../client/src/lib/exposure-content.js';
+import { PRIORITISE_FAQ, PRIORITISE_META, PRIORITISE_TOOL_PATH } from '../../client/src/lib/prioritise-content.js';
 import { actorJsonLd, blogPostJsonLd, cveJsonLd, hubJsonLd, landingJsonLd } from '../../client/src/lib/jsonld.js';
 import type { HeadTags } from './head-inject.js';
-import { renderActorBody, renderActorsHubBody, renderCveBody, renderCveHubBody, renderCvssToolBody, renderExposureToolBody, renderCweHubBody, renderCweIndexBody, renderFeedBody, renderKevHubBody, renderLandingBody, renderProductHubBody, renderVendorHubBody, renderVendorsIndexBody, type ActorsHubData, type CveBodyData, type FeedArticle, type CveHubData, type KevHubData } from './page-body.js';
+import { renderActorBody, renderActorsHubBody, renderCveBody, renderCveHubBody, renderCvssToolBody, renderExposureToolBody, renderPrioritiseToolBody, renderCweHubBody, renderCweIndexBody, renderFeedBody, renderKevHubBody, renderLandingBody, renderProductHubBody, renderVendorHubBody, renderVendorsIndexBody, type ActorsHubData, type CveBodyData, type FeedArticle, type CveHubData, type KevHubData } from './page-body.js';
 
 export interface PageHead extends HeadTags {
   status: 200 | 301 | 404;
@@ -205,6 +206,16 @@ export async function resolvePageHead(rawPathname: string, data: PageData, searc
         canonical: canonicalFor(pathname),
         jsonLd: hubJsonLd({ path: pathname, name: 'KEV exposure checker', title: EXPOSURE_META.title, description: EXPOSURE_META.description, faq: EXPOSURE_FAQ }),
         body: renderExposureToolBody(vendors),
+      };
+    }
+    if (pathname === PRIORITISE_TOOL_PATH) {
+      return {
+        status: 200,
+        title: PRIORITISE_META.title,
+        description: PRIORITISE_META.description,
+        canonical: canonicalFor(pathname),
+        jsonLd: hubJsonLd({ path: pathname, name: 'CVE prioritiser', title: PRIORITISE_META.title, description: PRIORITISE_META.description, faq: PRIORITISE_FAQ }),
+        body: renderPrioritiseToolBody(),
       };
     }
     const view: CvssView | null =

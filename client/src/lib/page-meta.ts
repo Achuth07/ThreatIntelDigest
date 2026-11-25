@@ -62,6 +62,12 @@ export const STATIC_PAGE_META: Record<string, PageMeta> = {
       'Pick the vendors and products you run and see every CISA Known Exploited Vulnerability that affects them, with CISA due dates, ransomware use and scores. Shareable and exportable.',
     keywords: 'KEV exposure checker, CISA KEV by vendor, known exploited vulnerabilities by product, KEV due date, patch priority',
   },
+  '/tools/cve-prioritiser': {
+    title: 'CVE Prioritiser: Rank CVEs by KEV, EPSS and CVSS | WhatCyber',
+    description:
+      'Paste a list of CVE IDs and rank them by what to patch first, using CISA KEV status, EPSS exploit probability and CVSS severity. Shareable and exportable.',
+    keywords: 'CVE prioritiser, vulnerability prioritization, KEV EPSS CVSS, patch priority, which CVE to patch first, vulnerability triage',
+  },
   '/vendors': {
     title: 'Vulnerabilities by Vendor: Microsoft, Linux, Google and More | WhatCyber',
     description:

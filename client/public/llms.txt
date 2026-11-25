@@ -20,6 +20,7 @@ The pages below answer the questions people most often ask about vulnerabilities
 - [CVSS 4.0 calculator](https://www.whatcyber.com/tools/cvss-calculator/4-0): works out the CVSS 4.0 score (CVSS-B, BT, BE, BTE) from the base, threat, environmental and supplemental metrics, with the severity rating and vector string.
 - [CVSS 3.1 calculator](https://www.whatcyber.com/tools/cvss-calculator/3-1): works out the CVSS 3.1 base score from the eight base metrics, shows the severity and the vector string, and loads the vector of any published CVE to check its NVD score.
 - [KEV exposure checker](https://www.whatcyber.com/tools/kev-exposure-checker): pick the vendors and products you run and list every CISA Known Exploited Vulnerability that affects them, with CISA due dates, ransomware use, CVSS and EPSS. The picks are kept in the address, so a result can be shared, and the table exports to CSV.
+- [CVE prioritiser](https://www.whatcyber.com/tools/cve-prioritiser): paste a list of CVE IDs and rank them into patch tiers (patch now, patch soon, plan the fix, routine) from CISA KEV status, EPSS exploit probability and CVSS v3 severity. The rules are shown on the page, the list is kept in the address, and the table exports to CSV.
 
 ## Page patterns
 

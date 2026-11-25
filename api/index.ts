@@ -5,6 +5,7 @@ import { fetchCveFromR2, getCveHistory } from '../server/services/r2.js';
 import { excerptFromSearchVector, SEARCH_VECTOR_HEAD } from '../server/services/cve-text.js';
 import { cleanAttackText } from '../server/services/attack-import.js';
 import { EXPOSURE_CACHE, kevCatalogResponse, kevExposureResponse } from '../server/services/kev-exposure.js';
+import { PRIORITISE_CACHE, cvePrioritiseResponse } from '../server/services/cve-prioritise.js';
 import { extractCveMentions, getArticleCveIds, getArticlesMentioningCve, linkArticleCves, mergeRelatedNews } from '../server/services/article-cves.js';
 
 // Module-level guard: only initialize storage once per warm function invocation
@@ -177,6 +178,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         console.error("Error fetching map data from R2:", error);
         // Fallback: If R2 fails (e.g. file doesn't exist yet), return empty array
         return res.json([]);
+      }
+    }
+
+    // GET /api/cve-prioritise?id=CVE-...&id=CVE-... (CVE prioritiser, WHA-29). It has its own prefix, so it
+    // is matched here; the dispatcher only sends /api/kev... to the KEV handler.
+    if ((pathname === '/api/cve-prioritise' || pathname === '/api/cve-prioritise/') && req.method === 'GET') {
+      try {
+        const result = await cvePrioritiseResponse(storage, req.query.id);
+        if (result.status === 200) res.setHeader('Cache-Control', PRIORITISE_CACHE);
+        return res.status(result.status).json(result.body);
+      } catch (error) {
+        console.error('Error prioritising CVEs:', error);
+        return res.status(500).json({ error: 'Failed to prioritise CVEs' });
       }
     }
 

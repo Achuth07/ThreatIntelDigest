@@ -1,5 +1,5 @@
 import { useLocation } from 'wouter';
-import { ShieldAlert, Flame, Bug, Building2, Layers, Calculator, Crosshair } from 'lucide-react';
+import { ShieldAlert, Flame, Bug, Building2, Layers, Calculator, Crosshair, ListOrdered } from 'lucide-react';
 import { SidebarSection, SidebarItem, SidebarBadge } from '@/components/layout/sidebar-primitives';
 
 export function VulnsSidebar() {
@@ -50,6 +50,13 @@ export function VulnsSidebar() {
           href="/tools/kev-exposure-checker"
           active={location.startsWith('/tools/kev-exposure-checker')}
           testId="button-kev-exposure-checker"
+        />
+        <SidebarItem
+          icon={ListOrdered}
+          label="CVE prioritiser"
+          href="/tools/cve-prioritiser"
+          active={location.startsWith('/tools/cve-prioritiser')}
+          testId="button-cve-prioritiser"
         />
       </SidebarSection>
     </>

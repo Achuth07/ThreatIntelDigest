@@ -1160,6 +1160,55 @@ export class PostgresStorage implements IStorage {
     }));
   }
 
+  async getPrioritiseEntries(ids: string[]): Promise<import('../client/src/lib/prioritise.js').PrioritiseEntry[]> {
+    if (ids.length === 0) return [];
+    const k = knownExploitedVulnerabilities;
+    const [vulnRows, kevRows] = await Promise.all([
+      this.db
+        .select({
+          id: vulnerabilities.id,
+          published: vulnerabilities.publishedDate,
+          cvss: vulnerabilities.cvssV3Score,
+          severity: vulnerabilities.cvssV3Severity,
+          epss: vulnerabilities.epssScore,
+          epssPercentile: vulnerabilities.epssPercentile,
+          vendors: vulnerabilities.vendors,
+        })
+        .from(vulnerabilities)
+        .where(inArray(vulnerabilities.id, ids)),
+      this.db
+        .select({ id: k.cveID, vendor: k.vendorProject, name: k.vulnerabilityName, added: k.dateAdded, due: k.dueDate, ransomware: k.knownRansomwareCampaignUse })
+        .from(k)
+        .where(inArray(k.cveID, ids)),
+    ]);
+    const vulnById = new Map(vulnRows.map((row) => [row.id, row]));
+    const kevById = new Map(kevRows.map((row) => [row.id, row]));
+    const day = (value: Date | string | null) => (value ? new Date(value).toISOString().slice(0, 10) : null);
+    const num = (value: unknown) => (value == null || value === '' || !Number.isFinite(Number(value)) ? null : Number(value));
+    return ids.map((cveId) => {
+      const vuln = vulnById.get(cveId);
+      const kev = kevById.get(cveId);
+      // Only a KEV entry names its vendor reliably. The vulnerability record's vendor list holds raw slugs that
+      // often name bundled or unrelated products (OpenSSH lists two firewall vendors), so it is not shown.
+      const vendors = kev ? [kev.vendor] : [];
+      return {
+        cveId,
+        found: !!vuln || !!kev,
+        vendors,
+        name: kev?.name ?? null,
+        publishedDate: day(vuln?.published ?? null),
+        cvssScore: num(vuln?.cvss),
+        cvssSeverity: vuln?.severity ?? null,
+        epss: num(vuln?.epss),
+        epssPercentile: num(vuln?.epssPercentile),
+        inKev: !!kev,
+        kevDateAdded: day(kev?.added ?? null),
+        kevDueDate: day(kev?.due ?? null),
+        ransomware: kev?.ransomware === 'Known',
+      };
+    });
+  }
+
   async getRelatedArticlesForKev(params: { cveID: string; product?: string; vendor?: string; vulnerabilityName?: string; limit?: number }): Promise<Article[]> {
     try {
       const { cveID, product, vendor, vulnerabilityName, limit = 10 } = params;
