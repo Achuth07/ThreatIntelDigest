@@ -36,6 +36,7 @@ const CORE_PATHS = [
   '/tools/cvss-calculator/4-0',
   '/tools/cvss-calculator/3-1',
   '/tools/kev-exposure-checker',
+  '/tools/cve-prioritiser',
   '/blog',
   '/about',
   '/sources',

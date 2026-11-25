@@ -92,6 +92,7 @@ export interface IStorage {
   getKevCatalog(): Promise<{ vendor: string; count: number; products: { product: string; count: number }[] }[]>;
   /** The KEV entries of the given vendors and products (an empty product = the whole vendor). */
   getKevExposure(items: { vendor: string; product: string }[], limit: number): Promise<import('../client/src/lib/exposure.js').ExposureEntry[]>;
+  getPrioritiseEntries(ids: string[]): Promise<import('../client/src/lib/prioritise.js').PrioritiseEntry[]>;
   getRelatedArticlesForKev(params: { cveID: string; product?: string; vendor?: string; vulnerabilityName?: string; limit?: number }): Promise<Article[]>;
 
   // Email Authentication
@@ -761,6 +762,10 @@ export class MemStorage implements IStorage {
   }
 
   async getKevExposure(): Promise<import('../client/src/lib/exposure.js').ExposureEntry[]> {
+    return [];
+  }
+
+  async getPrioritiseEntries(): Promise<import('../client/src/lib/prioritise.js').PrioritiseEntry[]> {
     return [];
   }
 

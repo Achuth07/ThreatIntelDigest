@@ -10,6 +10,7 @@ import { Readability } from '@mozilla/readability';
 import { submitUrl } from "./services/indexnow";
 import { fetchCisaKevData } from "./services/cisa-service";
 import { kevCatalogResponse, kevExposureResponse } from "./services/kev-exposure";
+import { cvePrioritiseResponse } from "./services/cve-prioritise";
 
 const parser = new Parser();
 
@@ -507,6 +508,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching KEV exposure:', error);
       res.status(500).json({ error: 'Failed to fetch KEV exposure' });
+    }
+  });
+
+  // CVE prioritiser (WHA-29): tier, KEV, EPSS and CVSS for a list of CVE IDs.
+  app.get('/api/cve-prioritise', async (req, res) => {
+    try {
+      const result = await cvePrioritiseResponse(storage, req.query.id);
+      res.status(result.status).json(result.body);
+    } catch (error) {
+      console.error('Error prioritising CVEs:', error);
+      res.status(500).json({ error: 'Failed to prioritise CVEs' });
     }
   });
 

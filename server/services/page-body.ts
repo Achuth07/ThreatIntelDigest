@@ -15,6 +15,7 @@ import type { CweHub, CweIndexRow, HubCve, HubKev, HubNews, ProductHub, Severity
 import { cveSummary, cveTimeline } from '../../client/src/lib/cve-summary.js';
 import { KEV_ANSWER, KEV_FAQ } from '../../client/src/lib/kev-content.js';
 import { EXPOSURE_ANSWER, EXPOSURE_FAQ } from '../../client/src/lib/exposure-content.js';
+import { PRIORITISE_ANSWER, PRIORITISE_FAQ, PRIORITISE_RULES } from '../../client/src/lib/prioritise-content.js';
 import { CVSS_TOOL_PATH, CVSS_VIEW_TEXT, cvssPath, faqFor, type CvssView } from '../../client/src/lib/cvss-content.js';
 import { EXAMPLES_4, METRICS4, calculate4, parseVector4 } from '../../client/src/lib/cvss4.js';
 import { EXAMPLES, METRICS, SEVERITY_RANGES, calculate, parseVector } from '../../client/src/lib/cvss.js';
@@ -615,6 +616,23 @@ ${EXPOSURE_FAQ.map(({ question, answer }) => `<h3>${esc(question)}</h3><p>${esc(
 <h2>More on WhatCyber</h2>
 <ul><li><a href="${esc(KEV_HUB)}">CISA Known Exploited Vulnerabilities catalog</a></li><li><a href="${esc(VENDORS_HUB)}">Vulnerabilities by vendor</a></li><li><a href="${esc(CVE_HUB)}">Latest CVEs</a></li><li><a href="${esc(CVSS_TOOL_PATH)}">CVSS calculator</a></li></ul>`;
   return shell('KEV exposure checker', inner);
+}
+
+/** The CVE prioritiser as readable HTML: what it does, the tier rules and the FAQ. */
+export function renderPrioritiseToolBody(): string {
+  const inner = `
+<p class="crumbs"><a href="/">WhatCyber</a> / CVE prioritiser</p>
+<h1>CVE prioritiser</h1>
+<p>${esc(PRIORITISE_ANSWER)}</p>
+<p>Paste CVE IDs, one per line or inside any text such as a scanner export, and the tool places each one in a patch tier and orders the list. The IDs are kept in the page address so you can share the result, and the table exports to CSV. It needs JavaScript; the rules and answers below work without it.</p>
+<h2>How the tiers are decided</h2>
+<ol>${PRIORITISE_RULES.map((r) => `<li><strong>${esc(r.label)}</strong>: ${esc(r.rule)}</li>`).join('')}</ol>
+<h2>Frequently asked questions</h2>
+${PRIORITISE_FAQ.map(({ question, answer }) => `<h3>${esc(question)}</h3><p>${esc(answer)}</p>`).join('\n')}
+<p class="crumbs">Data: the <a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog" rel="noopener">CISA Known Exploited Vulnerabilities catalog</a>, CVSS from the National Vulnerability Database and <a href="https://www.first.org/epss/" rel="noopener">FIRST EPSS</a>.</p>
+<h2>More on WhatCyber</h2>
+<ul><li><a href="${esc(KEV_HUB)}">CISA Known Exploited Vulnerabilities catalog</a></li><li><a href="/tools/kev-exposure-checker">KEV exposure checker</a></li><li><a href="${esc(CVE_HUB)}">Latest CVEs</a></li><li><a href="${esc(CVSS_TOOL_PATH)}">CVSS calculator</a></li></ul>`;
+  return shell('CVE prioritiser', inner);
 }
 
 // ---------------------------------------------------------------------------------------------
