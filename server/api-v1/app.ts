@@ -55,14 +55,17 @@ export function createApp() {
     origin: '*',
     allowMethods: ['GET', 'HEAD', 'POST', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Authorization', 'X-API-Key', 'If-None-Match', 'Content-Type'],
-    exposeHeaders: ['RateLimit', 'RateLimit-Policy', 'RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset', 'Retry-After', 'ETag', 'X-Request-Id'],
+    exposeHeaders: ['RateLimit', 'RateLimit-Policy', 'RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset', 'Retry-After', 'ETag', 'X-Request-Id', 'Server-Timing'],
     maxAge: 86400,
   }));
 
-  // API responses are data, not pages; keep them out of search results.
+  // API responses are data, not pages; keep them out of search results. Server-Timing reports how
+  // long the request took inside the function, separate from network time to the caller.
   app.use('*', async (c, next) => {
+    const started = performance.now();
     await next();
     c.header('X-Robots-Tag', 'noindex');
+    c.header('Server-Timing', `app;dur=${(performance.now() - started).toFixed(1)}`);
   });
 
   // Strict rate limiting, then admin-only access. CORS preflights were answered above.
