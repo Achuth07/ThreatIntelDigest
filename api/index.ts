@@ -183,7 +183,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // GET /api/cve-prioritise?id=CVE-...&id=CVE-... (CVE prioritiser, WHA-29). It has its own prefix, so it
     // is matched here; the dispatcher only sends /api/kev... to the KEV handler.
-    if ((pathname === '/api/cve-prioritise' || pathname === '/api/cve-prioritise/') && method === 'GET') {
+    if ((pathname === '/api/cve-prioritise' || pathname === '/api/cve-prioritise/') && req.method === 'GET') {
       try {
         const result = await cvePrioritiseResponse(storage, req.query.id);
         if (result.status === 200) res.setHeader('Cache-Control', PRIORITISE_CACHE);
