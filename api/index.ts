@@ -181,6 +181,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    // GET /api/cve-prioritise?id=CVE-...&id=CVE-... (CVE prioritiser, WHA-29). It has its own prefix, so it
+    // is matched here; the dispatcher only sends /api/kev... to the KEV handler.
+    if ((pathname === '/api/cve-prioritise' || pathname === '/api/cve-prioritise/') && method === 'GET') {
+      try {
+        const result = await cvePrioritiseResponse(storage, req.query.id);
+        if (result.status === 200) res.setHeader('Cache-Control', PRIORITISE_CACHE);
+        return res.status(result.status).json(result.body);
+      } catch (error) {
+        console.error('Error prioritising CVEs:', error);
+        return res.status(500).json({ error: 'Failed to prioritise CVEs' });
+      }
+    }
+
     // Vulnerabilities endpoints
     if (pathname.startsWith('/api/vulnerabilities/vendors')) {
       return handleVulnerabilitiesVendorsEndpoint(req, res);
@@ -5325,18 +5338,6 @@ async function handleKevEndpoints(req: VercelRequest, res: VercelResponse, actio
     } catch (error) {
       console.error('Error fetching KEV exposure:', error);
       return res.status(500).json({ error: 'Failed to fetch KEV exposure' });
-    }
-  }
-
-  // GET /api/cve-prioritise?id=CVE-...&id=CVE-... (CVE prioritiser, WHA-29)
-  if ((pathname === '/api/cve-prioritise' || pathname === '/api/cve-prioritise/') && method === 'GET') {
-    try {
-      const result = await cvePrioritiseResponse(storage, req.query.id);
-      if (result.status === 200) res.setHeader('Cache-Control', PRIORITISE_CACHE);
-      return res.status(result.status).json(result.body);
-    } catch (error) {
-      console.error('Error prioritising CVEs:', error);
-      return res.status(500).json({ error: 'Failed to prioritise CVEs' });
     }
   }
 
