@@ -39,6 +39,9 @@ const ListQuery = PageQuery.extend({
   sort: z.enum(SORTS).default('-published').openapi({ description: 'Prefix with - for descending. CVEs without the value sort last either way.' }),
 });
 
+// Parameters that next and previous links carry over.
+const LIST_PARAMS = Object.keys(ListQuery.shape);
+
 const DetailQuery = z.object({
   include: z.string().optional().openapi({ description: 'Comma-separated: references, articles, threat_actors.' }),
 });
@@ -169,7 +172,7 @@ export function registerCveRoutes(v1: OpenAPIHono<ApiEnv>) {
     const db = getDb();
     const planned = await plan(db, q);
     if ('error' in planned) return c.json(errorBody(c, 'validation_error', planned.error, { fields: [{ field: planned.field, message: planned.error }] }), 400) as any;
-    if (planned.empty) return c.json(listEnvelope(c, page, 0, []), 200);
+    if (planned.empty) return c.json(listEnvelope(c, page, LIST_PARAMS, 0, []), 200);
 
     const offset = offsetOf(page);
     const limit = q.page_size;
@@ -213,7 +216,7 @@ export function registerCveRoutes(v1: OpenAPIHono<ApiEnv>) {
     const unfiltered = planned.candidates.length === 0 && planned.filters.length === 0;
     const { count, estimated } = await countRows(db, from, where(planned.filters), unfiltered);
     c.header('Cache-Control', 'private, max-age=60');
-    return c.json(listEnvelope(c, page, count, rows.map(serializeCveListItem), estimated), 200);
+    return c.json(listEnvelope(c, page, LIST_PARAMS, count, rows.map(serializeCveListItem), estimated), 200);
   }, (result, c) => {
     if (!result.success) return c.json(errorBody(c, 'validation_error', 'Some query parameters are not valid.', validationDetails(result.error.issues)), 400) as any;
   });

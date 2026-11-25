@@ -53,22 +53,27 @@ export function publicUrl(c: Context<any>): URL {
   return url;
 }
 
-function pageLink(c: Context<any>, page: number): string {
+// Only the route's own parameters go into links. Vercel's api.whatcyber.com rewrite adds a host=
+// parameter to the request, and anything else a client sends that the route ignores stays out too.
+function pageLink(c: Context<any>, page: number, allowed: ReadonlySet<string>): string {
   const url = publicUrl(c);
+  for (const key of [...url.searchParams.keys()]) if (!allowed.has(key)) url.searchParams.delete(key);
   url.searchParams.set('page', String(page));
   return url.toString();
 }
 
 // List envelope: { count, next, previous, results }, the same shape as OpenCVE so moving over is
-// easy. next and previous are absolute URLs that keep every other query parameter.
+// easy. next and previous are absolute URLs that keep the route's other query parameters, given in
+// queryParams (usually Object.keys of the route's query schema).
 // count_estimated is true when count comes from the planner instead of an exact count.
-export function listEnvelope<T>(c: Context<any>, params: PageParams, count: number, results: T[], countEstimated = false) {
+export function listEnvelope<T>(c: Context<any>, params: PageParams, queryParams: readonly string[], count: number, results: T[], countEstimated = false) {
+  const allowed = new Set(queryParams);
   const hasNext = offsetOf(params) + results.length < count && results.length === params.page_size && offsetOf(params) + params.page_size < MAX_OFFSET;
   return {
     count,
     ...(countEstimated ? { count_estimated: true } : {}),
-    next: hasNext ? pageLink(c, params.page + 1) : null,
-    previous: params.page > 1 ? pageLink(c, params.page - 1) : null,
+    next: hasNext ? pageLink(c, params.page + 1, allowed) : null,
+    previous: params.page > 1 ? pageLink(c, params.page - 1, allowed) : null,
     results,
   };
 }

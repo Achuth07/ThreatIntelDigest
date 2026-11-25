@@ -83,7 +83,8 @@ export function serializeCveListItem(row: any) {
     cvss,
     epss: row.epss_score !== null ? { score: toNumber(row.epss_score)!, percentile: toNumber(row.epss_percentile) } : null,
     is_kev: row.is_kev === true,
-    weaknesses: row.weaknesses ?? [],
+    // NVD can list the same CWE once from itself and once from the CNA; return each once.
+    weaknesses: [...new Set<string>(row.weaknesses ?? [])],
     vendors: row.vendors ?? [],
   };
 }
