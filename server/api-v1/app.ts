@@ -1,6 +1,7 @@
 import { OpenAPIHono } from '@hono/zod-openapi';
 import { cors } from 'hono/cors';
 import { requestId } from 'hono/request-id';
+import { HTTPException } from 'hono/http-exception';
 import type { Context } from 'hono';
 import { pingRoute, pingHandler } from './routes/ping.js';
 import { getDb } from '../db.js';
@@ -105,6 +106,10 @@ export function createApp() {
 
   app.notFound(c => c.json(errorBody(c, 'not_found', `No route for ${c.req.method} ${new URL(c.req.url).pathname}`), 404));
   app.onError((error, c) => {
+    // Hono reports client mistakes it catches itself (malformed JSON, for example) as HTTPException 4xx.
+    if (error instanceof HTTPException && error.status < 500) {
+      return c.json(errorBody(c, 'validation_error', error.message || 'The request is not valid.'), error.status);
+    }
     console.error(`[api-v1] ${c.get('requestId')}`, error);
     return c.json(errorBody(c, 'internal_error', 'Something went wrong. Quote the request id if you contact us.'), 500);
   });
