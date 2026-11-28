@@ -24,7 +24,8 @@ export type ApiEnv = { Variables: { requestId: string; admin: AdminIdentity } };
 
 export { errorBody } from './lib/responses.js';
 
-function createV1() {
+// Exported so tests can read each route's response schemas from the OpenAPI registry.
+export function createV1() {
   const v1 = new OpenAPIHono<ApiEnv>();
   v1.openapi(pingRoute, pingHandler);
   registerAccountKeyRoutes(v1);

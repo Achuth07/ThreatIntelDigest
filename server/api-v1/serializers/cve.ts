@@ -120,7 +120,8 @@ export function serializeCveDetail(row: any, extras: DetailExtras) {
       : null,
     kev: row.is_kev ? {
       vendor_project: row.kev_vendor, product: row.kev_product, vulnerability_name: row.kev_name,
-      date_added: toIso(row.kev_date_added)?.slice(0, 10) ?? null, due_date: toIso(row.kev_due_date)?.slice(0, 10) ?? null,
+      // Calendar dates, formatted by Postgres so the server's time zone cannot shift them.
+      date_added: row.kev_date_added ?? null, due_date: row.kev_due_date ?? null,
       description: row.kev_description, required_action: row.kev_action,
       known_ransomware_campaign_use: row.kev_ransomware ?? null, notes: row.kev_notes || null,
     } : null,
