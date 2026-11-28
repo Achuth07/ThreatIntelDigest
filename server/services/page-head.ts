@@ -23,9 +23,10 @@ import { KEV_FAQ } from '../../client/src/lib/kev-content.js';
 import { CVSS4_LEGACY_PATH, CVSS_TOOL_PATH, CVSS_VERSION_SLUGS, CVSS_VIEW_TEXT, cvssPath, faqFor, isCvssVersionSlug, type CvssView } from '../../client/src/lib/cvss-content.js';
 import { EXPOSURE_FAQ, EXPOSURE_META, EXPOSURE_TOOL_PATH } from '../../client/src/lib/exposure-content.js';
 import { PRIORITISE_FAQ, PRIORITISE_META, PRIORITISE_TOOL_PATH } from '../../client/src/lib/prioritise-content.js';
+import { profileDescription, publishedProfile, showDrafts, type ActorFacts } from '../../client/src/lib/actor-profile.js';
 import { actorJsonLd, blogPostJsonLd, cveJsonLd, hubJsonLd, landingJsonLd } from '../../client/src/lib/jsonld.js';
 import type { HeadTags } from './head-inject.js';
-import { renderActorBody, renderActorsHubBody, renderCveBody, renderCveHubBody, renderCvssToolBody, renderExposureToolBody, renderPrioritiseToolBody, renderCweHubBody, renderCweIndexBody, renderFeedBody, renderKevHubBody, renderLandingBody, renderProductHubBody, renderVendorHubBody, renderVendorsIndexBody, type ActorsHubData, type CveBodyData, type FeedArticle, type CveHubData, type KevHubData } from './page-body.js';
+import { renderActorBody, renderActorsHubBody, renderCveBody, renderCveHubBody, renderCvssToolBody, renderExposureToolBody, renderPrioritiseToolBody, renderCweHubBody, renderCweIndexBody, renderFeedBody, renderKevHubBody, renderLandingBody, renderProductHubBody, renderVendorHubBody, renderVendorsIndexBody, type ActorBodyData, type ActorsHubData, type CveBodyData, type FeedArticle, type CveHubData, type KevHubData } from './page-body.js';
 
 export interface PageHead extends HeadTags {
   status: 200 | 301 | 404;
@@ -43,13 +44,7 @@ export interface PageData {
    */
   getCve(cveId: string): Promise<CveBodyData | null>;
   /** Looks a threat actor up by slug or by id (the old address). */
-  getActor(idOrSlug: string): Promise<{
-    id: string;
-    slug: string | null;
-    name: string;
-    aliases: string[] | null;
-    description: string | null;
-  } | null>;
+  getActor(idOrSlug: string): Promise<ActorBodyData | null>;
   /** One page of the KEV catalog, newest first. Throws only when the data source itself fails. */
   getKevPage(page: number, pageSize: number): Promise<KevHubData>;
   /** The newest news articles, for the threat feed page. */
@@ -361,12 +356,22 @@ export async function resolvePageHead(rawPathname: string, data: PageData, searc
     // The old id-based address, or a slug in the wrong case, moves to the readable one.
     if (actor.slug && id !== actor.slug) return redirectTo(actorUrl(actor));
 
-    const seo = actorSeo({ name: actor.name, aliases: actor.aliases, description: actor.description });
+    // The written profile (WHA-20) leads when there is a reviewed one; drafts show on previews only.
+    const profile = publishedProfile(actor.slug, showDrafts(process.env.VERCEL_ENV));
+    const facts: ActorFacts = {
+      name: actor.name,
+      attackId: actor.attackId ?? null,
+      aliases: actor.aliases ?? [],
+      techniques: actor.techniques ?? [],
+      software: actor.software ?? [],
+      cves: actor.cves ?? [],
+    };
+    const seo = actorSeo({ name: actor.name, aliases: actor.aliases, description: profileDescription(profile, facts, actor.description) });
     return {
       status: 200,
       ...seo,
       canonical: canonicalFor(pathname),
-      body: renderActorBody(actor),
+      body: renderActorBody({ ...actor, profile }),
       jsonLd: actorJsonLd({
         slug: actor.slug || actor.id,
         name: actor.name,

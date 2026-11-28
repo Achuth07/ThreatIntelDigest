@@ -21,6 +21,8 @@ import { EXAMPLES_4, METRICS4, calculate4, parseVector4 } from '../../client/src
 import { EXAMPLES, METRICS, SEVERITY_RANGES, calculate, parseVector } from '../../client/src/lib/cvss.js';
 import { HUB_ANSWERS, cveSources, isoDay, sourcesFor, type HubKind } from '../../client/src/lib/provenance.js';
 import { pageList } from '../../client/src/lib/page-list.js';
+import { factsSummary, tacticName, tacticRank, type ActorFacts } from '../../client/src/lib/actor-profile.js';
+import type { ActorProfile } from '../../client/src/lib/actor-profiles.js';
 
 const esc = (value: unknown) =>
   String(value ?? '')
@@ -215,17 +217,58 @@ export interface ActorBodyData {
   name: string;
   aliases: string[] | null;
   description: string | null;
+  /** From MITRE ATT&CK and our news links (WHA-20); all optional so the page works without them. */
+  attackId?: string | null;
+  techniques?: { attackId: string; name: string; tactics: string[]; isSubtechnique: boolean }[];
+  software?: { name: string; type: string }[];
+  cves?: { cveId: string; confidence: string; inKev: boolean; cvssScore: number | null }[];
+  articles?: { title: string; source: string; publishedAt: unknown }[];
+  /** The reviewed written profile, when there is one. */
+  profile?: (ActorProfile & { draft?: boolean }) | null;
 }
 
 export function renderActorBody(data: ActorBodyData): string {
   const aliases = (data.aliases ?? []).filter(Boolean);
   const description = plain(data.description ?? '');
+  const techniques = data.techniques ?? [];
+  const software = data.software ?? [];
+  const cves = data.cves ?? [];
+  const articles = data.articles ?? [];
+  const profile = data.profile ?? null;
+  const facts: ActorFacts = { name: data.name, attackId: data.attackId ?? null, aliases, techniques, software, cves };
+  const summary = factsSummary(facts);
+  const attackUrl = data.attackId ? `https://attack.mitre.org/groups/${data.attackId}/` : null;
+
+  // Techniques grouped under the first tactic they belong to, in matrix order. Sub-techniques are left out.
+  const byTactic = new Map<string, string[]>();
+  for (const technique of techniques.filter((t) => !t.isSubtechnique)) {
+    const tactic = [...technique.tactics].sort((a, b) => tacticRank(a) - tacticRank(b))[0] ?? 'other';
+    byTactic.set(tactic, [...(byTactic.get(tactic) ?? []), technique.name]);
+  }
+  const tacticSections = [...byTactic.entries()].sort((a, b) => tacticRank(a[0]) - tacticRank(b[0]));
+
+  const sources = [...(profile?.sources ?? [])];
+  if (attackUrl && !sources.some((source) => source.url === attackUrl)) sources.push({ label: `MITRE ATT&CK: ${data.name}${data.attackId ? ` (${data.attackId})` : ''}`, url: attackUrl });
 
   const inner = `
 <p class="crumbs"><a href="/">WhatCyber</a> / <a href="${esc(ACTORS_HUB)}">Threat actors</a> / ${esc(data.name)}</p>
 <h1>${esc(data.name)}</h1>
 ${aliases.length ? `<p>Also known as: ${esc(aliases.join(', '))}</p>` : ''}
-${description ? `<h2>Overview</h2><p>${esc(description)}</p>` : ''}
+${profile ? `<h2>Overview</h2><p>${esc(profile.summary)}</p>
+<dl><dt>Origin</dt><dd>${esc(profile.origin)}</dd><dt>Motivation</dt><dd>${esc(profile.motivation)}</dd><dt>Targets</dt><dd>${esc(profile.targets)}</dd></dl>` : summary || description ? `<h2>Overview</h2>${summary ? `<p>${esc(summary)}</p>` : ''}${description ? `<h3>From MITRE ATT&amp;CK</h3><p>${esc(description)}</p>` : ''}` : ''}
+${cves.length ? `<h2>Exploited vulnerabilities (${cves.length})</h2>
+<ul>${cves
+    .slice(0, 15)
+    .map(
+      (c) =>
+        `<li><a href="${esc(cveUrl(c.cveId))}">${esc(c.cveId)}</a>${c.inKev ? ' <span class="tag warn">CISA KEV</span>' : ''}${c.cvssScore != null ? ` CVSS ${c.cvssScore.toFixed(1)}` : ''} (${c.confidence === 'high' ? 'reported by MITRE ATT&amp;CK' : 'named alongside the actor in news'})</li>`,
+    )
+    .join('')}</ul>` : ''}
+${tacticSections.length ? `<h2>Techniques (${techniques.length})</h2>
+${tacticSections.map(([tactic, names]) => `<h3>${esc(tacticName(tactic))}</h3><p>${esc(names.join(', '))}</p>`).join('\n')}` : ''}
+${software.length ? `<h2>Malware and tools (${software.length})</h2><ul>${software.map((s) => `<li>${esc(s.name)} (${esc(s.type)})</li>`).join('')}</ul>` : ''}
+${articles.length ? `<h2>Recent news</h2><ul>${articles.map((a) => `<li>${esc(a.title)}, ${esc(a.source)}${a.publishedAt ? ` (${esc(formatDate(a.publishedAt))})` : ''}</li>`).join('')}</ul>` : ''}
+${sources.length ? `<h2>Sources</h2><ul>${sources.map((source) => `<li><a href="${esc(source.url)}" rel="noopener">${esc(source.label)}</a></li>`).join('')}</ul>` : ''}
 <h2>More on WhatCyber</h2>
 <ul><li><a href="${esc(ACTORS_HUB)}">All threat actor profiles</a></li><li><a href="${esc(KEV_HUB)}">CISA Known Exploited Vulnerabilities catalog</a></li><li><a href="${esc(CVE_HUB)}">Latest CVEs</a></li></ul>`;
 

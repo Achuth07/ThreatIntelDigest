@@ -3,6 +3,7 @@ import { Bug, ExternalLink, Layers, Package, ShieldAlert } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cveUrl } from "@/lib/urls";
+import { tacticName, tacticRank } from "@/lib/actor-profile";
 
 // Sections of the threat actor page built from MITRE ATT&CK and news links (WHA-55).
 
@@ -20,17 +21,6 @@ export interface ActorCve {
     cvssV3Severity: string | null;
 }
 
-// ATT&CK v20 matrix order. Tactics not listed here sort after these.
-const TACTICS: [string, string][] = [
-    ["reconnaissance", "Reconnaissance"], ["resource-development", "Resource Development"], ["initial-access", "Initial Access"],
-    ["execution", "Execution"], ["persistence", "Persistence"], ["privilege-escalation", "Privilege Escalation"],
-    ["stealth", "Stealth"], ["defense-impairment", "Defense Impairment"], ["defense-evasion", "Defense Evasion"],
-    ["credential-access", "Credential Access"], ["discovery", "Discovery"], ["lateral-movement", "Lateral Movement"],
-    ["collection", "Collection"], ["command-and-control", "Command and Control"], ["exfiltration", "Exfiltration"], ["impact", "Impact"],
-];
-
-const tacticName = (id: string) => TACTICS.find(([key]) => key === id)?.[1] ?? id.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-const tacticRank = (id: string) => { const i = TACTICS.findIndex(([key]) => key === id); return i === -1 ? TACTICS.length : i; };
 const techniqueUrl = (attackId: string) => `https://attack.mitre.org/techniques/${attackId.replace(".", "/")}/`;
 
 const SEVERITY_STYLE: Record<string, string> = {

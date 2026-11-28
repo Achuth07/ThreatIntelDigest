@@ -62,8 +62,9 @@ export function actorSeo(group: { name: string; aliases?: string[] | null; descr
           ]
         : [`${group.name}: Threat Actor Profile and Recent News`, `${group.name}: Threat Actor Profile`]
     ),
+    // A written summary that already opens with the name is used as it is, so the name is not said twice.
     description:
-      plainSummary(`${group.name}${knownAs}: ${group.description ?? ''}`) ||
+      plainSummary(group.description?.toLowerCase().startsWith(group.name.toLowerCase()) ? group.description : `${group.name}${knownAs}: ${group.description ?? ''}`) ||
       `Threat actor profile for ${group.name}, with related news.`,
   };
 }

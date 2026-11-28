@@ -137,17 +137,69 @@ function createDataSource(): PageData {
 
     async getActor(idOrSlug) {
       const isId = UUID_PATTERN.test(idOrSlug);
+      let base: any = null;
       try {
         const rows = isId
           ? await sql()`SELECT id, slug, name, aliases, description FROM threat_groups WHERE id = ${idOrSlug}`
           : await sql()`SELECT id, slug, name, aliases, description FROM threat_groups WHERE slug = ${idOrSlug}`;
-        return (rows[0] as any) ?? null;
+        base = rows[0] ?? null;
       } catch (error) {
         // The slug column may not exist yet (migration 005 not run). Old id-based links still work.
         if (!isId) throw error;
         const rows = await sql()`SELECT id, name, aliases, description FROM threat_groups WHERE id = ${idOrSlug}`;
-        return rows[0] ? ({ ...rows[0], slug: null } as any) : null;
+        base = rows[0] ? { ...rows[0], slug: null } : null;
       }
+      if (!base) return null;
+
+      // What MITRE ATT&CK and our news links say about the actor (WHA-55, WHA-20). Each part is optional:
+      // if a table is missing or slow, the page still renders with the name, aliases and description.
+      const query = sql();
+      const part = async <T>(run: () => Promise<T>, fallback: T): Promise<T> => {
+        try {
+          return await run();
+        } catch {
+          return fallback;
+        }
+      };
+      const [attack, techniques, software, cves, articles] = await Promise.all([
+        part(() => query`SELECT attack_id FROM threat_groups WHERE id = ${base.id}`, [] as any[]),
+        part(
+          () => query`SELECT t.attack_id, t.name, t.tactics, t.is_subtechnique
+                      FROM actor_techniques at JOIN attack_techniques t ON t.stix_id = at.technique_stix_id
+                      WHERE at.threat_group_id = ${base.id} ORDER BY t.attack_id`,
+          [] as any[],
+        ),
+        part(
+          () => query`SELECT s.name, s.software_type FROM actor_software asw JOIN attack_software s ON s.stix_id = asw.software_stix_id
+                      WHERE asw.threat_group_id = ${base.id} ORDER BY s.name`,
+          [] as any[],
+        ),
+        part(
+          () => query`SELECT DISTINCT ON (c.cve_id) c.cve_id, c.confidence, (k.cve_id IS NOT NULL) AS in_kev, v.cvss_v3_score
+                      FROM actor_cves c
+                      LEFT JOIN known_exploited_vulnerabilities k ON k.cve_id = c.cve_id
+                      LEFT JOIN vulnerabilities v ON v.id = c.cve_id
+                      WHERE c.threat_group_id = ${base.id}
+                      ORDER BY c.cve_id, CASE c.confidence WHEN 'high' THEN 0 ELSE 1 END`,
+          [] as any[],
+        ),
+        part(
+          () => query`SELECT a.title, a.source, a.published_at FROM article_threat_groups atg JOIN articles a ON a.id = atg.article_id
+                      WHERE atg.threat_group_id = ${base.id} ORDER BY a.published_at DESC LIMIT 5`,
+          [] as any[],
+        ),
+      ]);
+
+      return {
+        ...base,
+        attackId: (attack[0] as any)?.attack_id ?? null,
+        techniques: (techniques as any[]).map((r) => ({ attackId: r.attack_id, name: r.name, tactics: Array.isArray(r.tactics) ? r.tactics : [], isSubtechnique: !!r.is_subtechnique })),
+        software: (software as any[]).map((r) => ({ name: r.name, type: r.software_type })),
+        cves: (cves as any[])
+          .map((r) => ({ cveId: r.cve_id, confidence: r.confidence, inKev: !!r.in_kev, cvssScore: r.cvss_v3_score == null ? null : Number(r.cvss_v3_score) }))
+          .sort((a, b) => (a.confidence === b.confidence ? b.cveId.localeCompare(a.cveId) : a.confidence === 'high' ? -1 : 1)),
+        articles: (articles as any[]).map((r) => ({ title: r.title, source: r.source, publishedAt: r.published_at })),
+      };
     },
 
     async getKevPage(page, pageSize) {
