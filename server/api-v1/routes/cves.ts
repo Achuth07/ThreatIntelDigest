@@ -3,7 +3,7 @@ import { sql, type SQL } from 'drizzle-orm';
 import { getDb } from '../../db.js';
 import { fetchCveFromR2 } from '../../services/r2.js';
 import { buildPrefixTsQuery } from '../../services/cve-text.js';
-import { cleanAttackText } from '../../services/attack-import.js';
+import { BEST_SCORE, BEST_SEVERITY, linkedActors, linkedArticles } from '../lib/cve-sql.js';
 import { requireScope } from '../lib/scopes.js';
 import {
   ErrorSchema, PageQuery, errorBody, listEnvelope, listSchema, offsetOf, pageTooDeep, validationDetails, MAX_OFFSET,
@@ -68,15 +68,6 @@ const detailRoute = createRoute({
 });
 
 // --- SQL building blocks --------------------------------------------------------------------
-
-// The score behind the cvss field: NVD's CVSS 3.x, else the CNA's or CISA's 3.x, else 4.0, else NVD 2.0.
-// cvss_v3_score and cvss_v2_score are stored as text, so they are cast to compare as numbers.
-const BEST_SCORE = sql`COALESCE(v.cvss_v3_score::numeric, s.cvss3_score, s.cvss4_score, v.cvss_v2_score::numeric)`;
-const BEST_SEVERITY = sql`upper(CASE
-  WHEN v.cvss_v3_score IS NOT NULL THEN v.cvss_v3_severity
-  WHEN s.cvss3_score IS NOT NULL THEN s.cvss3_severity
-  WHEN s.cvss4_score IS NOT NULL THEN s.cvss4_severity
-  ELSE v.cvss_v2_severity END)`;
 
 const LIST_COLUMNS = sql`
   v.id, v.published_date, v.last_modified_date, v.vuln_status, v.cvss_v3_score, v.cvss_v3_severity, v.cvss_v2_score,
@@ -246,16 +237,8 @@ export function registerCveRoutes(v1: OpenAPIHono<ApiEnv>) {
         FROM cve_products cp JOIN products p ON p.id = ANY(cp.product_ids) JOIN vendors ve ON ve.id = p.vendor_id
         WHERE cp.cve_id = ${id} ORDER BY ve.slug, p.slug
       `).then((r: any) => r.rows),
-      includes.includes('articles')
-        ? db.execute(sql`SELECT article_id, title, article_url, source, published_at FROM article_cves WHERE cve_id = ${id} ORDER BY published_at DESC LIMIT 20`).then((r: any) => r.rows)
-        : Promise.resolve(null),
-      includes.includes('threat_actors')
-        ? db.execute(sql`
-            SELECT DISTINCT ON (t.id) t.name, t.slug, t.attack_id, c.source, c.confidence, c.evidence, c.evidence_url
-            FROM actor_cves c JOIN threat_groups t ON t.id = c.threat_group_id WHERE c.cve_id = ${id}
-            ORDER BY t.id, CASE c.confidence WHEN 'high' THEN 0 ELSE 1 END
-          `).then((r: any) => r.rows.map((a: any) => ({ ...a, evidence: cleanAttackText(a.evidence) })))
-        : Promise.resolve(null),
+      includes.includes('articles') ? linkedArticles(db, id) : Promise.resolve(null),
+      includes.includes('threat_actors') ? linkedActors(db, id) : Promise.resolve(null),
     ]);
 
     c.header('Cache-Control', 'private, max-age=300');

@@ -4,15 +4,25 @@ import { toIso, toNumber } from '../lib/responses.js';
 
 // CVE serialisers for v1 (WHA-39, WHA-57): snake_case, UTC ISO 8601 times, numbers for decimals.
 
-const SITE = 'https://www.whatcyber.com';
+export const SITE = 'https://www.whatcyber.com';
 
-const Cvss = z.object({
+export const Cvss = z.object({
   score: z.number(),
   version: z.string().openapi({ example: '3.1' }),
   severity: z.string().nullable().openapi({ example: 'critical' }),
   vector: z.string().nullable(),
   source: z.enum(['nvd', 'cna', 'cisa']).openapi({ description: 'nvd: from the NVD record. cna: the CVE Numbering Authority. cisa: CISA Vulnrichment.' }),
 }).openapi('CvssScore');
+
+// News coverage and threat actors linked to a CVE, shared by /cves/{id} and /kev/{cve_id}.
+export const LinkedArticleSchema = z.object({ title: z.string(), url: z.string(), source: z.string(), published_at: z.string().datetime(), whatcyber_url: z.string().nullable() });
+export const LinkedActorSchema = z.object({
+  name: z.string(), attack_id: z.string().nullable(), whatcyber_url: z.string().nullable(),
+  source: z.enum(['attack', 'news']), confidence: z.enum(['high', 'low']), evidence: z.string().nullable(), evidence_url: z.string().nullable(),
+});
+
+export const serializeLinkedArticle = (a: any) => ({ title: a.title, url: a.article_url, source: a.source, published_at: toIso(a.published_at)!, whatcyber_url: a.article_id ? `${SITE}/article/${a.article_id}` : null });
+export const serializeLinkedActor = (a: any) => ({ name: a.name, attack_id: a.attack_id ?? null, whatcyber_url: a.slug ? `${SITE}/threat-actors/${a.slug}` : null, source: a.source, confidence: a.confidence, evidence: a.evidence ?? null, evidence_url: a.evidence_url ?? null });
 
 export const CveListItemSchema = z.object({
   cve_id: z.string(),
@@ -49,11 +59,8 @@ export const CveDetailSchema = CveListItemSchema.extend({
   }).nullable(),
   products: z.array(z.object({ vendor: z.string(), vendor_name: z.string(), product: z.string(), product_name: z.string(), versions: z.array(z.string()) })),
   references: z.array(z.object({ url: z.string(), source: z.string().nullable(), tags: z.array(z.string()) })).optional(),
-  articles: z.array(z.object({ title: z.string(), url: z.string(), source: z.string(), published_at: z.string().datetime(), whatcyber_url: z.string().nullable() })).optional(),
-  threat_actors: z.array(z.object({
-    name: z.string(), attack_id: z.string().nullable(), whatcyber_url: z.string().nullable(),
-    source: z.enum(['attack', 'news']), confidence: z.enum(['high', 'low']), evidence: z.string().nullable(), evidence_url: z.string().nullable(),
-  })).optional(),
+  articles: z.array(LinkedArticleSchema).optional(),
+  threat_actors: z.array(LinkedActorSchema).optional(),
   links: z.object({ whatcyber: z.string(), nvd: z.string(), cve_org: z.string() }),
   partial: z.boolean().openapi({ description: 'true when the full record could not be read; Postgres fields are still returned.' }),
 }).openapi('CveDetail');
@@ -62,7 +69,7 @@ const versionOf = (vector: string | null | undefined, fallback: string) => /^CVS
 const lower = (value: unknown) => (typeof value === 'string' && value ? value.toLowerCase() : null);
 const cisaOr = (source: string | null) => (source === 'adp' ? 'cisa' : 'cna') as 'cna' | 'cisa';
 
-function bestCvss(row: any): z.infer<typeof Cvss> | null {
+export function bestCvss(row: any): z.infer<typeof Cvss> | null {
   if (row.cvss_v3_score !== null) return { score: Number(row.cvss_v3_score), version: versionOf(row.cvss_vector, '3.x'), severity: lower(row.cvss_v3_severity), vector: row.cvss_vector ?? null, source: 'nvd' };
   if (row.cvss3_score !== null) return { score: Number(row.cvss3_score), version: versionOf(row.cvss3_vector, '3.x'), severity: lower(row.cvss3_severity), vector: row.cvss3_vector ?? null, source: cisaOr(row.cvss3_source) };
   if (row.cvss4_score !== null) return { score: Number(row.cvss4_score), version: '4.0', severity: lower(row.cvss4_severity), vector: row.cvss4_vector ?? null, source: cisaOr(row.cvss4_source) };
@@ -127,8 +134,8 @@ export function serializeCveDetail(row: any, extras: DetailExtras) {
     } : null,
     products: extras.products.map(p => ({ vendor: p.vendor, vendor_name: p.vendor_name, product: p.product, product_name: p.product_name, versions: versions.get(`${p.vendor}:${p.product}`) ?? [] })),
     ...(extras.includeReferences ? { references: (record?.references ?? []).map((r: any) => ({ url: r.url, source: r.source ?? null, tags: r.tags ?? [] })) } : {}),
-    ...(extras.articles ? { articles: extras.articles.map(a => ({ title: a.title, url: a.article_url, source: a.source, published_at: toIso(a.published_at)!, whatcyber_url: a.article_id ? `${SITE}/article/${a.article_id}` : null })) } : {}),
-    ...(extras.actors ? { threat_actors: extras.actors.map(a => ({ name: a.name, attack_id: a.attack_id ?? null, whatcyber_url: a.slug ? `${SITE}/threat-actors/${a.slug}` : null, source: a.source, confidence: a.confidence, evidence: a.evidence ?? null, evidence_url: a.evidence_url ?? null })) } : {}),
+    ...(extras.articles ? { articles: extras.articles.map(serializeLinkedArticle) } : {}),
+    ...(extras.actors ? { threat_actors: extras.actors.map(serializeLinkedActor) } : {}),
     links: { whatcyber: `${SITE}/cve/${row.id}`, nvd: `https://nvd.nist.gov/vuln/detail/${row.id}`, cve_org: `https://www.cve.org/CVERecord?id=${row.id}` },
     partial: record === null,
   };

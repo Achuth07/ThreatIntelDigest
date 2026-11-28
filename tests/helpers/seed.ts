@@ -5,6 +5,11 @@ export const ADMIN = { id: 1, email: 'admin@test.local' };
 export const OTHER_USER = { id: 2, email: 'member@test.local' };
 export const ACTOR_ID = '11111111-1111-4111-8111-111111111111';
 export const ARTICLE_ID = '22222222-2222-4222-8222-222222222222';
+export const ARTICLE_2 = '33333333-3333-4333-8333-333333333333';
+export const PRIVATE_ARTICLE = '44444444-4444-4444-8444-444444444444';
+export const OTHER_ACTOR_ID = '55555555-5555-4555-8555-555555555555';
+// A summary longer than the API may return, with HTML and entities left in by the feed.
+export const LONG_SUMMARY = '<p>Attackers &amp; partners exploited <b>FortiOS</b>.</p> ' + 'Full article text that must never be served in full. '.repeat(40);
 
 export const SEED_SQL = `
 INSERT INTO users (id, name, email) VALUES
@@ -58,6 +63,45 @@ INSERT INTO threat_groups (id, stix_id, name, slug, attack_id) VALUES ('${ACTOR_
 INSERT INTO actor_cves (threat_group_id, cve_id, source, confidence, evidence, evidence_url) VALUES
   ('${ACTOR_ID}', 'CVE-2024-0001', 'news', 'low', 'Named in a news report', 'https://news.example/fortios-exploited'),
   ('${ACTOR_ID}', 'CVE-2024-0001', 'attack', 'high', 'Test Panda exploited [CVE-2024-0001](https://nvd.example)', NULL);
+-- A second KEV entry whose CVE is not in the CVE table yet, not overdue, unknown ransomware use.
+INSERT INTO known_exploited_vulnerabilities (cve_id, vendor_project, product, vulnerability_name, date_added, short_description,
+  required_action, due_date, known_ransomware_campaign_use, notes) VALUES
+  ('CVE-2025-9999', 'Apache', 'HTTP Server', 'Apache HTTP Server Path Traversal Vulnerability', '2025-01-10', 'Apache HTTP Server has a path traversal.',
+   'Apply updates per vendor instructions.', '2099-01-31', 'Unknown', 'https://httpd.apache.org/security/');
+INSERT INTO kev_product_map (vendor_project, product, product_id, kev_count, method) VALUES ('Apache', 'HTTP Server', 2, 1, 'exact');
+
+INSERT INTO rss_sources (name, url, is_active, last_fetched) VALUES
+  ('Bleeping Computer', 'https://www.bleepingcomputer.com/feed/', true, '2026-11-28T01:00:00'),
+  ('The Hacker News', 'http://feeds.feedburner.com/TheHackersNews?format=xml', true, NULL),
+  ('My Private Feed', 'https://private.example/feed', true, NULL),
+  ('Inactive Feed', 'https://inactive.example/feed', false, NULL);
+
+INSERT INTO articles (id, title, summary, url, source, threat_level, tags, published_at, targeted_industries) VALUES
+  ('${ARTICLE_ID}', 'FortiOS bug &quot;exploited&quot;', '${LONG_SUMMARY.replace(/'/g, "''")}', 'https://news.example/fortios-exploited', 'Bleeping Computer', 'CRITICAL', ARRAY['Zero-Day'], '2024-03-04T08:00:00', '["Government","Energy"]'),
+  ('${ARTICLE_2}', 'Weekly roundup', 'A quiet week.', 'https://news.example/roundup', 'The Hacker News', 'MEDIUM', NULL, '2024-03-10T08:00:00', '[]'),
+  ('${PRIVATE_ARTICLE}', 'Private feed post', 'From a feed someone added.', 'https://private.example/post', 'My Private Feed', 'HIGH', NULL, '2024-03-11T08:00:00', '[]');
+
+INSERT INTO threat_groups (id, stix_id, name, slug, attack_id, aliases, description, last_updated) VALUES
+  ('${OTHER_ACTOR_ID}', 'intrusion-set--apt29', 'APT29', 'apt29', 'G0016', '["APT29","Cozy Bear","NOBELIUM"]',
+   '[APT29](https://attack.mitre.org/groups/G0016) is a threat group attributed to the SVR.(Citation: Example)', '2026-07-31T13:18:06');
+UPDATE threat_groups SET aliases = '["Test Panda","Bamboo Typhoon"]', description = 'Test Panda targets [FortiOS](https://attack.mitre.org) devices.', last_updated = '2026-05-01T00:00:00' WHERE id = '${ACTOR_ID}';
+INSERT INTO article_threat_groups (article_id, threat_group_id) VALUES ('${ARTICLE_ID}', '${ACTOR_ID}'), ('${PRIVATE_ARTICLE}', '${ACTOR_ID}');
+
+INSERT INTO attack_techniques (stix_id, attack_id, name, tactics, is_subtechnique, parent_attack_id, status) VALUES
+  ('attack-pattern--1', 'T1566', 'Phishing', '["initial-access"]', false, NULL, 'active'),
+  ('attack-pattern--2', 'T1566.001', 'Spearphishing Attachment', '["initial-access"]', true, 'T1566', 'active'),
+  ('attack-pattern--3', 'T1190', 'Exploit Public-Facing Application', '["initial-access"]', false, NULL, 'active'),
+  ('attack-pattern--4', 'T1079', 'Multilayer Encryption', '["command-and-control"]', false, NULL, 'revoked');
+INSERT INTO actor_techniques (threat_group_id, technique_stix_id, description) VALUES
+  ('${OTHER_ACTOR_ID}', 'attack-pattern--2', '[APT29](https://attack.mitre.org/groups/G0016) sent spearphishing attachments.(Citation: Example)'),
+  ('${ACTOR_ID}', 'attack-pattern--3', 'Test Panda exploited FortiOS.'),
+  ('${ACTOR_ID}', 'attack-pattern--4', 'Old, revoked technique.');
+INSERT INTO attack_software (stix_id, attack_id, name, software_type, aliases) VALUES
+  ('tool--1', 'S0154', 'Cobalt Strike', 'malware', '["Cobalt Strike"]'),
+  ('tool--2', 'S0002', 'Mimikatz', 'tool', '[]');
+INSERT INTO actor_software (threat_group_id, software_stix_id) VALUES ('${OTHER_ACTOR_ID}', 'tool--1'), ('${OTHER_ACTOR_ID}', 'tool--2');
+INSERT INTO actor_cves (threat_group_id, cve_id, source, confidence, evidence) VALUES
+  ('${ACTOR_ID}', 'CVE-2025-9999', 'news', 'low', 'Named together in a report');
 `;
 
 export const SEEDED_CVE_COUNT = 6;

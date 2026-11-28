@@ -10,6 +10,8 @@ export default defineConfig({
   test: {
     include: ['tests/**/*.test.ts'],
     environment: 'node',
+    // Production runs in UTC, and timestamp columns without a time zone are read as local time.
+    env: { TZ: 'UTC' },
     setupFiles: ['tests/setup.ts'],
     // Starting PGlite and loading the schema takes a couple of seconds per file.
     hookTimeout: 30_000,
