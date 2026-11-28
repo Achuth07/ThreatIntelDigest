@@ -34,15 +34,15 @@ const cisa = (id: string, title: string): ActorProfileSource => ({ label: `CISA:
 export const ACTOR_PROFILES: Record<string, ActorProfile> = {
   'salt-typhoon': {
     summary:
-      'Salt Typhoon is the name given to a Chinese state-backed espionage operation that has broken into the networks of telecommunications and internet service providers, mainly in the United States. MITRE ATT&CK says it has been active since at least 2019 and that it targets and uses internet-facing network edge devices to get into victim networks. CISA and partner agencies published a joint advisory on the campaign in August 2025. Other security vendors track overlapping activity under names such as OPERATOR PANDA, RedMike, GhostEmperor and UNC5807, and MITRE notes that these resemble Salt Typhoon rather than being proven to be the same group.',
-    origin: 'People\'s Republic of China, state-backed (per MITRE ATT&CK)',
+      'Salt Typhoon is the name security vendors use for a Chinese state-backed espionage operation that has broken into telecommunications and internet service providers, with MITRE ATT&CK pointing to major US providers. MITRE says it has been active since at least 2019 and that it targets and uses internet-facing network edge devices to get into victim networks. In August 2025 CISA, the FBI, the NSA and partner agencies published a joint advisory on Chinese state-sponsored activity that they say partly overlaps with what industry calls Salt Typhoon, OPERATOR PANDA, RedMike, UNC5807 and GhostEmperor. The advisory does not adopt any of those names. It describes targets in telecommunications, government, transportation, lodging and military networks in the United States, Australia, Canada, New Zealand, the United Kingdom and elsewhere, and says the actors focus on backbone, provider edge and customer edge routers.',
+    origin: 'People\'s Republic of China, state-backed (per MITRE ATT&CK and the joint advisory)',
     motivation: 'Espionage',
-    targets: 'Telecommunications and internet service providers, mainly in the United States',
+    targets: 'Telecommunications and internet service providers (MITRE highlights major US providers); the CISA advisory also lists government, transportation, lodging and military networks in many countries',
     sources: [mitre('G1045', 'Salt Typhoon'), cisa('aa25-239a', 'Countering Chinese State-Sponsored Actors Compromise of Networks Worldwide to Feed Global Espionage System')],
   },
   'scattered-spider': {
     summary:
-      'Scattered Spider is a financially motivated cybercriminal group of native English speakers, active since at least 2022. It is known for social engineering rather than technical exploits: its members pose as IT and help-desk staff, get past multi-factor authentication, and then take over administrator accounts in identity and cloud services such as Okta, AWS and Microsoft 365. It began with customer-support outsourcers, telecoms and technology firms and widened in 2023 to gaming, hospitality, retail, managed service providers, manufacturing and finance. MITRE ATT&CK says the group has also deployed ransomware for profit, and CISA has published an advisory on its methods.',
+      'Scattered Spider is a financially motivated cybercriminal group of native English speakers, active since at least 2022. MITRE ATT&CK says it relies heavily on social engineering: its members pose as IT and help-desk staff, get past multi-factor authentication, and then take over administrator accounts in identity and cloud services such as Okta, AWS and Microsoft 365. It began with customer-support outsourcers, telecoms and technology firms and widened in 2023 to gaming, hospitality, retail, managed service providers, manufacturing and finance. MITRE ATT&CK says the group has also deployed ransomware for profit, and CISA has published an advisory on its methods.',
     origin: 'Cybercriminal group of native English speakers (not a state actor)',
     motivation: 'Financial gain',
     targets: 'Customer-support outsourcers, telecoms and technology firms at first; later gaming, hospitality, retail, managed service providers, manufacturing and finance',
@@ -53,20 +53,20 @@ export const ACTOR_PROFILES: Record<string, ActorProfile> = {
       'APT29 is a Russian espionage group that the US and UK governments attribute to the Foreign Intelligence Service (SVR). MITRE ATT&CK says it has operated since at least 2008, mostly against government networks in Europe and NATO member countries, research institutes and think tanks, and that it compromised the US Democratic National Committee from the summer of 2015. In April 2021 the two governments attributed the SolarWinds supply chain compromise to the SVR, and public statements named APT29, Cozy Bear and The Dukes. Security vendors track the same or overlapping activity under many other names, including NOBELIUM, Midnight Blizzard and UNC2452.',
     origin: 'Russia, attributed to the Foreign Intelligence Service (SVR) by the US and UK governments',
     motivation: 'Espionage',
-    targets: 'Government networks in Europe and NATO countries, research institutes and think tanks',
+    targets: 'Government networks in Europe and NATO countries, research institutes and think tanks (MITRE); CISA also lists policy analysis organisations and IT companies',
     sources: [mitre('G0016', 'APT29'), cisa('aa21-116a', 'Russian Foreign Intelligence Service (SVR) Cyber Operations: Trends and Best Practices for Network Defenders')],
   },
   'lazarus-group': {
     summary:
-      'Lazarus Group is the best known name for North Korean state-sponsored hacking. MITRE ATT&CK attributes it to the Reconnaissance General Bureau and says it has been active since at least 2009, including the destructive 2014 attack on Sony Pictures. Public reporting uses the name as an umbrella for several North Korean units that share people, infrastructure and malware, so it is hard to pin a given operation on one team with confidence. The activity covers espionage, destructive attacks and theft for money, and CISA has described North Korean campaigns against blockchain companies.',
+      'Lazarus Group is the best known name for North Korean state-sponsored hacking. MITRE ATT&CK attributes it to the Reconnaissance General Bureau and says it has been active since at least 2009, including the destructive 2014 attack on Sony Pictures. Public reporting uses the name as an umbrella for several North Korean units that share people, infrastructure and malware, so it is hard to pin a given operation on one team with confidence. The activity covers espionage, destructive attacks and theft for money. In April 2022 CISA, the FBI and the US Treasury warned that a North Korean group commonly tracked as Lazarus Group, APT38, BlueNoroff and Stardust Chollima had been stealing cryptocurrency since at least 2020.',
     origin: 'North Korea, attributed to the Reconnaissance General Bureau (RGB)',
     motivation: 'Espionage, destruction and financial gain',
-    targets: 'Entertainment (Sony Pictures, 2014) and blockchain and cryptocurrency companies, among others',
+    targets: 'Entertainment (Sony Pictures, 2014) and cryptocurrency and blockchain companies, among others',
     sources: [mitre('G0032', 'Lazarus Group'), cisa('aa22-108a', 'TraderTraitor: North Korean State-Sponsored APT Targets Blockchain Companies')],
   },
   akira: {
     summary:
-      'Akira is a ransomware operation that has been active since at least March 2023. MITRE ATT&CK says its operators usually get in with stolen credentials on remote access services such as VPNs that rely on a single password, then move through the network with widely available tools. It practises double extortion: it copies data out before encrypting, and threatens to publish it if the ransom is not paid. Its encryptor has versions for Windows and for VMware ESXi hypervisors, and analysts have found overlaps with the Conti ransomware. CISA and partners have published a #StopRansomware advisory on it.',
+      'Akira is a ransomware operation that has been active since at least March 2023. MITRE ATT&CK says its operators get in with stolen credentials on remote access services such as VPNs that rely on a single password, then move through the network with widely available tools. It practises double extortion: it copies data out before encrypting, and threatens to publish it if the ransom is not paid. Its encryptor has versions for Windows and for VMware ESXi hypervisors, and analysts have found overlaps with the Conti ransomware. CISA and partners have published a #StopRansomware advisory on it.',
     origin: 'Ransomware operation; no country attribution in MITRE ATT&CK',
     motivation: 'Financial gain (extortion)',
     targets: 'Windows systems and VMware ESXi hypervisors, reached through remote access services',
