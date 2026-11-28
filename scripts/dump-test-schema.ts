@@ -12,6 +12,7 @@ neonConfig.webSocketConstructor = ws;
 export const TEST_TABLES = [
   'users', 'vulnerabilities', 'cve_scores', 'known_exploited_vulnerabilities', 'vendors', 'products',
   'cve_products', 'article_cves', 'threat_groups', 'actor_cves', 'api_keys', 'api_rate_limits',
+  'articles', 'rss_sources', 'article_threat_groups', 'attack_techniques', 'attack_software', 'actor_techniques', 'actor_software', 'kev_product_map',
 ];
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });

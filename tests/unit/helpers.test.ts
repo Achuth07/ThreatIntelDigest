@@ -113,3 +113,15 @@ describe('strict contract check', () => {
     expect(strict(z.object({ a: z.array(z.object({ b: z.number() })) })).safeParse({ a: [{ b: 1, c: 2 }] }).success).toBe(false);
   });
 });
+
+describe('feed text', () => {
+  it('strips tags, including encoded ones, and decodes entities', async () => {
+    const { plainText, shortSummary } = await import('../../server/api-v1/lib/text.js');
+    expect(plainText('<p>Fix &amp; <b>patch</b>.</p><script>alert(1)</script>')).toBe('Fix & patch.');
+    expect(plainText('&lt;img src=x onerror=alert(1)&gt;Hello &#8217;s')).toBe('Hello ’s');
+    expect(shortSummary('word '.repeat(200), 50)!.length).toBeLessThanOrEqual(50);
+    expect(shortSummary('   ')).toBeNull();
+    expect(plainText('YARA-X&amp;amp;#39;s release')).toBe("YARA-X's release");
+    expect(plainText('I&#xe2;&#x80;&#x99;ve seen an&#xc2;&#xa0;option. Café stays')).toBe('I’ve seen an option. Café stays');
+  });
+});

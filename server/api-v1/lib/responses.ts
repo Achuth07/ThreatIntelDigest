@@ -97,3 +97,26 @@ export const toIso = (value: unknown): string | null => (value ? new Date(value 
 
 // Decimal columns come back from Postgres as strings; the API returns numbers.
 export const toNumber = (value: unknown): number | null => (value === null || value === undefined || value === '' ? null : Number(value));
+
+// --- Route definition helpers --------------------------------------------------------------
+
+export const jsonContent = <T extends z.ZodTypeAny>(schema: T, description: string) => ({ description, content: { 'application/json': { schema } } });
+
+export const authErrors = (scope: string) => ({
+  401: jsonContent(ErrorSchema, 'Missing or invalid API key'),
+  403: jsonContent(ErrorSchema, `The key lacks ${scope}`),
+  429: jsonContent(ErrorSchema, 'Rate limit reached'),
+});
+
+export const isoDate = z.string().refine(value => !Number.isNaN(Date.parse(value)), 'Use an ISO 8601 date, e.g. 2026-01-31 or 2026-01-31T12:00:00Z');
+export const queryBool = z.enum(['true', 'false']).transform(value => value === 'true');
+
+// Escapes % and _ so user text matches literally inside ILIKE patterns.
+export const likeContains = (value: string) => `%${value.replace(/[\\%_]/g, ch => `\\${ch}`)}%`;
+
+// Splits a comma-separated filter and checks each value against the allowed list.
+export function csvValues<T extends string>(value: string, allowed: readonly T[]): { values: T[] } | { bad: string } {
+  const values = value.toLowerCase().split(',').map(s => s.trim()).filter(Boolean);
+  const bad = values.find(v => !(allowed as readonly string[]).includes(v));
+  return bad !== undefined ? { bad } : { values: values as T[] };
+}

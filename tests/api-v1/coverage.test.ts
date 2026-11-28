@@ -10,6 +10,16 @@ const TESTED = [
   'DELETE /account/keys/{id}',
   'GET /cves',
   'GET /cves/{id}',
+  'GET /kev',
+  'GET /kev/{cve_id}',
+  'GET /threat-actors',
+  'GET /threat-actors/{id}',
+  'GET /threat-actors/{id}/articles',
+  'GET /threat-actors/{id}/techniques',
+  'GET /threat-actors/{id}/cves',
+  'GET /news',
+  'GET /news/{id}',
+  'GET /sources',
 ];
 
 describe('route coverage', () => {

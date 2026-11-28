@@ -189,3 +189,99 @@ CREATE TABLE "api_rate_limits" (
   CONSTRAINT "api_rate_limits_pkey" PRIMARY KEY (bucket, window_start)
 );
 CREATE INDEX idx_api_rate_limits_window ON api_rate_limits USING btree (window_start);
+
+CREATE TABLE "articles" (
+  "id" uuid NOT NULL DEFAULT gen_random_uuid(),
+  "title" text NOT NULL,
+  "summary" text,
+  "url" text NOT NULL,
+  "source" character varying(255) NOT NULL,
+  "threat_level" character varying(20) DEFAULT 'LOW'::character varying,
+  "tags" text[],
+  "read_time" integer,
+  "published_at" timestamp without time zone NOT NULL,
+  "created_at" timestamp without time zone DEFAULT now(),
+  "targeted_industries" jsonb DEFAULT '[]'::jsonb,
+  "source_icon" text,
+  CONSTRAINT "articles_pkey" PRIMARY KEY (id),
+  CONSTRAINT "articles_url_key" UNIQUE (url)
+);
+CREATE INDEX idx_articles_published_at ON articles USING btree (published_at DESC);
+CREATE INDEX idx_articles_source ON articles USING btree (source);
+CREATE INDEX idx_articles_threat_level ON articles USING btree (threat_level);
+
+CREATE TABLE "rss_sources" (
+  "id" uuid NOT NULL DEFAULT gen_random_uuid(),
+  "name" character varying(255) NOT NULL,
+  "url" text NOT NULL,
+  "icon" character varying(100),
+  "color" character varying(7),
+  "is_active" boolean DEFAULT true,
+  "last_fetched" timestamp without time zone,
+  CONSTRAINT "rss_sources_pkey" PRIMARY KEY (id),
+  CONSTRAINT "rss_sources_url_key" UNIQUE (url)
+);
+
+CREATE TABLE "article_threat_groups" (
+  "id" serial NOT NULL,
+  "article_id" uuid NOT NULL,
+  "threat_group_id" uuid NOT NULL,
+  "created_at" timestamp without time zone DEFAULT now(),
+  CONSTRAINT "article_threat_groups_pkey" PRIMARY KEY (id)
+);
+
+CREATE TABLE "attack_techniques" (
+  "stix_id" text NOT NULL,
+  "attack_id" text NOT NULL,
+  "name" text NOT NULL,
+  "description" text,
+  "tactics" jsonb NOT NULL DEFAULT '[]'::jsonb,
+  "platforms" jsonb NOT NULL DEFAULT '[]'::jsonb,
+  "is_subtechnique" boolean NOT NULL DEFAULT false,
+  "parent_attack_id" text,
+  "status" text NOT NULL DEFAULT 'active'::text,
+  "modified" timestamp without time zone,
+  CONSTRAINT "attack_techniques_pkey" PRIMARY KEY (stix_id),
+  CONSTRAINT "attack_techniques_attack_id_key" UNIQUE (attack_id)
+);
+
+CREATE TABLE "attack_software" (
+  "stix_id" text NOT NULL,
+  "attack_id" text NOT NULL,
+  "name" text NOT NULL,
+  "software_type" text NOT NULL,
+  "description" text,
+  "aliases" jsonb NOT NULL DEFAULT '[]'::jsonb,
+  "platforms" jsonb NOT NULL DEFAULT '[]'::jsonb,
+  "status" text NOT NULL DEFAULT 'active'::text,
+  "modified" timestamp without time zone,
+  CONSTRAINT "attack_software_pkey" PRIMARY KEY (stix_id),
+  CONSTRAINT "attack_software_attack_id_key" UNIQUE (attack_id)
+);
+
+CREATE TABLE "actor_techniques" (
+  "threat_group_id" uuid NOT NULL,
+  "technique_stix_id" text NOT NULL,
+  "description" text,
+  CONSTRAINT "actor_techniques_pkey" PRIMARY KEY (threat_group_id, technique_stix_id)
+);
+CREATE INDEX idx_actor_techniques_technique ON actor_techniques USING btree (technique_stix_id);
+
+CREATE TABLE "actor_software" (
+  "threat_group_id" uuid NOT NULL,
+  "software_stix_id" text NOT NULL,
+  "description" text,
+  CONSTRAINT "actor_software_pkey" PRIMARY KEY (threat_group_id, software_stix_id)
+);
+CREATE INDEX idx_actor_software_software ON actor_software USING btree (software_stix_id);
+
+CREATE TABLE "kev_product_map" (
+  "vendor_project" text NOT NULL,
+  "product" text NOT NULL,
+  "product_id" integer,
+  "method" text,
+  "kev_count" integer NOT NULL,
+  "updated_at" timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT "kev_product_map_pkey" PRIMARY KEY (vendor_project, product)
+);
+CREATE INDEX idx_kev_product_map_product ON kev_product_map USING btree (product_id);
