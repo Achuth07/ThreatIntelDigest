@@ -346,7 +346,8 @@ export interface ActorsHubData {
   total: number;
   /** The most recent update of any profile. */
   latest?: unknown;
-  entries: { id: string; slug: string | null; name: string; aliases: string[] | null; description: string | null }[];
+  /** `snippet` is the short line built from the written profile or the actor's own data (WHA-20). */
+  entries: { id: string; slug: string | null; name: string; aliases: string[] | null; description: string | null; snippet?: string | null }[];
 }
 
 export function renderActorsHubBody(data: ActorsHubData): string {
@@ -359,8 +360,10 @@ export function renderActorsHubBody(data: ActorsHubData): string {
 <ul>${entries
     .map((a) => {
       const aliases = (a.aliases ?? []).filter(Boolean).slice(0, 4);
-      const description = plain(a.description ?? '');
-      return `<li><a href="${esc(actorUrl(a))}">${esc(a.name)}</a>${aliases.length ? ` (also known as ${esc(aliases.join(', '))})` : ''}${description ? `<br>${esc(description.length > 220 ? description.slice(0, 217) + '...' : description)}` : ''}</li>`;
+      // Our own snippet when there is one; MITRE's description only as a fallback.
+      const fallback = plain(a.description ?? '');
+      const description = a.snippet || (fallback.length > 220 ? fallback.slice(0, 217) + '...' : fallback);
+      return `<li><a href="${esc(actorUrl(a))}">${esc(a.name)}</a>${aliases.length ? ` (also known as ${esc(aliases.join(', '))})` : ''}${description ? `<br>${esc(description)}` : ''}</li>`;
     })
     .join('')}</ul>
 ${pager(ACTORS_HUB, page, totalPages, 'Threat actor pages')}

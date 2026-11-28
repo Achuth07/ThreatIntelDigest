@@ -4,6 +4,7 @@ import path from 'node:path';
 import { neon } from '@neondatabase/serverless';
 import { DEFAULT_DESCRIPTION, DEFAULT_TITLE, canonicalFor, isNoindexPath } from '../client/src/lib/seo-core.js';
 import { UUID_PATTERN } from '../client/src/lib/urls.js';
+import { actorSnippet, publishedProfile, showDrafts, type ActorFacts } from '../client/src/lib/actor-profile.js';
 import { injectHead } from '../server/services/head-inject.js';
 import { getCweHub, getCweIndex, getProductHub, getHubCweIds, getHubVendorSlugs, getVendorHub, getVendorIndex } from '../server/services/hub-data.js';
 import { injectBody, stripBody } from '../server/services/page-body.js';
@@ -241,7 +242,48 @@ function createDataSource(): PageData {
               LIMIT ${pageSize} OFFSET ${(page - 1) * pageSize}`,
       ]);
       const total = Number((countRows[0] as any)?.total ?? 0);
-      return { page, total, latest: (countRows[0] as any)?.latest ?? null, totalPages: Math.max(1, Math.ceil(total / pageSize)), entries: rows as any[] };
+
+      // A short line per actor from its written profile or its own ATT&CK data, not MITRE's description
+      // (WHA-20). If the extra queries fail, the entries keep MITRE's text and the page still renders.
+      let entries = rows as any[];
+      try {
+        const ids = entries.map((r) => r.id);
+        const [techRows, softwareRows, cveRows] = await Promise.all([
+          query`SELECT at.threat_group_id AS gid, t.tactics, t.is_subtechnique
+                FROM actor_techniques at JOIN attack_techniques t ON t.stix_id = at.technique_stix_id
+                WHERE at.threat_group_id = ANY(${ids}::uuid[])`,
+          query`SELECT asw.threat_group_id AS gid, s.name, s.software_type
+                FROM actor_software asw JOIN attack_software s ON s.stix_id = asw.software_stix_id
+                WHERE asw.threat_group_id = ANY(${ids}::uuid[]) ORDER BY s.name`,
+          query`SELECT DISTINCT ON (c.threat_group_id, c.cve_id) c.threat_group_id AS gid, c.cve_id, c.confidence, (k.cve_id IS NOT NULL) AS in_kev
+                FROM actor_cves c LEFT JOIN known_exploited_vulnerabilities k ON k.cve_id = c.cve_id
+                WHERE c.threat_group_id = ANY(${ids}::uuid[])
+                ORDER BY c.threat_group_id, c.cve_id, CASE c.confidence WHEN 'high' THEN 0 ELSE 1 END`,
+        ]);
+        const by = <T extends { gid: string }>(list: any[]) => {
+          const map = new Map<string, T[]>();
+          for (const row of list) map.set(row.gid, [...(map.get(row.gid) ?? []), row]);
+          return map;
+        };
+        const techByActor = by(techRows as any[]);
+        const softwareByActor = by(softwareRows as any[]);
+        const cveByActor = by(cveRows as any[]);
+        const drafts = showDrafts(process.env.VERCEL_ENV);
+        entries = entries.map((r) => {
+          const facts: ActorFacts = {
+            name: r.name,
+            attackId: null,
+            aliases: r.aliases ?? [],
+            techniques: (techByActor.get(r.id) ?? []).map((t: any) => ({ attackId: '', name: '', tactics: Array.isArray(t.tactics) ? t.tactics : [], isSubtechnique: !!t.is_subtechnique })),
+            software: (softwareByActor.get(r.id) ?? []).map((s: any) => ({ name: s.name, type: s.software_type })),
+            cves: (cveByActor.get(r.id) ?? []).map((c: any) => ({ cveId: c.cve_id, confidence: c.confidence, inKev: !!c.in_kev })),
+          };
+          return { ...r, snippet: actorSnippet(publishedProfile(r.slug, drafts), facts) || null };
+        });
+      } catch {
+        /* keep MITRE's text for this page */
+      }
+      return { page, total, latest: (countRows[0] as any)?.latest ?? null, totalPages: Math.max(1, Math.ceil(total / pageSize)), entries };
     },
 
     async getLatestCves(limit) {
