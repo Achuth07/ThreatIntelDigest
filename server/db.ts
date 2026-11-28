@@ -23,4 +23,10 @@ export function getDb() {
   return db;
 }
 
+// Tests run against an in-process Postgres (tests/helpers/db.ts) and set it here, so getDb()
+// never opens a connection to Neon during a test run.
+export function setDbForTests(testDb: unknown) {
+  db = testDb as ReturnType<typeof drizzle> | null;
+}
+
 export { schema };

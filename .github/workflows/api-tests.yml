@@ -1,0 +1,59 @@
+name: API tests
+
+# Type check and contract tests for the v1 API (WHA-40). Tests run in-process against PGlite and
+# a fake R2, so this job needs no secrets and never touches Neon or R2.
+
+on:
+  pull_request:
+    paths:
+      - 'server/api-v1/**'
+      - 'server/db.ts'
+      - 'server/services/**'
+      - 'shared/**'
+      - 'api/v1.ts'
+      - 'tests/**'
+      - 'vitest.config.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/api-tests.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'server/api-v1/**'
+      - 'server/db.ts'
+      - 'server/services/**'
+      - 'shared/**'
+      - 'api/v1.ts'
+      - 'tests/**'
+      - 'vitest.config.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/api-tests.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: api-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Type check
+        run: npm run check
+
+      - name: Tests
+        run: npm test

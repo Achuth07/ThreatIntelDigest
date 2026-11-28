@@ -232,7 +232,7 @@ export function registerCveRoutes(v1: OpenAPIHono<ApiEnv>) {
     const db = getDb();
     const { rows } = await db.execute(sql`
       SELECT ${LIST_COLUMNS}, s.ssvc_exploitation, s.ssvc_automatable, s.ssvc_technical_impact, s.ssvc_timestamp,
-             k.vendor_project AS kev_vendor, k.product AS kev_product, k.date_added AS kev_date_added, k.due_date AS kev_due_date,
+             k.vendor_project AS kev_vendor, k.product AS kev_product, to_char(k.date_added, 'YYYY-MM-DD') AS kev_date_added, to_char(k.due_date, 'YYYY-MM-DD') AS kev_due_date,
              k.short_description AS kev_description, k.required_action AS kev_action, k.known_ransomware_campaign_use AS kev_ransomware, k.notes AS kev_notes
       FROM ${FROM} WHERE v.id = ${id}
     `);
