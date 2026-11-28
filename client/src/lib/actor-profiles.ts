@@ -39,6 +39,7 @@ export const ACTOR_PROFILES: Record<string, ActorProfile> = {
     motivation: 'Espionage',
     targets: 'Telecommunications and internet service providers (MITRE highlights major US providers); the CISA advisory also lists government, transportation, lodging and military networks in many countries',
     sources: [mitre('G1045', 'Salt Typhoon'), cisa('aa25-239a', 'Countering Chinese State-Sponsored Actors Compromise of Networks Worldwide to Feed Global Espionage System')],
+    reviewedOn: '2026-11-28',
   },
   'scattered-spider': {
     summary:
@@ -47,6 +48,7 @@ export const ACTOR_PROFILES: Record<string, ActorProfile> = {
     motivation: 'Financial gain',
     targets: 'Customer-support outsourcers, telecoms and technology firms at first; later gaming, hospitality, retail, managed service providers, manufacturing and finance',
     sources: [mitre('G1015', 'Scattered Spider'), cisa('aa23-320a', 'Scattered Spider')],
+    reviewedOn: '2026-11-28',
   },
   apt29: {
     summary:
@@ -55,6 +57,7 @@ export const ACTOR_PROFILES: Record<string, ActorProfile> = {
     motivation: 'Espionage',
     targets: 'Government networks in Europe and NATO countries, research institutes and think tanks (MITRE); CISA also lists policy analysis organisations and IT companies',
     sources: [mitre('G0016', 'APT29'), cisa('aa21-116a', 'Russian Foreign Intelligence Service (SVR) Cyber Operations: Trends and Best Practices for Network Defenders')],
+    reviewedOn: '2026-11-28',
   },
   'lazarus-group': {
     summary:
@@ -63,6 +66,7 @@ export const ACTOR_PROFILES: Record<string, ActorProfile> = {
     motivation: 'Espionage, destruction and financial gain',
     targets: 'Entertainment (Sony Pictures, 2014) and cryptocurrency and blockchain companies, among others',
     sources: [mitre('G0032', 'Lazarus Group'), cisa('aa22-108a', 'TraderTraitor: North Korean State-Sponsored APT Targets Blockchain Companies')],
+    reviewedOn: '2026-11-28',
   },
   akira: {
     summary:
@@ -71,6 +75,7 @@ export const ACTOR_PROFILES: Record<string, ActorProfile> = {
     motivation: 'Financial gain (extortion)',
     targets: 'Windows systems and VMware ESXi hypervisors, reached through remote access services',
     sources: [mitre('G1024', 'Akira'), cisa('aa24-109a', '#StopRansomware: Akira Ransomware')],
+    reviewedOn: '2026-11-28',
   },
   fin7: {
     summary:
@@ -79,5 +84,6 @@ export const ACTOR_PROFILES: Record<string, ActorProfile> = {
     motivation: 'Financial gain',
     targets: 'Retail, restaurants, hospitality, software, consulting, financial services, medical equipment, cloud services, media, food and drink, transport, pharmaceuticals and utilities, mainly in the United States',
     sources: [mitre('G0046', 'FIN7')],
+    reviewedOn: '2026-11-28',
   },
 };
