@@ -6,6 +6,7 @@ import { excerptFromSearchVector, SEARCH_VECTOR_HEAD } from '../server/services/
 import { cleanAttackText } from '../server/services/attack-import.js';
 import { EXPOSURE_CACHE, kevCatalogResponse, kevExposureResponse } from '../server/services/kev-exposure.js';
 import { PRIORITISE_CACHE, cvePrioritiseResponse } from '../server/services/cve-prioritise.js';
+import { publishedProfile, showDrafts } from '../client/src/lib/actor-profile.js';
 import { extractCveMentions, getArticleCveIds, getArticlesMentioningCve, linkArticleCves, mergeRelatedNews } from '../server/services/article-cves.js';
 
 // Module-level guard: only initialize storage once per warm function invocation
@@ -5586,6 +5587,8 @@ async function handleThreatGroupsEndpoints(req: VercelRequest, res: VercelRespon
       return res.json({
         ...group,
         attackUrl: group.attackId ? `https://attack.mitre.org/groups/${group.attackId}/` : null,
+        // The written profile (WHA-20). Decided here so unreviewed drafts never reach production.
+        profile: publishedProfile(group.slug, showDrafts(process.env.VERCEL_ENV)),
         recentArticles: linkedArticles,
         techniques: techniqueRows.rows.map((row: any) => ({
           attackId: row.attack_id,
